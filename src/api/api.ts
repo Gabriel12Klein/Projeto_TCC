@@ -1,4 +1,4 @@
-import type { AuthSession, EntityRecord, ResourceKey, User } from '../types';
+import type { AuthSession, CatalogWine, CatalogWineDetail, EntityRecord, ResourceKey, User } from '../types';
 
 const TOKEN_KEY = 'vinum_token';
 const USER_KEY = 'vinum_user';
@@ -38,4 +38,14 @@ export const api = {
   create: (resource: ResourceKey, payload: Record<string, unknown>) => request<EntityRecord>(`/${resource}`, { method: 'POST', body: JSON.stringify(payload) }),
   update: (resource: ResourceKey, id: string, payload: Record<string, unknown>) => request<EntityRecord>(`/${resource}/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   remove: (resource: ResourceKey, id: string) => request<void>(`/${resource}/${id}`, { method: 'DELETE' }),
+  catalog: {
+    list: (filters: { q?: string; type?: string } = {}) => {
+      const params = new URLSearchParams();
+      if (filters.q) params.set('q', filters.q);
+      if (filters.type) params.set('type', filters.type);
+      const query = params.size ? `?${params}` : '';
+      return request<CatalogWine[]>(`/catalog/wines${query}`);
+    },
+    detail: (slug: string) => request<CatalogWineDetail>(`/catalog/wines/${encodeURIComponent(slug)}`),
+  },
 };
