@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react';
+import type { ComponentType } from 'react';
 import adminBackground from '../../assets/admin/common/admin-background.png';
-import AdminSidebar from './components/AdminSidebar.jsx';
-import AdminHeader from './components/AdminHeader.jsx';
-import ModuleTabs from './components/ModuleTabs.jsx';
-import { moduleConfigs } from './moduleConfigs.js';
-import { api } from '../../api/api.js';
-import VinicolaCadastrar from './modules/Vinicola/VinicolaCadastrar.jsx';
-import VinicolaRegistros from './modules/Vinicola/VinicolaRegistros.jsx';
-import SafraCadastrar from './modules/Safra/SafraCadastrar.jsx';
-import SafraRegistros from './modules/Safra/SafraRegistros.jsx';
-import VinhoCadastrar from './modules/Vinho/VinhoCadastrar.jsx';
-import VinhoRegistros from './modules/Vinho/VinhoRegistros.jsx';
-import LoteCadastrar from './modules/Lote/LoteCadastrar.jsx';
-import LoteRegistros from './modules/Lote/LoteRegistros.jsx';
+import AdminSidebar from './components/AdminSidebar';
+import AdminHeader from './components/AdminHeader';
+import ModuleTabs from './components/ModuleTabs';
+import { moduleConfigs } from './moduleConfigs';
+import { api } from '../../api/api';
+import type { EntityRecord, ResourceKey, User } from '../../types';
+import VinicolaCadastrar from './modules/Vinicola/VinicolaCadastrar';
+import VinicolaRegistros from './modules/Vinicola/VinicolaRegistros';
+import SafraCadastrar from './modules/Safra/SafraCadastrar';
+import SafraRegistros from './modules/Safra/SafraRegistros';
+import VinhoCadastrar from './modules/Vinho/VinhoCadastrar';
+import VinhoRegistros from './modules/Vinho/VinhoRegistros';
+import LoteCadastrar from './modules/Lote/LoteCadastrar';
+import LoteRegistros from './modules/Lote/LoteRegistros';
 
-const components = {
+const components: Record<ResourceKey, { form: ComponentType<any>; records: ComponentType<any> }> = {
   vinicolas: { form: VinicolaCadastrar, records: VinicolaRegistros },
   safras: { form: SafraCadastrar, records: SafraRegistros },
   vinhos: { form: VinhoCadastrar, records: VinhoRegistros },
@@ -24,9 +26,9 @@ const components = {
 const ADMIN_MODULE_KEY = 'vinum_admin_module';
 const ADMIN_TAB_KEY = 'vinum_admin_tab';
 
-function getInitialModule() {
+function getInitialModule(): ResourceKey {
   const saved = sessionStorage.getItem(ADMIN_MODULE_KEY);
-  return saved && components[saved] ? saved : 'vinicolas';
+  return saved && saved in components ? saved as ResourceKey : 'vinicolas';
 }
 
 function getInitialTab() {
@@ -34,10 +36,10 @@ function getInitialTab() {
   return saved === 'records' ? 'records' : 'form';
 }
 
-export default function AdminPage({ user, onLogout }) {
+export default function AdminPage({ user, onLogout }: { user: User; onLogout: () => void }) {
   const [module, setModule] = useState(getInitialModule);
   const [tab, setTab] = useState(getInitialTab);
-  const [editing, setEditing] = useState(null);
+  const [editing, setEditing] = useState<EntityRecord | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [formMessage, setFormMessage] = useState('');
@@ -57,13 +59,13 @@ export default function AdminPage({ user, onLogout }) {
     setFormMessage('');
   }, [module, tab]);
 
-  function selectModule(key) {
+  function selectModule(key: ResourceKey) {
     setModule(key);
     setTab('form');
     setEditing(null);
   }
 
-  async function save(payload) {
+  async function save(payload: Record<string, unknown>) {
     if (editing?.id) {
       await api.update(module, editing.id, payload);
     } else {
@@ -75,7 +77,7 @@ export default function AdminPage({ user, onLogout }) {
     setTab('records');
   }
 
-  function edit(item) {
+  function edit(item: EntityRecord) {
     setEditing(item);
     setTab('form');
   }

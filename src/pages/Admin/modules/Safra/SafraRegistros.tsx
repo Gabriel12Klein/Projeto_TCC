@@ -1,2 +1,2 @@
-import ModuleRecords from '../../components/ModuleRecords.jsx';
+import ModuleRecords from '../../components/ModuleRecords';
 export default function SafraRegistros(props){return <ModuleRecords {...props}/>}

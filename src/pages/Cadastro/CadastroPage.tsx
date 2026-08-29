@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { api } from '../../api/api.js';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { api } from '../../api/api';
+import { registerFormSchema, type RegisterForm } from '../../features/auth/auth.schemas';
 
 import backgroundRegister from './assets/background-register.png';
 import iconUserName from './assets/icon-user-name.png';
@@ -36,19 +39,14 @@ const inputClass = 'w-full min-w-0 border-0 outline-0 bg-transparent text-[#261b
 
 export default function CadastroPage({ onOpenLogin }) {
   const [message, setMessage] = useState('');
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterForm>({
+    resolver: zodResolver(registerFormSchema),
+  });
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  async function submit(data: RegisterForm) {
     setMessage('');
-    const form = new FormData(event.currentTarget);
-    const email = form.get('email');
-    const confirmEmail = form.get('confirmEmail');
-    const password = form.get('password');
-    const confirmPassword = form.get('confirmPassword');
-    if (email !== confirmEmail) return setMessage('Os e-mails informados não coincidem.');
-    if (password !== confirmPassword) return setMessage('As senhas informadas não coincidem.');
     try {
-      await api.register({ name: form.get('name'), email, password });
+      await api.register({ name: data.name, email: data.email, password: data.password });
       setMessage('Conta criada com sucesso. Agora faça o login.');
       setTimeout(() => onOpenLogin?.(), 900);
     } catch (error) { setMessage(error.message); }
@@ -73,12 +71,12 @@ export default function CadastroPage({ onOpenLogin }) {
             <p className="mt-[1.2%] mb-0 text-[clamp(12px,1.03vw,16px)] text-[#1a1a1a]">Preencha os dados abaixo para criar sua conta</p>
           </header>
 
-          <form className="flex flex-col" onSubmit={handleSubmit}>
+          <form className="flex flex-col" onSubmit={handleSubmit(submit)}>
             <label className="block w-full mb-[2.1%]">
               <span className="block mb-[1.7%] text-[clamp(14px,1.1vw,17px)] text-[#171414]">Nome completo</span>
               <span className={inputShell}>
                 <img className="w-[23px] h-[23px] object-contain shrink-0" src={iconUserName} alt="" aria-hidden="true" />
-                <input className={inputClass} type="text" name="name" placeholder="Digite seu nome completo" required />
+                <input className={inputClass} type="text" placeholder="Digite seu nome completo" {...register('name')} />
               </span>
             </label>
 
@@ -87,7 +85,7 @@ export default function CadastroPage({ onOpenLogin }) {
                 <span className="block mb-[1.7%] text-[clamp(14px,1.1vw,17px)] text-[#171414]">E-mail:</span>
                 <span className={inputShell}>
                   <img className="w-[23px] h-[23px] object-contain shrink-0" src={iconEmail} alt="" aria-hidden="true" />
-                  <input className={inputClass} type="email" name="email" placeholder="Digite seu E-mail" required />
+                  <input className={inputClass} type="email" placeholder="Digite seu E-mail" {...register('email')} />
                 </span>
               </label>
 
@@ -95,7 +93,7 @@ export default function CadastroPage({ onOpenLogin }) {
                 <span className="block mb-[1.7%] text-[clamp(14px,1.1vw,17px)] text-[#171414]">Confirmar E-mail:</span>
                 <span className={inputShell}>
                   <img className="w-[23px] h-[23px] object-contain shrink-0" src={iconEmail} alt="" aria-hidden="true" />
-                  <input className={inputClass} type="email" name="confirmEmail" placeholder="Confirme seu E-mail" required />
+                  <input className={inputClass} type="email" placeholder="Confirme seu E-mail" {...register('confirmEmail')} />
                 </span>
               </label>
             </div>
@@ -105,7 +103,7 @@ export default function CadastroPage({ onOpenLogin }) {
                 <span className="block mb-[1.7%] text-[clamp(14px,1.1vw,17px)] text-[#171414]">Senha:</span>
                 <span className={inputShell}>
                   <img className="w-[23px] h-[23px] object-contain shrink-0" src={iconPassword} alt="" aria-hidden="true" />
-                  <input className={inputClass} type="password" name="password" placeholder="Digite sua senha" required />
+                  <input className={inputClass} type="password" placeholder="Digite sua senha" {...register('password')} />
                 </span>
               </label>
 
@@ -113,17 +111,17 @@ export default function CadastroPage({ onOpenLogin }) {
                 <span className="block mb-[1.7%] text-[clamp(14px,1.1vw,17px)] text-[#171414]">Confirmar Senha:</span>
                 <span className={inputShell}>
                   <img className="w-[23px] h-[23px] object-contain shrink-0" src={iconPassword} alt="" aria-hidden="true" />
-                  <input className={inputClass} type="password" name="confirmPassword" placeholder="Confirme sua senha" required />
+                  <input className={inputClass} type="password" placeholder="Confirme sua senha" {...register('confirmPassword')} />
                 </span>
               </label>
             </div>
 
-            <button className="w-full min-h-[clamp(50px,5.3vw,58px)] mt-[6.8%] px-[18px] py-[10px] flex items-center justify-center gap-5 border-0 rounded-[5px] bg-[#4c151c] text-[#d8b655] text-[clamp(17px,1.52vw,22px)] font-bold cursor-pointer transition-[transform,background-color] duration-150 hover:bg-[#5c1821] active:translate-y-px max-[1120px]:mt-6" type="submit">
+            <button disabled={isSubmitting} className="w-full min-h-[clamp(50px,5.3vw,58px)] mt-[6.8%] px-[18px] py-[10px] flex items-center justify-center gap-5 border-0 rounded-[5px] bg-[#4c151c] text-[#d8b655] text-[clamp(17px,1.52vw,22px)] font-bold cursor-pointer transition-[transform,background-color] duration-150 hover:bg-[#5c1821] active:translate-y-px max-[1120px]:mt-6 disabled:opacity-60" type="submit">
               <span>Criar Conta</span>
               <span className="text-[1.35em] leading-none" aria-hidden="true">→</span>
             </button>
 
-            {message && <p className="mt-2 mb-0 text-[#7b2028] text-[11px] leading-[1.3] text-center">{message}</p>}
+            {(message || Object.values(errors)[0]?.message) && <p className="mt-2 mb-0 text-[#7b2028] text-[11px] leading-[1.3] text-center">{message || String(Object.values(errors)[0]?.message ?? '')}</p>}
           </form>
 
           <div className="flex items-center gap-3 mt-[3.2%] mb-[3.2%]" aria-hidden="true">

@@ -1,2 +1,2 @@
-import ModuleRecords from '../../components/ModuleRecords.jsx';
+import ModuleRecords from '../../components/ModuleRecords';
 export default function LoteRegistros(props){return <ModuleRecords {...props}/>}

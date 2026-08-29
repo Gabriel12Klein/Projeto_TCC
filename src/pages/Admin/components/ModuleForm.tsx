@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import FormField from './FormField.jsx';
+import FormField from './FormField';
 import saveIcon from '../../../assets/admin/common/save.png';
 import clearIcon from '../../../assets/admin/common/clear.png';
 import cancelIcon from '../../../assets/admin/common/cancel.png';

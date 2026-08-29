@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { api } from '../../../api/api.js';
+import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from '../../../api/api';
 import searchIcon from '../../../assets/admin/common/search.png';
 import filterIcon from '../../../assets/admin/common/filter.png';
 import sortIcon from '../../../assets/admin/common/sort.png';
@@ -25,12 +26,14 @@ const statusClasses = {
 const normalizeStatus = (value='') => String(value).toLowerCase().replaceAll(' ','-').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
 export default function ModuleRecords({ config, refreshKey, onEdit, onNew }) {
-  const [items,setItems]=useState([]);
+  const queryClient = useQueryClient();
   const [query,setQuery]=useState('');
   const [page,setPage]=useState(1);
   const pageSize=5;
-  const load=()=>api.list(config.key).then(setItems).catch(console.error);
-  useEffect(()=>{load()},[config.key,refreshKey]);
+  const { data: items = [], isLoading, error } = useQuery({
+    queryKey: ['admin-records', config.key, refreshKey],
+    queryFn: () => api.list(config.key),
+  });
   const filtered=useMemo(()=>items.filter(item=>JSON.stringify(item).toLowerCase().includes(query.toLowerCase())),[items,query]);
   const pages=Math.max(1,Math.ceil(filtered.length/pageSize));
   const visible=filtered.slice((page-1)*pageSize,page*pageSize);
@@ -41,7 +44,7 @@ export default function ModuleRecords({ config, refreshKey, onEdit, onNew }) {
     if(!confirm(`Excluir ${config.singular}?`)) return;
     try {
       await api.remove(config.key,item.id);
-      setItems(current => current.filter(record => record.id !== item.id));
+      await queryClient.invalidateQueries({ queryKey: ['admin-records', config.key] });
       const remaining = filtered.length - 1;
       const nextPages = Math.max(1, Math.ceil(remaining / pageSize));
       setPage(current => Math.min(current, nextPages));
@@ -89,6 +92,8 @@ export default function ModuleRecords({ config, refreshKey, onEdit, onNew }) {
     </div>
 
     <div className="w-full max-w-full border border-[#e4ded9] rounded-[9px] overflow-auto bg-white [scrollbar-width:thin] [scrollbar-color:#998c87_#f1eeeb] [&::-webkit-scrollbar]:w-[9px] [&::-webkit-scrollbar]:h-[9px] [&::-webkit-scrollbar-thumb]:bg-[#998c87] [&::-webkit-scrollbar-thumb]:rounded-lg [&::-webkit-scrollbar-track]:bg-[#f1eeeb]">
+      {isLoading && <p className="m-4 text-sm text-[#655c58]">Carregando registros...</p>}
+      {error && <p className="m-4 text-sm text-red-700">Não foi possível carregar os registros.</p>}
       <table className="w-full border-collapse min-w-[980px] text-[clamp(11px,0.82vw,12.5px)]">
         <thead><tr>{config.columns.map(([,label])=><th className="h-11 text-left px-[clamp(8px,0.8vw,12px)] text-[#4a272d] font-bold bg-[#fffdfa] border-b border-[#e7e0dc] whitespace-nowrap" key={label}>{label}</th>)}<th className="h-11 text-left px-[clamp(8px,0.8vw,12px)] text-[#4a272d] font-bold bg-[#fffdfa] border-b border-[#e7e0dc] whitespace-nowrap">Ações</th></tr></thead>
         <tbody>{visible.map(item=><tr key={item.id} className="[&:last-child>td]:border-b-0">{config.columns.map(([col])=><td className="h-14 py-[7px] px-[clamp(8px,0.8vw,12px)] border-b border-[#ece6e2] text-[#453b38] max-w-[190px] align-middle" key={col}>{display(col,item[col])}</td>)}<td className="h-14 py-[7px] px-[clamp(8px,0.8vw,12px)] border-b border-[#ece6e2] text-[#453b38] align-middle"><div className="flex gap-1.5 whitespace-nowrap"><button type="button" className={actionButton} title="Visualizar" onClick={()=>alert(JSON.stringify(item,null,2))}><img className="w-full h-full object-contain transition-transform duration-150 group-hover:scale-[1.08]" src={viewIcon} alt="Visualizar"/></button><button type="button" className={actionButton} title="Editar" onClick={()=>onEdit(item)}><img className="w-full h-full object-contain" src={editIcon} alt="Editar"/></button><button type="button" className={`${actionButton} border-[#db6a6e] hover:bg-[#fff0f0] hover:border-[#c9343d]`} title="Excluir" onClick={(event)=>remove(event,item)}><img className="w-full h-full object-contain" src={deleteIcon} alt="Excluir"/></button></div></td></tr>)}</tbody>

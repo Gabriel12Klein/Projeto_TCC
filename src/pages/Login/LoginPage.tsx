@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { api, saveSession } from '../../api/api.js';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { api, saveSession } from '../../api/api';
+import { loginFormSchema, type LoginForm } from '../../features/auth/auth.schemas';
 
 import backgroundLogin from './assets/background-login.png';
 import logoVinum from './assets/logo-vinum.png';
@@ -32,13 +35,14 @@ const featureItems = [
 export default function LoginPage({ onOpenRegister, onLoginSuccess }) {
   const [remember, setRemember] = useState(false);
   const [message, setMessage] = useState('');
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
+    resolver: zodResolver(loginFormSchema),
+  });
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  async function submit(data: LoginForm) {
     setMessage('');
-    const form = new FormData(event.currentTarget);
     try {
-      const session = await api.login({ email: form.get('email'), password: form.get('password') });
+      const session = await api.login(data);
       saveSession(session);
       onLoginSuccess?.(session.user);
     } catch (error) {
@@ -66,12 +70,12 @@ export default function LoginPage({ onOpenRegister, onLoginSuccess }) {
             <p className="mt-0 mb-[3.8%] text-[clamp(11px,1vw,15px)] text-[#171717] max-[1050px]:text-[15px]">Acesse sua conta para continuar.</p>
           </header>
 
-          <form className="flex min-h-0 flex-col" onSubmit={handleSubmit}>
+          <form className="flex min-h-0 flex-col" onSubmit={handleSubmit(submit)}>
             <label className="block mb-[3.35%]">
               <span className="block mb-[1.6%] text-[clamp(12px,1vw,16px)] text-[#161313] max-[1050px]:text-[15px]">E-mail:</span>
               <span className="h-[clamp(40px,4.35vw,46px)] flex items-center gap-[10px] bg-white px-[13px] border-2 border-[#c8c4c2] rounded-[6px] transition-[border-color,box-shadow] duration-150 focus-within:border-[#7d1d2d] focus-within:shadow-[0_0_0_3px_rgb(125_29_45_/_10%)]">
                 <img className="w-[25px] h-[25px] object-contain shrink-0" src={iconEmail} alt="" aria-hidden="true" />
-                <input className="w-full min-w-0 border-0 outline-0 bg-transparent text-[#261b1c] text-[clamp(12px,0.98vw,15px)] placeholder:text-[#c7c4c4] max-[1050px]:text-[15px]" type="email" name="email" placeholder="Digite seu E-mail" required />
+                <input className="w-full min-w-0 border-0 outline-0 bg-transparent text-[#261b1c] text-[clamp(12px,0.98vw,15px)] placeholder:text-[#c7c4c4] max-[1050px]:text-[15px]" type="email" placeholder="Digite seu E-mail" {...register('email')} />
               </span>
             </label>
 
@@ -79,7 +83,7 @@ export default function LoginPage({ onOpenRegister, onLoginSuccess }) {
               <span className="block mb-[1.6%] text-[clamp(12px,1vw,16px)] text-[#161313] max-[1050px]:text-[15px]">Senha:</span>
               <span className="h-[clamp(40px,4.35vw,46px)] flex items-center gap-[10px] bg-white px-[13px] border-2 border-[#c8c4c2] rounded-[6px] transition-[border-color,box-shadow] duration-150 focus-within:border-[#7d1d2d] focus-within:shadow-[0_0_0_3px_rgb(125_29_45_/_10%)]">
                 <img className="w-[25px] h-[25px] object-contain shrink-0" src={iconPassword} alt="" aria-hidden="true" />
-                <input className="w-full min-w-0 border-0 outline-0 bg-transparent text-[#261b1c] text-[clamp(12px,0.98vw,15px)] placeholder:text-[#c7c4c4] max-[1050px]:text-[15px]" type="password" name="password" placeholder="Digite sua senha" required />
+                <input className="w-full min-w-0 border-0 outline-0 bg-transparent text-[#261b1c] text-[clamp(12px,0.98vw,15px)] placeholder:text-[#c7c4c4] max-[1050px]:text-[15px]" type="password" placeholder="Digite sua senha" {...register('password')} />
               </span>
             </label>
 
@@ -103,12 +107,12 @@ export default function LoginPage({ onOpenRegister, onLoginSuccess }) {
               </button>
             </div>
 
-            <button className="w-full min-h-[clamp(48px,5.2vw,54px)] px-[18px] py-[10px] flex items-center justify-center gap-5 border-0 rounded-[5px] bg-[#4c151c] text-[#d8b655] text-[clamp(16px,1.45vw,20px)] font-bold cursor-pointer transition-[transform,background-color] duration-150 hover:bg-[#5c1821] active:translate-y-px" type="submit">
+            <button disabled={isSubmitting} className="w-full min-h-[clamp(48px,5.2vw,54px)] px-[18px] py-[10px] flex items-center justify-center gap-5 border-0 rounded-[5px] bg-[#4c151c] text-[#d8b655] text-[clamp(16px,1.45vw,20px)] font-bold cursor-pointer transition-[transform,background-color] duration-150 hover:bg-[#5c1821] active:translate-y-px disabled:opacity-60" type="submit">
               <span>Entrar</span>
               <span className="text-[1.35em] font-normal leading-none" aria-hidden="true">→</span>
             </button>
 
-            {message && <p className="mt-2 mb-0 text-[#7b2028] text-[11px] leading-[1.3] text-center">{message}</p>}
+            {(message || errors.email?.message || errors.password?.message) && <p className="mt-2 mb-0 text-[#7b2028] text-[11px] leading-[1.3] text-center">{message || errors.email?.message || errors.password?.message}</p>}
           </form>
 
           <div className="flex items-center gap-3 mt-[5.2%] mb-[5.2%]" aria-hidden="true">
