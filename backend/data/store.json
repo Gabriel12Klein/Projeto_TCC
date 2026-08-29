@@ -1,0 +1,253 @@
+{
+  "users": [
+    {
+      "id": "usr-1787698346400-6eddaa",
+      "name": "Gabriel klein",
+      "email": "gabrielklein0505@gmail.com",
+      "salt": "9181b6a1b77079c4af63ed7c84dc9190",
+      "passwordHash": "449f47741367ee6c198502c5f6c1240e076dcd8e23b9c5e0d5bf5f964d56aded33bf235be5afed3c4cd7718d4b49710ace67c005781f9f781c70610daa5384bc",
+      "role": "Administrador",
+      "createdAt": "2026-08-25T22:52:26.400Z"
+    },
+    {
+      "id": "usr-1787705598172-cba1c5",
+      "name": "Administrador",
+      "email": "admin@vinum.local",
+      "salt": "af7b389fc86648c6308895826f4150c1",
+      "passwordHash": "9e4ae5e6a808dc34ebc646a48ab75734619ec411a1ee70b129fe755573f89b7b4e1bec632f68cb6ea5651f1322023e8ca079e4ada9ec861b7eb4ec6c38e4b96a",
+      "role": "Administrador",
+      "createdAt": "2026-08-26T00:53:18.172Z"
+    },
+    {
+      "id": "usr-1788030096228-8149f3",
+      "name": "Gabriel klein",
+      "email": "gabrielklein22@hotmail.com",
+      "salt": "cdb4d14267d61bc55c6589a923b423f5",
+      "passwordHash": "cbbcd4e89b768c517e3ae4e1f2d74641094de4895e2b751e647c05ba6432ac26cab68c1dd267a783f9700f3cd9ebd92b53dd86d1e50bc6249bc08ced9052fc26",
+      "role": "Administrador",
+      "createdAt": "2026-08-29T19:01:36.228Z"
+    }
+  ],
+  "vinicolas": [
+    {
+      "id": "vin-1",
+      "name": "Vinícola Aurora",
+      "cnpj": "12.345.678/0001-90",
+      "city": "Bento Gonçalves",
+      "state": "RS",
+      "email": "contato@aurora.com.br",
+      "wallet": "0x1a2b...9c8d7e",
+      "status": "Ativa",
+      "createdAt": "2026-08-23"
+    },
+    {
+      "id": "vin-2",
+      "name": "Casa Valduga",
+      "cnpj": "05.860.123/0001-30",
+      "city": "Bento Gonçalves",
+      "state": "RS",
+      "email": "admin@casavalduga.com.br",
+      "wallet": "0x3f4e...5a6b7c",
+      "status": "Ativa",
+      "createdAt": "2026-08-23"
+    },
+    {
+      "id": "vin-3",
+      "name": "Salton Vinhos",
+      "cnpj": "87.547.032/0001-22",
+      "city": "Bento Gonçalves",
+      "state": "RS",
+      "email": "faleconosco@salton.com.br",
+      "wallet": "0x7d8e...1f2a3b",
+      "status": "Ativa",
+      "createdAt": "2026-08-23"
+    },
+    {
+      "id": "vin-4",
+      "name": "Miolo Wine Group",
+      "cnpj": "03.015.872/0001-10",
+      "city": "Vale dos Vinhedos",
+      "state": "RS",
+      "email": "contato@miolo.com.br",
+      "wallet": "0x9b8a...4c3d2e",
+      "status": "Ativa",
+      "createdAt": "2026-08-23"
+    }
+  ],
+  "safras": [
+    {
+      "id": "saf-1",
+      "identifier": "SAF-2024-001",
+      "wineId": "vinho-1",
+      "wineName": "Vinum Reserva",
+      "year": "2024",
+      "observations": "Safra com excelente maturação das uvas.",
+      "status": "Finalizada",
+      "createdAt": "15/03/2024"
+    },
+    {
+      "id": "saf-2",
+      "identifier": "SAF-2023-002",
+      "wineId": "vinho-2",
+      "wineName": "Vinho Branco Seco",
+      "year": "2023",
+      "observations": "Clima seco e estável durante a colheita.",
+      "status": "Finalizada",
+      "createdAt": "12/03/2023"
+    },
+    {
+      "id": "saf-3",
+      "identifier": "SAF-2022-003",
+      "wineId": "vinho-3",
+      "wineName": "Vinho Rosé",
+      "year": "2022",
+      "observations": "Boa acidez e ótima qualidade das uvas.",
+      "status": "Finalizada",
+      "createdAt": "10/03/2022"
+    },
+    {
+      "id": "saf-4",
+      "identifier": "SAF-2021-004",
+      "wineId": "vinho-4",
+      "wineName": "Espumante Brut",
+      "year": "2021",
+      "observations": "Colheita antecipada devido às chuvas.",
+      "status": "Encerrada",
+      "createdAt": "09/02/2021"
+    },
+    {
+      "id": "saf-5",
+      "identifier": "SAF-2020-005",
+      "wineId": "vinho-5",
+      "wineName": "Vinho Tinto Jovem",
+      "year": "2020",
+      "observations": "Safra marcada por altas temperaturas.",
+      "status": "Encerrada",
+      "createdAt": "08/02/2020"
+    }
+  ],
+  "vinhos": [
+    {
+      "id": "vinho-1",
+      "name": "Vinum Reserva",
+      "year": "2021",
+      "type": "Tinto",
+      "grapes": "Cabernet Sauvignon, Merlot",
+      "volume": "750",
+      "alcohol": "13,5",
+      "description": "Vinho tinto encorpado e equilibrado.",
+      "status": "Ativo",
+      "createdAt": "2026-08-23"
+    },
+    {
+      "id": "vinho-2",
+      "name": "Vinum Chardonnay",
+      "year": "2022",
+      "type": "Branco",
+      "grapes": "Chardonnay",
+      "volume": "750",
+      "alcohol": "12,5",
+      "description": "Branco fresco e aromático.",
+      "status": "Ativo",
+      "createdAt": "2026-08-23"
+    },
+    {
+      "id": "vinho-3",
+      "name": "Vinum Rosé",
+      "year": "2022",
+      "type": "Rosé",
+      "grapes": "Pinot Noir, Grenache",
+      "volume": "750",
+      "alcohol": "12,0",
+      "description": "Rosé delicado e frutado.",
+      "status": "Ativo",
+      "createdAt": "2026-08-23"
+    },
+    {
+      "id": "vinho-4",
+      "name": "Vinum Sauvignon Blanc",
+      "year": "2023",
+      "type": "Branco",
+      "grapes": "Sauvignon Blanc",
+      "volume": "750",
+      "alcohol": "12,5",
+      "description": "Branco jovem em elaboração.",
+      "status": "Em produção",
+      "createdAt": "2026-08-23"
+    },
+    {
+      "id": "vinho-5",
+      "name": "Vinum Syrah",
+      "year": "2020",
+      "type": "Tinto",
+      "grapes": "Syrah",
+      "volume": "750",
+      "alcohol": "14,0",
+      "description": "Tinto intenso e especiado.",
+      "status": "Inativo",
+      "createdAt": "2026-08-23"
+    }
+  ],
+  "lotes": [
+    {
+      "id": "lot-1",
+      "code": "LT-2024-0001",
+      "vintageId": "saf-1",
+      "vintageName": "2024",
+      "quantity": "1250",
+      "productionDate": "15/03/2024",
+      "registrationDate": "16/03/2024",
+      "status": "Publicado",
+      "blockchain": "0x7f3a...b8c9d2",
+      "qrCode": "QR-0001"
+    },
+    {
+      "id": "lot-2",
+      "code": "LT-2024-0002",
+      "vintageId": "saf-1",
+      "vintageName": "2024",
+      "quantity": "980",
+      "productionDate": "18/03/2024",
+      "registrationDate": "19/03/2024",
+      "status": "Registrado",
+      "blockchain": "0x9e21...f4a7b1",
+      "qrCode": "QR-0002"
+    },
+    {
+      "id": "lot-3",
+      "code": "LT-2024-0003",
+      "vintageId": "saf-1",
+      "vintageName": "2024",
+      "quantity": "1100",
+      "productionDate": "20/03/2024",
+      "registrationDate": "21/03/2024",
+      "status": "Pendente",
+      "blockchain": "",
+      "qrCode": ""
+    },
+    {
+      "id": "lot-4",
+      "code": "LT-2023-0015",
+      "vintageId": "saf-2",
+      "vintageName": "2023",
+      "quantity": "1500",
+      "productionDate": "12/04/2023",
+      "registrationDate": "13/04/2023",
+      "status": "Publicado",
+      "blockchain": "0x2b7c...a1d3f5",
+      "qrCode": "QR-0015"
+    },
+    {
+      "id": "lot-5",
+      "code": "LT-2023-0016",
+      "vintageId": "saf-2",
+      "vintageName": "2023",
+      "quantity": "850",
+      "productionDate": "15/04/2023",
+      "registrationDate": "16/04/2023",
+      "status": "Registrado",
+      "blockchain": "0x8d90...c3f1a6",
+      "qrCode": "QR-0016"
+    }
+  ]
+}

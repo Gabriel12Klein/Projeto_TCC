@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme {
+  --font-inter: "Inter", Arial, sans-serif;
+  --font-playfair: "Playfair Display", Georgia, "Times New Roman", serif;
+
+  --color-vinum-burgundy: #5b0c1b;
+  --color-vinum-wine: #851329;
+  --color-vinum-gold: #d0a565;
+  --color-vinum-text: #2c2223;
+}

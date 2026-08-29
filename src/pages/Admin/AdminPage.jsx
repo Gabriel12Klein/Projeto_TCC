@@ -1,0 +1,142 @@
+import { useEffect, useState } from 'react';
+import adminBackground from '../../assets/admin/common/admin-background.png';
+import AdminSidebar from './components/AdminSidebar.jsx';
+import AdminHeader from './components/AdminHeader.jsx';
+import ModuleTabs from './components/ModuleTabs.jsx';
+import { moduleConfigs } from './moduleConfigs.js';
+import { api } from '../../api/api.js';
+import VinicolaCadastrar from './modules/Vinicola/VinicolaCadastrar.jsx';
+import VinicolaRegistros from './modules/Vinicola/VinicolaRegistros.jsx';
+import SafraCadastrar from './modules/Safra/SafraCadastrar.jsx';
+import SafraRegistros from './modules/Safra/SafraRegistros.jsx';
+import VinhoCadastrar from './modules/Vinho/VinhoCadastrar.jsx';
+import VinhoRegistros from './modules/Vinho/VinhoRegistros.jsx';
+import LoteCadastrar from './modules/Lote/LoteCadastrar.jsx';
+import LoteRegistros from './modules/Lote/LoteRegistros.jsx';
+
+const components = {
+  vinicolas: { form: VinicolaCadastrar, records: VinicolaRegistros },
+  safras: { form: SafraCadastrar, records: SafraRegistros },
+  vinhos: { form: VinhoCadastrar, records: VinhoRegistros },
+  lotes: { form: LoteCadastrar, records: LoteRegistros },
+};
+
+const ADMIN_MODULE_KEY = 'vinum_admin_module';
+const ADMIN_TAB_KEY = 'vinum_admin_tab';
+
+function getInitialModule() {
+  const saved = sessionStorage.getItem(ADMIN_MODULE_KEY);
+  return saved && components[saved] ? saved : 'vinicolas';
+}
+
+function getInitialTab() {
+  const saved = sessionStorage.getItem(ADMIN_TAB_KEY);
+  return saved === 'records' ? 'records' : 'form';
+}
+
+export default function AdminPage({ user, onLogout }) {
+  const [module, setModule] = useState(getInitialModule);
+  const [tab, setTab] = useState(getInitialTab);
+  const [editing, setEditing] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [formMessage, setFormMessage] = useState('');
+
+  const config = moduleConfigs[module];
+  const Current = components[module][tab];
+
+  useEffect(() => {
+    sessionStorage.setItem(ADMIN_MODULE_KEY, module);
+  }, [module]);
+
+  useEffect(() => {
+    sessionStorage.setItem(ADMIN_TAB_KEY, tab);
+  }, [tab]);
+
+  useEffect(() => {
+    setFormMessage('');
+  }, [module, tab]);
+
+  function selectModule(key) {
+    setModule(key);
+    setTab('form');
+    setEditing(null);
+  }
+
+  async function save(payload) {
+    if (editing?.id) {
+      await api.update(module, editing.id, payload);
+    } else {
+      await api.create(module, payload);
+    }
+
+    setEditing(null);
+    setRefreshKey((value) => value + 1);
+    setTab('records');
+  }
+
+  function edit(item) {
+    setEditing(item);
+    setTab('form');
+  }
+
+  function changeTab(next) {
+    setTab(next);
+    if (next === 'form' && tab !== 'form') setEditing(null);
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem(ADMIN_MODULE_KEY);
+    sessionStorage.removeItem(ADMIN_TAB_KEY);
+    onLogout?.();
+  }
+
+  const shellClass = sidebarCollapsed
+    ? 'grid-cols-[88px_minmax(0,1fr)] gap-5'
+    : 'grid-cols-[clamp(250px,17vw,270px)_minmax(0,1fr)] gap-[clamp(18px,1.5vw,28px)] max-[1450px]:grid-cols-[clamp(245px,18vw,260px)_minmax(0,1fr)] max-[1450px]:gap-[18px]';
+
+  return (
+    <main className="min-h-screen w-full flex justify-center items-start p-[clamp(10px,1.3vw,22px)] overflow-auto bg-[radial-gradient(circle_at_50%_10%,#731426_0%,#4a0b17_38%,#2b070e_100%)] font-inter text-vinum-text max-[1250px]:justify-start max-[1160px]:p-2">
+      <div
+        className={`relative w-[min(97vw,1600px)] min-w-[1180px] h-[clamp(760px,94vh,1040px)] grid ${shellClass} py-[clamp(16px,1.4vw,24px)] px-[clamp(18px,1.7vw,30px)] border-[3px] border-[#c49a57] rounded-[clamp(28px,2.2vw,42px)] shadow-[0_18px_55px_rgb(14_0_4_/_45%),inset_0_0_0_4px_rgba(255,255,255,.75)] overflow-hidden transition-[grid-template-columns,gap] duration-[220ms] max-[1450px]:w-[98vw] max-[1450px]:min-w-[1160px] max-[1450px]:py-4 max-[1450px]:px-[18px] max-[1250px]:min-w-[1140px] max-[1160px]:w-[1140px] max-[1160px]:min-w-[1140px] max-[1160px]:h-[clamp(740px,96vh,920px)]`}
+        style={{ background: `#f9f6f1 url(${adminBackground}) center / cover no-repeat` }}
+      >
+        <AdminSidebar
+          active={module}
+          onSelect={selectModule}
+          onLogout={handleLogout}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((value) => !value)}
+        />
+
+        <section className="relative min-w-0 h-full flex flex-col pt-1 px-0.5 pb-0 overflow-hidden">
+          <AdminHeader heading={config.heading} user={user} />
+          <ModuleTabs tab={tab} onChange={changeTab} />
+
+          <div className="relative flex-1 min-h-0 -mt-px p-[clamp(18px,1.7vw,27px)_clamp(16px,1.5vw,24px)] bg-[rgba(255,255,255,.55)] border border-[#e7e1db] rounded-[18px] shadow-[0_8px_20px_rgb(73_37_29_/_10%)] overflow-y-auto overflow-x-hidden [scrollbar-color:#8d817c_#f0ece8] [scrollbar-width:thin] max-[1450px]:p-[18px_18px_16px]">
+            <Current
+              config={config}
+              initialData={editing}
+              refreshKey={refreshKey}
+              onSave={save}
+              onMessage={setFormMessage}
+              onCancel={() => {
+                setEditing(null);
+                setTab('records');
+              }}
+              onEdit={edit}
+              onNew={() => {
+                setEditing(null);
+                setTab('form');
+              }}
+            />
+          </div>
+
+          <div className="shrink-0 min-h-[38px] px-[clamp(16px,1.5vw,24px)] pt-[8px] pb-[2px] flex items-start" aria-live="polite">
+            {formMessage && <p className="m-0 text-[#7d1d2d] text-[13px] leading-[1.35]">{formMessage}</p>}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
