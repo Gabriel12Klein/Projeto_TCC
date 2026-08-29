@@ -34,13 +34,16 @@ async function upgradeLegacyPassword(password: string, user: User) {
 export async function ensureSeedAdmin() {
   const current = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
   if (current) {
-    if (current.role !== 'ADMIN') await prisma.user.update({ where: { id: current.id }, data: { role: 'ADMIN' } });
+    if (current.role !== 'ADMIN')
+      await prisma.user.update({ where: { id: current.id }, data: { role: 'ADMIN' } });
     return;
   }
   await prisma.user.create({
     data: {
-      name: 'Administrador', email: ADMIN_EMAIL,
-      passwordHash: await bcrypt.hash(ADMIN_PASSWORD, 12), role: 'ADMIN',
+      name: 'Administrador',
+      email: ADMIN_EMAIL,
+      passwordHash: await bcrypt.hash(ADMIN_PASSWORD, 12),
+      role: 'ADMIN',
     },
   });
 }
@@ -51,8 +54,10 @@ export const authService = {
     if (existing) throw new AppError(409, 'Já existe uma conta com este e-mail.');
     const user = await prisma.user.create({
       data: {
-        name: input.name, email: input.email,
-        passwordHash: await bcrypt.hash(input.password, 12), role: 'CUSTOMER',
+        name: input.name,
+        email: input.email,
+        passwordHash: await bcrypt.hash(input.password, 12),
+        role: 'CUSTOMER',
       },
     });
     return publicUser(user);
@@ -68,7 +73,8 @@ export const authService = {
     const token = randomBytes(32).toString('hex');
     await prisma.session.create({
       data: {
-        tokenHash: tokenHash(token), userId: user.id,
+        tokenHash: tokenHash(token),
+        userId: user.id,
         expiresAt: new Date(Date.now() + SESSION_DURATION_MS),
       },
     });
@@ -77,7 +83,8 @@ export const authService = {
 
   async authenticate(token: string) {
     const session = await prisma.session.findUnique({
-      where: { tokenHash: tokenHash(token) }, include: { user: true },
+      where: { tokenHash: tokenHash(token) },
+      include: { user: true },
     });
     if (!session || session.expiresAt <= new Date() || !session.user.active) {
       if (session) await prisma.session.delete({ where: { id: session.id } });

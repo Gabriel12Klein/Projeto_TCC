@@ -9,7 +9,10 @@ const positiveNumber = z.union([z.string(), z.number()]).transform((value, conte
   return parsed;
 });
 
-const date = z.string().trim().refine((value) => !Number.isNaN(Date.parse(value)), 'Data inválida.');
+const date = z
+  .string()
+  .trim()
+  .refine((value) => !Number.isNaN(Date.parse(value)), 'Data inválida.');
 
 const batchBaseSchema = z.object({
   code: z.string().trim().min(3).max(80),
@@ -23,10 +26,14 @@ const batchBaseSchema = z.object({
   qrCode: z.string().trim().optional(),
 });
 
-export const batchSchema = batchBaseSchema.refine((input) => input.vintageId || input.vintageName, {
-  message: 'Informe a safra relacionada.', path: ['vintageId'],
-}).refine((input) => new Date(input.registrationDate) >= new Date(input.productionDate), {
-  message: 'A data de registro deve ser posterior ou igual à produção.', path: ['registrationDate'],
-});
+export const batchSchema = batchBaseSchema
+  .refine((input) => input.vintageId || input.vintageName, {
+    message: 'Informe a safra relacionada.',
+    path: ['vintageId'],
+  })
+  .refine((input) => new Date(input.registrationDate) >= new Date(input.productionDate), {
+    message: 'A data de registro deve ser posterior ou igual à produção.',
+    path: ['registrationDate'],
+  });
 
 export const batchUpdateSchema = batchBaseSchema.partial();

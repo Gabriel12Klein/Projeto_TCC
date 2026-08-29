@@ -9,6 +9,8 @@ import vintagesRouter from './modules/vintages/vintages.routes.js';
 import batchesRouter from './modules/batches/batches.routes.js';
 import catalogRouter from './modules/catalog/catalog.routes.js';
 import uploadsRouter from './modules/uploads/uploads.routes.js';
+import swaggerUi from 'swagger-ui-express';
+import { openApiDocument } from './docs/openapi.js';
 
 export const app = express();
 
@@ -16,6 +18,7 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '2mb' }));
 app.use('/uploads', express.static(uploadsRoot, { fallthrough: false, maxAge: '1h' }));
 app.get('/api/health', (_req, res) => res.json({ ok: true, storage: 'prisma-sqlite' }));
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 app.use('/api/auth', authRouter);
 app.use('/api/catalog', catalogRouter);
 app.use('/api/uploads', requireAuth, requireRoles('ADMIN', 'EDITOR'), uploadsRouter);

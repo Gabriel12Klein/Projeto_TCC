@@ -56,9 +56,13 @@ async function main() {
       where: { email },
       update: {},
       create: {
-        id: text(user.id), name: text(user.name), email,
-        passwordHash: text(user.passwordHash), passwordSalt: text(user.salt) || null,
-        role: 'ADMIN', createdAt: date(user.createdAt),
+        id: text(user.id),
+        name: text(user.name),
+        email,
+        passwordHash: text(user.passwordHash),
+        passwordSalt: text(user.salt) || null,
+        role: 'ADMIN',
+        createdAt: date(user.createdAt),
       },
     });
   }
@@ -68,9 +72,14 @@ async function main() {
       where: { cnpj: text(winery.cnpj) },
       update: {},
       create: {
-        id: text(winery.id), name: text(winery.name), cnpj: text(winery.cnpj),
-        city: text(winery.city), state: text(winery.state), email: text(winery.email) || null,
-        walletAddress: text(winery.wallet) || null, status: text(winery.status, 'Ativa'),
+        id: text(winery.id),
+        name: text(winery.name),
+        cnpj: text(winery.cnpj),
+        city: text(winery.city),
+        state: text(winery.state),
+        email: text(winery.email) || null,
+        walletAddress: text(winery.wallet) || null,
+        status: text(winery.status, 'Ativa'),
         createdAt: date(winery.createdAt),
       },
     });
@@ -82,11 +91,20 @@ async function main() {
       where: { id: text(wine.id) },
       update: {},
       create: {
-        id: text(wine.id), name, slug: `${slugify(name)}-${text(wine.id)}`,
-        type: text(wine.type), grapes: text(wine.grapes),
+        id: text(wine.id),
+        name,
+        slug: `${slugify(name)}-${text(wine.id)}`,
+        type: text(wine.type),
+        grapes: text(wine.grapes),
         volumeMl: Math.round(number(wine.volume, 750)),
-        alcoholPercentage: number(wine.alcohol), description: text(wine.description),
-        status: text(wine.status) === 'Ativo' ? 'PUBLISHED' : text(wine.status) === 'Inativo' ? 'ARCHIVED' : 'DRAFT',
+        alcoholPercentage: number(wine.alcohol),
+        description: text(wine.description),
+        status:
+          text(wine.status) === 'Ativo'
+            ? 'PUBLISHED'
+            : text(wine.status) === 'Inativo'
+              ? 'ARCHIVED'
+              : 'DRAFT',
         createdAt: date(wine.createdAt),
       },
     });
@@ -99,9 +117,13 @@ async function main() {
       where: { identifier: text(vintage.identifier) },
       update: {},
       create: {
-        id: text(vintage.id), wineId, identifier: text(vintage.identifier),
-        year: Math.round(number(vintage.year)), observations: text(vintage.observations) || null,
-        status: text(vintage.status), createdAt: date(vintage.createdAt),
+        id: text(vintage.id),
+        wineId,
+        identifier: text(vintage.identifier),
+        year: Math.round(number(vintage.year)),
+        observations: text(vintage.observations) || null,
+        status: text(vintage.status),
+        createdAt: date(vintage.createdAt),
       },
     });
   }
@@ -113,17 +135,25 @@ async function main() {
       where: { code: text(batch.code) },
       update: {},
       create: {
-        id: text(batch.id), vintageId, code: text(batch.code),
-        quantityLiters: number(batch.quantity), productionDate: date(batch.productionDate),
-        registrationDate: date(batch.registrationDate), status: text(batch.status),
-        blockchainRef: text(batch.blockchain) || null, qrCodePath: text(batch.qrCode) || null,
+        id: text(batch.id),
+        vintageId,
+        code: text(batch.code),
+        quantityLiters: number(batch.quantity),
+        productionDate: date(batch.productionDate),
+        registrationDate: date(batch.registrationDate),
+        status: text(batch.status),
+        blockchainRef: text(batch.blockchain) || null,
+        qrCodePath: text(batch.qrCode) || null,
       },
     });
   }
 
   const [users, wineries, wines, vintages, batches] = await Promise.all([
-    prisma.user.count(), prisma.winery.count(), prisma.wine.count(),
-    prisma.vintage.count(), prisma.batch.count(),
+    prisma.user.count(),
+    prisma.winery.count(),
+    prisma.wine.count(),
+    prisma.vintage.count(),
+    prisma.batch.count(),
   ]);
   console.log({ users, wineries, wines, vintages, batches });
 }

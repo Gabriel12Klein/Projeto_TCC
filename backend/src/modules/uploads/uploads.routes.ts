@@ -9,7 +9,8 @@ import { prisma } from '../../lib/prisma.js';
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const storage = multer.diskStorage({
   destination: ensureUploadDirectory('wines'),
-  filename: (_req, file, callback) => callback(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`),
+  filename: (_req, file, callback) =>
+    callback(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`),
 });
 const upload = multer({
   storage,
@@ -19,20 +20,24 @@ const upload = multer({
 
 const router = Router();
 
-router.post('/wines/:wineId', upload.single('image'), asyncRoute(async (req, res) => {
-  if (!req.file) throw new AppError(400, 'Envie uma imagem JPEG, PNG ou WebP de até 5 MB.');
-  const wineId = String(req.params.wineId);
-  await prisma.wine.findUniqueOrThrow({ where: { id: wineId } });
-  const path = `/uploads/wines/${req.file.filename}`;
-  const image = await prisma.$transaction(async (transaction) => {
-    await transaction.wineImage.updateMany({ where: { wineId }, data: { isPrimary: false } });
-    const created = await transaction.wineImage.create({
-      data: { wineId, path, altText: req.body.altText || null, isPrimary: true },
+router.post(
+  '/wines/:wineId',
+  upload.single('image'),
+  asyncRoute(async (req, res) => {
+    if (!req.file) throw new AppError(400, 'Envie uma imagem JPEG, PNG ou WebP de até 5 MB.');
+    const wineId = String(req.params.wineId);
+    await prisma.wine.findUniqueOrThrow({ where: { id: wineId } });
+    const path = `/uploads/wines/${req.file.filename}`;
+    const image = await prisma.$transaction(async (transaction) => {
+      await transaction.wineImage.updateMany({ where: { wineId }, data: { isPrimary: false } });
+      const created = await transaction.wineImage.create({
+        data: { wineId, path, altText: req.body.altText || null, isPrimary: true },
+      });
+      await transaction.wine.update({ where: { id: wineId }, data: { imagePath: path } });
+      return created;
     });
-    await transaction.wine.update({ where: { id: wineId }, data: { imagePath: path } });
-    return created;
-  });
-  res.status(201).json({ id: image.id, path: image.path, isPrimary: image.isPrimary });
-}));
+    res.status(201).json({ id: image.id, path: image.path, isPrimary: image.isPrimary });
+  }),
+);
 
 export default router;

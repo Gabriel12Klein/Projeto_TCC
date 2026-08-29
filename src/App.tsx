@@ -10,7 +10,19 @@ import CatalogPage from './pages/Catalog/CatalogPage';
 import WineDetailPage from './pages/Catalog/WineDetailPage';
 
 function Loading() {
-  return <div style={{minHeight:'100vh',display:'grid',placeItems:'center',background:'#351416',color:'#e4c167'}}>Carregando VINUM...</div>;
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        background: '#351416',
+        color: '#e4c167',
+      }}
+    >
+      Carregando VINUM...
+    </div>
+  );
 }
 
 export default function App() {
@@ -23,16 +35,24 @@ export default function App() {
       setCheckingSession(false);
       return;
     }
-    api.me().then((currentUser) => {
-      setUser(currentUser);
-    }).catch(() => {
-      clearSession();
-      setUser(null);
-    }).finally(() => setCheckingSession(false));
+    api
+      .me()
+      .then((currentUser) => {
+        setUser(currentUser);
+      })
+      .catch(() => {
+        clearSession();
+        setUser(null);
+      })
+      .finally(() => setCheckingSession(false));
   }, []);
 
   async function logout() {
-    try { await api.logout(); } catch { /* sessão local pode já ter expirado */ }
+    try {
+      await api.logout();
+    } catch {
+      /* sessão local pode já ter expirado */
+    }
     clearSession();
     setUser(null);
     navigate('/login');
@@ -50,13 +70,23 @@ export default function App() {
         <Route index element={<CatalogPage />} />
         <Route path="vinhos/:slug" element={<WineDetailPage />} />
       </Route>
-      <Route path="/login" element={<LoginPage onOpenRegister={() => navigate('/cadastro')} onLoginSuccess={loginSuccess} />} />
+      <Route
+        path="/login"
+        element={<LoginPage onOpenRegister={() => navigate('/cadastro')} onLoginSuccess={loginSuccess} />}
+      />
       <Route path="/cadastro" element={<CadastroPage onOpenLogin={() => navigate('/login')} />} />
-      <Route path="/admin/*" element={
-        checkingSession ? <Loading /> : user && (user.role === 'ADMIN' || user.role === 'EDITOR')
-          ? <AdminPage user={user} onLogout={logout} />
-          : <Navigate to={user ? '/catalogo' : '/login'} replace />
-      } />
+      <Route
+        path="/admin/*"
+        element={
+          checkingSession ? (
+            <Loading />
+          ) : user && (user.role === 'ADMIN' || user.role === 'EDITOR') ? (
+            <AdminPage user={user} onLogout={logout} />
+          ) : (
+            <Navigate to={user ? '/catalogo' : '/login'} replace />
+          )
+        }
+      />
       <Route path="*" element={<Navigate to="/catalogo" replace />} />
     </Routes>
   );

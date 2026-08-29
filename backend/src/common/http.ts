@@ -35,7 +35,9 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
       return;
     }
     if (error.code === 'P2003') {
-      res.status(409).json({ message: 'O registro está relacionado a outros dados e não pode ser removido.' });
+      res
+        .status(409)
+        .json({ message: 'O registro está relacionado a outros dados e não pode ser removido.' });
       return;
     }
     if (error.code === 'P2025') {

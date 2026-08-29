@@ -30,9 +30,11 @@ function toDatabase(input: Record<string, unknown>): Prisma.WineryUncheckedCreat
 export const wineriesService = {
   async list(query = '') {
     const wineries = await prisma.winery.findMany({
-      where: query ? { OR: [
-        { name: { contains: query } }, { city: { contains: query } }, { cnpj: { contains: query } },
-      ] } : undefined,
+      where: query
+        ? {
+            OR: [{ name: { contains: query } }, { city: { contains: query } }, { cnpj: { contains: query } }],
+          }
+        : undefined,
       orderBy: { createdAt: 'desc' },
     });
     return wineries.map(toView);

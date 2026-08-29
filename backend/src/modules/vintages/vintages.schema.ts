@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-const year = z.union([z.string(), z.number()]).transform(Number).refine(
-  (value) => Number.isInteger(value) && value >= 1900 && value <= 2100,
-  'Ano da safra inválido.',
-);
+const year = z
+  .union([z.string(), z.number()])
+  .transform(Number)
+  .refine((value) => Number.isInteger(value) && value >= 1900 && value <= 2100, 'Ano da safra inválido.');
 
 const vintageBaseSchema = z.object({
   identifier: z.string().trim().min(3).max(80),

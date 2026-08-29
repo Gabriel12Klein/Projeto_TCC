@@ -4,10 +4,17 @@ import { prisma } from '../../lib/prisma.js';
 
 function toView(wine: Wine) {
   return {
-    id: wine.id, wineryId: wine.wineryId ?? '', name: wine.name, slug: wine.slug,
-    type: wine.type, grapes: wine.grapes, volume: String(wine.volumeMl),
-    alcohol: String(wine.alcoholPercentage).replace('.', ','), description: wine.description,
-    imageName: wine.imagePath ?? '', status: wineStatusToView(wine.status),
+    id: wine.id,
+    wineryId: wine.wineryId ?? '',
+    name: wine.name,
+    slug: wine.slug,
+    type: wine.type,
+    grapes: wine.grapes,
+    volume: String(wine.volumeMl),
+    alcohol: String(wine.alcoholPercentage).replace('.', ','),
+    description: wine.description,
+    imageName: wine.imagePath ?? '',
+    status: wineStatusToView(wine.status),
     createdAt: wine.createdAt.toISOString(),
   };
 }
@@ -15,9 +22,15 @@ function toView(wine: Wine) {
 export const winesService = {
   async list(query = '') {
     const wines = await prisma.wine.findMany({
-      where: query ? { OR: [
-        { name: { contains: query } }, { type: { contains: query } }, { grapes: { contains: query } },
-      ] } : undefined,
+      where: query
+        ? {
+            OR: [
+              { name: { contains: query } },
+              { type: { contains: query } },
+              { grapes: { contains: query } },
+            ],
+          }
+        : undefined,
       orderBy: { createdAt: 'desc' },
     });
     return wines.map(toView);
@@ -25,11 +38,15 @@ export const winesService = {
   async create(input: Record<string, unknown>) {
     const name = String(input.name);
     const data: Prisma.WineUncheckedCreateInput = {
-      name, slug: `${slugify(name)}-${Date.now().toString(36)}`,
+      name,
+      slug: `${slugify(name)}-${Date.now().toString(36)}`,
       wineryId: input.wineryId ? String(input.wineryId) : null,
-      type: String(input.type), grapes: String(input.grapes),
-      volumeMl: Math.round(Number(input.volume)), alcoholPercentage: Number(input.alcohol),
-      description: String(input.description), imagePath: input.imageName ? String(input.imageName) : null,
+      type: String(input.type),
+      grapes: String(input.grapes),
+      volumeMl: Math.round(Number(input.volume)),
+      alcoholPercentage: Number(input.alcohol),
+      description: String(input.description),
+      imagePath: input.imageName ? String(input.imageName) : null,
       status: wineStatusToDatabase(String(input.status)),
     };
     return toView(await prisma.wine.create({ data }));

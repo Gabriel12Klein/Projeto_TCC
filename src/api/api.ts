@@ -4,9 +4,15 @@ const TOKEN_KEY = 'vinum_token';
 const USER_KEY = 'vinum_user';
 const API_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '');
 
-export function getToken() { return sessionStorage.getItem(TOKEN_KEY); }
+export function getToken() {
+  return sessionStorage.getItem(TOKEN_KEY);
+}
 export function getStoredUser(): User | null {
-  try { return JSON.parse(sessionStorage.getItem(USER_KEY) ?? 'null') as User | null; } catch { return null; }
+  try {
+    return JSON.parse(sessionStorage.getItem(USER_KEY) ?? 'null') as User | null;
+  } catch {
+    return null;
+  }
 }
 export function saveSession({ token, user }: AuthSession) {
   sessionStorage.setItem(TOKEN_KEY, token);
@@ -30,20 +36,28 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  login: (payload: { email: string; password: string }) => request<AuthSession>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
+  login: (payload: { email: string; password: string }) =>
+    request<AuthSession>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   me: () => request<User>('/auth/me'),
-  register: (payload: { name: string; email: string; password: string }) => request<User>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+  register: (payload: { name: string; email: string; password: string }) =>
+    request<User>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
   logout: () => request<{ ok: boolean }>('/auth/logout', { method: 'POST' }),
   list: (resource: ResourceKey) => request<EntityRecord[]>(`/${resource}`),
-  create: (resource: ResourceKey, payload: Record<string, unknown>) => request<EntityRecord>(`/${resource}`, { method: 'POST', body: JSON.stringify(payload) }),
-  update: (resource: ResourceKey, id: string, payload: Record<string, unknown>) => request<EntityRecord>(`/${resource}/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  create: (resource: ResourceKey, payload: Record<string, unknown>) =>
+    request<EntityRecord>(`/${resource}`, { method: 'POST', body: JSON.stringify(payload) }),
+  update: (resource: ResourceKey, id: string, payload: Record<string, unknown>) =>
+    request<EntityRecord>(`/${resource}/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   remove: (resource: ResourceKey, id: string) => request<void>(`/${resource}/${id}`, { method: 'DELETE' }),
   uploadWineImage: (wineId: string, image: File) => {
     const body = new FormData();
     body.append('image', image);
-    return request<{ id: string; path: string; isPrimary: boolean }>(`/uploads/wines/${wineId}`, { method: 'POST', body });
+    return request<{ id: string; path: string; isPrimary: boolean }>(`/uploads/wines/${wineId}`, {
+      method: 'POST',
+      body,
+    });
   },
-  generateBatchQr: (batchId: string) => request<{ path: string; targetUrl: string }>(`/lotes/${batchId}/qr-code`, { method: 'POST' }),
+  generateBatchQr: (batchId: string) =>
+    request<{ path: string; targetUrl: string }>(`/lotes/${batchId}/qr-code`, { method: 'POST' }),
   catalog: {
     list: (filters: { q?: string; type?: string } = {}) => {
       const params = new URLSearchParams();

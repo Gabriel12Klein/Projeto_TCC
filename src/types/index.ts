@@ -27,7 +27,17 @@ export type CatalogWineDetail = CatalogWine & {
   winery: { name: string; city: string; state: string } | null;
   images: { path: string; altText: string | null; isPrimary: boolean }[];
   vintages: {
-    id: string; identifier: string; year: number; observations: string | null; status: string;
-    batches: { code: string; status: string; productionDate: string; blockchainRef: string | null; qrCodePath: string | null }[];
+    id: string;
+    identifier: string;
+    year: number;
+    observations: string | null;
+    status: string;
+    batches: {
+      code: string;
+      status: string;
+      productionDate: string;
+      blockchainRef: string | null;
+      qrCodePath: string | null;
+    }[];
   }[];
 };
