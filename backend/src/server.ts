@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { app } from './app.js';
-import { ensureSeedAdmin } from './modules/auth.js';
+import { ensureSeedAdmin } from './modules/auth/auth.service.js';
 import { disconnectDatabase } from './lib/prisma.js';
 
 const port = Number(process.env.PORT ?? 3001);
