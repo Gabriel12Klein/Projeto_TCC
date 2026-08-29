@@ -55,7 +55,7 @@ export const moduleConfigs = {
       { name:'volume', label:'Volume', required:true, placeholder:'Ex.: 750', suffix:'ml', validation:'positiveNumber', inputMode:'decimal' },
       { name:'alcohol', label:'Teor alcoólico', required:true, placeholder:'Ex.: 13,5', suffix:'% vol', validation:'alcohol', inputMode:'decimal' },
       { name:'description', label:'Descrição', required:true, type:'textarea', full:true, placeholder:'Descreva o vinho: características, aromas, notas de degustação, harmonização, entre outras informações.', maxLength:1000, validation:{ minLength:10 } },
-      { name:'imageName', label:'Imagem do vinho', type:'file', placeholder:'Clique para selecionar ou arraste a imagem aqui' },
+      { name:'imageFile', label:'Imagem do vinho', type:'file', placeholder:'Selecione uma imagem JPEG, PNG ou WebP de até 5 MB' },
       { name:'status', label:'Situação / Status', required:true, type:'select', options:['Ativo','Em produção','Inativo'] }
     ],
     columns:[['name','Nome do vinho'],['type','Tipo'],['grapes','Uvas'],['volume','Volume'],['alcohol','Teor alcoólico'],['status','Situação']]

@@ -36,7 +36,7 @@ export default function FormField({ field, value, onChange, valid = false, unloc
     : field.type === 'textarea'
       ? <textarea className={`${controlClass} h-[calc(100%-16px)] resize-none`} id={id} value={value ?? ''} maxLength={field.maxLength} placeholder={field.placeholder} onChange={handleChange} required={field.required} disabled={field.disabled} {...focusProps}/>
       : field.type === 'file'
-        ? <input className={controlClass} id={id} type="file" accept="image/png,image/jpeg" onChange={e=>onChange(field.name,e.target.files?.[0]?.name ?? '')} disabled={field.disabled} {...focusProps}/>
+        ? <input className={controlClass} id={id} type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>onChange(field.name,e.target.files?.[0] ?? null)} disabled={field.disabled} {...focusProps}/>
         : <input
             className={controlClass}
             id={id}

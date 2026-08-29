@@ -7,6 +7,7 @@ import linkIcon from '../../../assets/admin/vinicola/link.png';
 import blockchainIcon from '../../../assets/admin/lote/blockchain.png';
 import qrIcon from '../../../assets/admin/lote/qrcode.png';
 import dividerLarge from '../../../assets/admin/common/divider-large.png';
+import { api } from '../../../api/api';
 
 const secondaryButton = 'min-w-[clamp(140px,13vw,165px)] min-h-12 h-[clamp(48px,5vh,54px)] rounded-[7px] px-[clamp(16px,1.5vw,24px)] flex items-center justify-center gap-[10px] text-[clamp(13px,1vw,15px)] cursor-pointer border-[1.5px] border-[#b8aaa5] bg-white text-[#4a3d3b] transition-[transform,box-shadow,background-color,border-color,color] duration-150 hover:bg-[#fff8f6] hover:border-[#8f2940] hover:text-[#75172a] hover:shadow-[0_5px_13px_rgba(91,12,27,.10)] hover:-translate-y-px active:translate-y-0 active:scale-[.98] focus-visible:outline-[3px] focus-visible:outline-[rgba(194,137,57,.42)] focus-visible:outline-offset-2';
 
@@ -71,7 +72,7 @@ function isValidField(field, value, form) {
 }
 
 export default function ModuleForm({ config, initialData, onSave, onCancel, onMessage }) {
-  const [form,setForm] = useState({});
+  const [form,setForm] = useState<Record<string, any>>({});
   useEffect(()=>setForm(initialData || {}),[initialData,config.key]);
   const showMessage = (text='') => onMessage?.(text);
   const change=(name,value)=>{ setForm(prev=>({...prev,[name]:value})); showMessage(''); };
@@ -105,7 +106,29 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
       focusField(invalid);
       return;
     }
-    try{await onSave(form); setForm({}); showMessage('Cadastro salvo localmente.');}catch(err){showMessage(err.message)}
+    try {
+      const { imageFile, ...payload } = form;
+      const saved = await onSave(payload);
+      if (config.key === 'vinhos' && imageFile instanceof File && saved?.id) {
+        await api.uploadWineImage(saved.id, imageFile);
+      }
+      setForm({});
+      showMessage('Cadastro salvo localmente.');
+    } catch(err) { showMessage(err.message); }
+  }
+
+  async function generateQrCode() {
+    if (!initialData?.id) {
+      showMessage('Salve o lote antes de gerar o QR Code.');
+      return;
+    }
+    try {
+      const result = await api.generateBatchQr(initialData.id);
+      setForm((current) => ({ ...current, qrCode: result.path }));
+      showMessage('QR Code gerado e vinculado ao lote.');
+    } catch (error) {
+      showMessage(error.message);
+    }
   }
 
   return <form className="min-h-full flex flex-col" onSubmit={submit} noValidate>
@@ -137,7 +160,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     <div className="flex flex-wrap gap-[clamp(10px,1vw,14px)] mt-[clamp(18px,2vw,26px)] pt-[clamp(15px,1.5vw,20px)] border-t border-[#ece6e1] max-[1450px]:mt-[18px] max-[1450px]:pt-[15px]">
       <button className="min-w-[clamp(200px,18vw,230px)] min-h-12 h-[clamp(48px,5vh,54px)] rounded-[7px] px-[clamp(16px,1.5vw,24px)] flex items-center justify-center gap-[10px] text-[clamp(13px,1vw,15px)] cursor-pointer border-0 bg-[linear-gradient(100deg,#8f0826,#5d0c1c)] text-white transition-[transform,box-shadow,filter] duration-150 hover:brightness-[1.08] hover:shadow-[0_7px_16px_rgba(105,10,31,.22)] hover:-translate-y-px active:translate-y-0 active:scale-[.98] focus-visible:outline-[3px] focus-visible:outline-[rgba(194,137,57,.42)] focus-visible:outline-offset-2" type="submit"><img className="w-[25px] h-[25px] object-contain" src={saveIcon} alt=""/>{initialData?.id?'Salvar alterações':'Salvar cadastro'}</button>
       {config.blockchainInfo && <button type="button" className={secondaryButton} onClick={()=>showMessage('Blockchain ainda não foi implementada nesta versão local.')}><img className="w-[25px] h-[25px] object-contain" src={linkIcon} alt=""/>Registrar na blockchain</button>}
-      {config.blockchainInfo && <button type="button" className={secondaryButton} onClick={()=>showMessage('Geração de QR Code será conectada em uma etapa posterior.')}><img className="w-[25px] h-[25px] object-contain" src={qrIcon} alt=""/>Gerar QR Code</button>}
+      {config.blockchainInfo && <button type="button" className={secondaryButton} onClick={generateQrCode}><img className="w-[25px] h-[25px] object-contain" src={qrIcon} alt=""/>Gerar QR Code</button>}
       {config.blockchainInfo && <span className="basis-full h-0" />}
       <button type="button" className={secondaryButton} onClick={()=>setForm({})}><img className="w-[25px] h-[25px] object-contain" src={clearIcon} alt=""/>Limpar</button>
       <button type="button" className={secondaryButton} onClick={onCancel}><img className="w-[25px] h-[25px] object-contain" src={cancelIcon} alt=""/>Cancelar</button>

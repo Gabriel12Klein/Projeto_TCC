@@ -38,6 +38,12 @@ export const api = {
   create: (resource: ResourceKey, payload: Record<string, unknown>) => request<EntityRecord>(`/${resource}`, { method: 'POST', body: JSON.stringify(payload) }),
   update: (resource: ResourceKey, id: string, payload: Record<string, unknown>) => request<EntityRecord>(`/${resource}/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   remove: (resource: ResourceKey, id: string) => request<void>(`/${resource}/${id}`, { method: 'DELETE' }),
+  uploadWineImage: (wineId: string, image: File) => {
+    const body = new FormData();
+    body.append('image', image);
+    return request<{ id: string; path: string; isPrimary: boolean }>(`/uploads/wines/${wineId}`, { method: 'POST', body });
+  },
+  generateBatchQr: (batchId: string) => request<{ path: string; targetUrl: string }>(`/lotes/${batchId}/qr-code`, { method: 'POST' }),
   catalog: {
     list: (filters: { q?: string; type?: string } = {}) => {
       const params = new URLSearchParams();

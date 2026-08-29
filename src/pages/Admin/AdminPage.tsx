@@ -66,15 +66,17 @@ export default function AdminPage({ user, onLogout }: { user: User; onLogout: ()
   }
 
   async function save(payload: Record<string, unknown>) {
+    let saved;
     if (editing?.id) {
-      await api.update(module, editing.id, payload);
+      saved = await api.update(module, editing.id, payload);
     } else {
-      await api.create(module, payload);
+      saved = await api.create(module, payload);
     }
 
     setEditing(null);
     setRefreshKey((value) => value + 1);
     setTab('records');
+    return saved;
   }
 
   function edit(item: EntityRecord) {

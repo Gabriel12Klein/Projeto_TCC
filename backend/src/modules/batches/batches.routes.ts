@@ -6,6 +6,9 @@ import { batchSchema, batchUpdateSchema } from './batches.schema.js';
 const router = Router();
 router.get('/', asyncRoute(async (req, res) => res.json(await batchesService.list(String(req.query.q ?? '').trim()))));
 router.post('/', asyncRoute(async (req, res) => res.status(201).json(await batchesService.create(batchSchema.parse(req.body)))));
+router.post('/:id/qr-code', asyncRoute(async (req, res) => {
+  res.status(201).json(await batchesService.generateQrCode(String(req.params.id)));
+}));
 router.put('/:id', asyncRoute(async (req, res) => res.json(await batchesService.update(String(req.params.id), batchUpdateSchema.parse(req.body)))));
 router.delete('/:id', asyncRoute(async (req, res) => {
   await batchesService.remove(String(req.params.id));

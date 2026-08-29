@@ -2,6 +2,10 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { AppError } from '../../common/http.js';
 import { toDate, toInputDate } from '../../common/format.js';
 import { prisma } from '../../lib/prisma.js';
+import QRCode from 'qrcode';
+import { join } from 'node:path';
+import { ensureUploadDirectory } from '../../common/files.js';
+import { slugify } from '../../common/format.js';
 
 const includeVintage = { vintage: { select: { id: true, year: true, identifier: true } } } as const;
 
@@ -64,5 +68,20 @@ export const batchesService = {
   },
   async remove(id: string) {
     await prisma.batch.delete({ where: { id } });
+  },
+  async generateQrCode(id: string) {
+    const batch = await prisma.batch.findUniqueOrThrow({
+      where: { id },
+      include: { vintage: { include: { wine: { select: { slug: true } } } } },
+    });
+    const fileName = `${slugify(batch.code)}-${batch.id}.png`;
+    const publicPath = `/uploads/qrcodes/${fileName}`;
+    const appUrl = (process.env.PUBLIC_APP_URL ?? 'http://localhost:5173').replace(/\/$/, '');
+    const targetUrl = `${appUrl}/catalogo/vinhos/${batch.vintage.wine.slug}?lote=${encodeURIComponent(batch.code)}`;
+    await QRCode.toFile(join(ensureUploadDirectory('qrcodes'), fileName), targetUrl, {
+      width: 640, margin: 2, color: { dark: '#4c151c', light: '#ffffff' },
+    });
+    await prisma.batch.update({ where: { id }, data: { qrCodePath: publicPath } });
+    return { path: publicPath, targetUrl };
   },
 };
