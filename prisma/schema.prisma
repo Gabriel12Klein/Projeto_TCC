@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../backend/src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  passwordSalt String?
+  role         String    @default("CUSTOMER")
+  active       Boolean   @default(true)
+  sessions     Session[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Winery {
+  id            String   @id @default(cuid())
+  name          String
+  cnpj          String   @unique
+  city          String
+  state         String
+  email         String?
+  walletAddress String?
+  status        String   @default("Ativa")
+  wines         Wine[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Wine {
+  id                String      @id @default(cuid())
+  wineryId          String?
+  winery            Winery?     @relation(fields: [wineryId], references: [id], onDelete: SetNull)
+  name              String
+  slug              String      @unique
+  type              String
+  grapes            String
+  volumeMl          Int
+  alcoholPercentage Float
+  description       String
+  imagePath         String?
+  status            String      @default("DRAFT")
+  vintages          Vintage[]
+  images            WineImage[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([wineryId])
+  @@index([status])
+}
+
+model WineImage {
+  id        String   @id @default(cuid())
+  wineId    String
+  wine      Wine     @relation(fields: [wineId], references: [id], onDelete: Cascade)
+  path      String
+  altText   String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([wineId])
+}
+
+model Vintage {
+  id           String   @id @default(cuid())
+  wineId       String
+  wine         Wine     @relation(fields: [wineId], references: [id], onDelete: Restrict)
+  identifier   String   @unique
+  year         Int
+  observations String?
+  status       String
+  batches      Batch[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([wineId])
+  @@index([year])
+}
+
+model Batch {
+  id               String   @id @default(cuid())
+  vintageId        String
+  vintage          Vintage  @relation(fields: [vintageId], references: [id], onDelete: Restrict)
+  code             String   @unique
+  quantityLiters   Float
+  productionDate   DateTime
+  registrationDate DateTime
+  status           String
+  blockchainRef    String?
+  qrCodePath       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([vintageId])
+  @@index([status])
+}
