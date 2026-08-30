@@ -62,9 +62,9 @@ export default function CatalogPage() {
               key={wine.id}
               className="group overflow-hidden rounded-3xl border border-[#dfd0bd] bg-white shadow-[0_12px_35px_rgba(76,21,28,.08)] transition hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(76,21,28,.14)]"
             >
-              <div className="grid aspect-[4/3] place-items-center bg-[radial-gradient(circle,#f2dfc1,#dbc19a)]">
+              <div className="grid h-72 place-items-center overflow-hidden bg-[radial-gradient(circle,#f2dfc1,#dbc19a)] p-6">
                 {wine.imagePath ? (
-                  <img className="h-full w-full object-cover" src={wine.imagePath} alt={wine.name} />
+                  <img className="block h-auto max-h-[230px] w-auto max-w-[170px] object-contain mix-blend-multiply" src={wine.imagePath} alt={wine.name} />
                 ) : (
                   <span className="font-playfair text-7xl text-[#851329]/35">V</span>
                 )}

@@ -7,7 +7,6 @@ import sortIcon from '../../../assets/admin/common/sort.png';
 import viewIcon from '../../../assets/admin/common/view.png';
 import editIcon from '../../../assets/admin/common/edit.png';
 import deleteIcon from '../../../assets/admin/common/delete.png';
-import qrIcon from '../../../assets/admin/lote/qrcode.png';
 import dividerLarge from '../../../assets/admin/common/divider-large.png';
 
 const statusClasses = {
@@ -58,7 +57,7 @@ export default function ModuleRecords({ config, refreshKey, onEdit, onNew }) {
     if(col==='alcohol'&&value) return `${value}% vol`;
     if(col==='quantity'&&value) return `${value}`;
     if(col==='wallet'||col==='blockchain') return value||'–';
-    if(col==='qrCode') return value?<span><img className="w-[27px] h-[27px] object-contain" src={qrIcon} alt="QR Code"/></span>:'–';
+    if(col==='qrCode') return value ? <a className="inline-flex rounded-md border border-[#dfd0bd] bg-white p-1 transition hover:border-[#8f2940] hover:shadow-sm" href={String(value)} target="_blank" rel="noreferrer" title="Abrir QR Code"><img className="h-12 w-12 object-contain" src={String(value)} alt="QR Code do lote" /></a> : '–';
     if(col==='status') {
       const key = normalizeStatus(value);
       return <span className={`inline-flex py-[5px] px-[10px] rounded-[7px] whitespace-nowrap ${statusClasses[key] || 'bg-[#eef0ef]'}`}>{value}</span>;

@@ -16,6 +16,7 @@ function normalizedText(value) {
 }
 
 function isValidField(field, value, form) {
+  if (field.type === 'multi-select') return !field.required || (Array.isArray(value) && value.length > 0);
   const text = normalizedText(value);
 
   if (!field.required && !text) return true;
@@ -71,11 +72,28 @@ function isValidField(field, value, form) {
   return Boolean(text);
 }
 
-export default function ModuleForm({ config, initialData, onSave, onCancel, onMessage }) {
+function invalidFieldMessage(field) {
+  if (field.type === 'multi-select') return `Selecione pelo menos uma opção em ${field.label}.`;
+  if (field.validation === 'positiveNumber') return `O campo ${field.label} deve conter apenas números.`;
+  if (field.validation === 'alcohol') return `O campo ${field.label} deve conter um número entre 0 e 100.`;
+  if (field.validation === 'year') return `O campo ${field.label} deve conter um ano válido.`;
+  if (field.validation === 'date' || field.validation === 'registrationDate') return `Informe uma data válida em ${field.label}.`;
+  if (typeof field.validation === 'object' && field.validation.minLength) return `O campo ${field.label} deve ter pelo menos ${field.validation.minLength} caracteres.`;
+  return `Preencha corretamente o campo “${field.label}”.`;
+}
+
+export default function ModuleForm({ config, initialData, onSave, onCancel, onMessage, onSaved, confirmOnCancel = true }) {
   const [form,setForm] = useState<Record<string, any>>({});
-  useEffect(()=>setForm(initialData || {}),[initialData,config.key]);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [submitted, setSubmitted] = useState(false);
+  useEffect(()=>{ setForm(initialData || {}); setTouched({}); setSubmitted(false); },[initialData,config.key]);
   const showMessage = (text='') => onMessage?.(text);
-  const change=(name,value)=>{ setForm(prev=>({...prev,[name]:value})); showMessage(''); };
+  const change=(name,value)=>{ setForm(prev=>({...prev,[name]:value})); setTouched(prev=>({...prev,[name]:true})); showMessage(''); };
+  function cancelForm() {
+    const hasChanges = Object.entries(form).some(([name, value]) => value instanceof File || String(value ?? '') !== String(initialData?.[name] ?? ''));
+    if (confirmOnCancel && hasChanges && !window.confirm('Existem dados preenchidos. Deseja sair sem salvar?')) return;
+    onCancel?.();
+  }
 
   const fieldValidity = useMemo(() => Object.fromEntries(
     config.fields.map(field => [field.name, isValidField(field, form[field.name], form)])
@@ -92,17 +110,18 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
   function handleFieldFocus(field, fieldIndex) {
     const blockedBy = firstInvalidRequired(fieldIndex);
     if (!blockedBy) return true;
-    showMessage(`Preencha corretamente o campo “${blockedBy.label}” antes de continuar.`);
+    showMessage(`${invalidFieldMessage(blockedBy)} Antes de continuar, corrija este campo.`);
     focusField(blockedBy);
     return false;
   }
 
   async function submit(e){
     e.preventDefault();
+    setSubmitted(true);
     showMessage('');
     const invalid = firstInvalidRequired();
     if (invalid) {
-      showMessage(`Preencha corretamente o campo “${invalid.label}” antes de salvar.`);
+      showMessage(`${invalidFieldMessage(invalid)} Corrija este campo antes de salvar.`);
       focusField(invalid);
       return;
     }
@@ -114,6 +133,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
       }
       setForm({});
       showMessage('Cadastro salvo localmente.');
+      onSaved?.(saved);
     } catch(err) { showMessage(err.message); }
   }
 
@@ -125,7 +145,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     try {
       const result = await api.generateBatchQr(initialData.id);
       setForm((current) => ({ ...current, qrCode: result.path }));
-      showMessage('QR Code gerado e vinculado ao lote.');
+      showMessage(`QR Code gerado e vinculado ao lote. Endereço: ${result.targetUrl}`);
     } catch (error) {
       showMessage(error.message);
     }
@@ -139,14 +159,20 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
 
     <div className="w-full my-3 mb-[18px] flex items-center justify-center pointer-events-none"><img className="block w-[106%] max-w-none h-auto max-h-9 object-contain object-center select-none" src={dividerLarge} alt="" aria-hidden="true" /></div>
 
+    {config.sectionTitle && <div className="mb-4 border-l-[3px] border-[#9d4b5b] pl-3">
+      <h3 className="m-0 text-[clamp(16px,1.2vw,19px)] font-semibold text-[#6a1424]">{config.sectionTitle}</h3>
+      {config.sectionSubtitle && <p className="mt-1 mb-0 text-[12px] text-[#857d79]">{config.sectionSubtitle}</p>}
+    </div>}
+
     <div className="grid grid-cols-2 gap-y-[clamp(14px,1.25vw,18px)] gap-x-[clamp(22px,2.5vw,38px)] max-[1450px]:gap-y-[14px] max-[1450px]:gap-x-6">
       {config.fields.map((f, fieldIndex)=>{
         const wrapper = f.full
           ? `min-w-0 col-span-2 ${f.action ? 'grid grid-cols-[minmax(0,1fr)_auto] gap-[14px] items-end' : ''}`
           : 'min-w-0';
         const unlocked = !firstInvalidRequired(fieldIndex);
+        const invalid = (touched[f.name] || submitted) && !fieldValidity[f.name];
         return <div key={f.name} className={wrapper}>
-          <div className={f.action ? 'col-start-1 col-end-2' : ''}><FormField field={f} value={form[f.name]} onChange={change} valid={fieldValidity[f.name]} unlocked={unlocked} onRequestFocus={()=>handleFieldFocus(f, fieldIndex)}/></div>
+          <div className={f.action ? 'col-start-1 col-end-2' : ''}><FormField field={f} value={form[f.name]} existingImage={f.type === 'file' ? String(initialData?.imageName ?? '') : ''} onChange={change} valid={fieldValidity[f.name]} invalid={invalid} error={invalid ? invalidFieldMessage(f) : ''} unlocked={unlocked} onRequestFocus={()=>handleFieldFocus(f, fieldIndex)}/></div>
           {f.action && <button type="button" disabled={f.disabled} className={`col-start-2 col-end-3 row-start-1 self-end mb-6 h-[clamp(44px,4.6vh,48px)] px-[clamp(15px,1.4vw,22px)] border-[1.5px] rounded-[6px] font-bold flex items-center gap-[9px] whitespace-nowrap transition-[transform,box-shadow,background-color,border-color,color] duration-150 ${f.disabled ? 'border-[#cfc7c4] bg-[#f4f1ef] text-[#9e9692] opacity-60 cursor-not-allowed' : 'border-[#8e1e35] bg-white text-[#7a1a2d] hover:bg-[#fff8f6] hover:border-[#8f2940] hover:text-[#75172a] hover:shadow-[0_5px_13px_rgba(91,12,27,.10)] hover:-translate-y-px active:translate-y-0 active:scale-[.98] focus-visible:outline-[3px] focus-visible:outline-[rgba(194,137,57,.42)] focus-visible:outline-offset-2'}`}><img className="w-[22px] h-[22px] object-contain" src={linkIcon} alt="" />{f.action}</button>}
         </div>;
       })}
@@ -163,7 +189,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
       {config.blockchainInfo && <button type="button" className={secondaryButton} onClick={generateQrCode}><img className="w-[25px] h-[25px] object-contain" src={qrIcon} alt=""/>Gerar QR Code</button>}
       {config.blockchainInfo && <span className="basis-full h-0" />}
       <button type="button" className={secondaryButton} onClick={()=>setForm({})}><img className="w-[25px] h-[25px] object-contain" src={clearIcon} alt=""/>Limpar</button>
-      <button type="button" className={secondaryButton} onClick={onCancel}><img className="w-[25px] h-[25px] object-contain" src={cancelIcon} alt=""/>Cancelar</button>
+      <button type="button" className={secondaryButton} onClick={cancelForm}><img className="w-[25px] h-[25px] object-contain" src={cancelIcon} alt=""/>Cancelar</button>
     </div>
   </form>;
 }

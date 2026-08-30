@@ -9,3 +9,20 @@
   --color-vinum-gold: #d0a565;
   --color-vinum-text: #2c2223;
 }
+
+/* Feedback visual consistente para campos inválidos após interação ou envio. */
+label:has(input:user-invalid) > span:has(input),
+label:has(textarea:user-invalid) > span:has(textarea),
+label:has(select:user-invalid) > span:has(select) {
+  border-color: #c9343d !important;
+  background-color: #fff7f7 !important;
+  box-shadow: 0 0 0 3px rgb(201 52 61 / 12%);
+}
+
+label:has(input:user-invalid) > input,
+label:has(textarea:user-invalid) > textarea,
+label:has(select:user-invalid) > select {
+  border-color: #c9343d !important;
+  background-color: #fff7f7 !important;
+  box-shadow: 0 0 0 3px rgb(201 52 61 / 12%);
+}

@@ -33,9 +33,9 @@ export default function WineDetailPage() {
         ← Voltar ao catálogo
       </Link>
       <section className="mt-7 grid overflow-hidden rounded-3xl border border-[#dfd0bd] bg-white shadow-xl lg:grid-cols-2">
-        <div className="grid min-h-[420px] place-items-center bg-[radial-gradient(circle,#f2dfc1,#cfae79)]">
+        <div className="grid min-h-[420px] place-items-center overflow-hidden bg-[radial-gradient(circle,#f2dfc1,#cfae79)] p-8">
           {image ? (
-            <img className="h-full max-h-[650px] w-full object-cover" src={image} alt={wine.name} />
+            <img className="block h-auto max-h-[560px] w-auto max-w-[80%] object-contain mix-blend-multiply" src={image} alt={wine.name} />
           ) : (
             <span className="font-playfair text-9xl text-[#851329]/35">V</span>
           )}
@@ -67,6 +67,24 @@ export default function WineDetailPage() {
         </div>
       </section>
 
+      {(wine.characteristics || wine.aromas || wine.tastingNotes || wine.pairing || wine.additionalInfo) && <section className="mt-10">
+        <h2 className="font-playfair text-3xl font-semibold text-[#5b0c1b]">Descrição do vinho</h2>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          {[
+            ['Características', wine.characteristics],
+            ['Aromas', wine.aromas],
+            ['Notas de degustação', wine.tastingNotes],
+            ['Harmonização', wine.pairing],
+            ['Informações complementares', wine.additionalInfo],
+          ].filter(([, value]) => value).map(([label, value]) => (
+            <article key={label} className="rounded-2xl border border-[#dfd0bd] bg-white p-5 shadow-sm">
+              <h3 className="font-semibold text-[#5b0c1b]">{label}</h3>
+              <p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#715f59]">{value}</p>
+            </article>
+          ))}
+        </div>
+      </section>}
+
       <section className="mt-10">
         <h2 className="font-playfair text-3xl font-semibold text-[#5b0c1b]">Safras e procedência</h2>
         {wine.vintages.length === 0 ? (
@@ -79,15 +97,24 @@ export default function WineDetailPage() {
                 <p className="mt-2 text-sm text-[#715f59]">
                   {vintage.identifier} · {vintage.status}
                 </p>
+                <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                  <div><dt className="font-semibold text-[#5b0c1b]">Uvas da safra</dt><dd className="mt-1 text-[#715f59]">{vintage.grapes.join(', ') || 'Não informado'}</dd></div>
+                  <div><dt className="font-semibold text-[#5b0c1b]">Fornecedor / origem</dt><dd className="mt-1 text-[#715f59]">{vintage.supplier || 'Não informado'}</dd></div>
+                </dl>
                 {vintage.observations && (
                   <p className="mt-4 text-sm leading-6 text-[#66534f]">{vintage.observations}</p>
                 )}
                 {vintage.batches.map((batch) => (
                   <div key={batch.code} className="mt-4 rounded-xl bg-[#f7f2eb] p-4 text-sm">
-                    <strong>Lote {batch.code}</strong>
-                    <span className="ml-2 text-[#715f59]">
-                      Produzido em {new Date(`${batch.productionDate}T00:00:00`).toLocaleDateString('pt-BR')}
-                    </span>
+                    <strong className="block text-[#5b0c1b]">Lote {batch.code}</strong>
+                    <div className="mt-2 grid gap-2 text-[#715f59] sm:grid-cols-2">
+                      <span>Quantidade: {batch.quantityLiters} litros</span>
+                      <span>Status: {batch.status}</span>
+                      <span>Produção: {new Date(`${batch.productionDate}T00:00:00`).toLocaleDateString('pt-BR')}</span>
+                      <span>Registro: {new Date(`${batch.registrationDate}T00:00:00`).toLocaleDateString('pt-BR')}</span>
+                      <span className="sm:col-span-2">Uvas utilizadas: {batch.grapes.join(', ') || 'Não informado'}</span>
+                    </div>
+                    {batch.qrCodePath && <a className="mt-3 inline-block font-semibold text-[#851329] hover:underline" href={batch.qrCodePath} target="_blank" rel="noreferrer">Abrir QR Code</a>}
                   </div>
                 ))}
               </article>

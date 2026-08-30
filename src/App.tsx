@@ -8,6 +8,9 @@ import type { User } from './types';
 import CatalogLayout from './pages/Catalog/CatalogLayout';
 import CatalogPage from './pages/Catalog/CatalogPage';
 import WineDetailPage from './pages/Catalog/WineDetailPage';
+import HomePage from './pages/Home/HomePage';
+import ProfilePage from './pages/Profile/ProfilePage';
+import BatchPublicPage from './pages/Catalog/BatchPublicPage';
 
 function Loading() {
   return (
@@ -65,10 +68,34 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/catalogo" replace />} />
-      <Route path="/catalogo" element={<CatalogLayout user={user} onLogout={logout} />}>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/consulta/lotes/:code" element={<BatchPublicPage />} />
+      <Route
+        path="/catalogo"
+        element={
+          user?.role === 'CUSTOMER' ? (
+            <CatalogLayout user={user} onLogout={logout} />
+          ) : (
+            <Navigate to={user ? '/admin' : '/'} replace />
+          )
+        }
+      >
         <Route index element={<CatalogPage />} />
         <Route path="vinhos/:slug" element={<WineDetailPage />} />
+        <Route path="cadastrar" element={<Navigate to="/catalogo" replace />} />
+        <Route path="registros" element={<Navigate to="/catalogo" replace />} />
+      </Route>
+      <Route
+        path="/perfil"
+        element={
+          user?.role === 'CUSTOMER' ? (
+            <CatalogLayout user={user} onLogout={logout} />
+          ) : (
+            <Navigate to={user ? '/admin' : '/'} replace />
+          )
+        }
+      >
+        <Route index element={<ProfilePage user={user as User} onUpdate={setUser} />} />
       </Route>
       <Route
         path="/login"
@@ -87,7 +114,7 @@ export default function App() {
           )
         }
       />
-      <Route path="*" element={<Navigate to="/catalogo" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

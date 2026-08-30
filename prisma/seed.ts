@@ -61,7 +61,7 @@ async function main() {
         email,
         passwordHash: text(user.passwordHash),
         passwordSalt: text(user.salt) || null,
-        role: 'ADMIN',
+        role: email === 'admin@vinum.local' ? 'ADMIN' : 'CUSTOMER',
         createdAt: date(user.createdAt),
       },
     });

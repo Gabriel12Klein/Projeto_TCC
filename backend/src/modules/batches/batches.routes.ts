@@ -17,7 +17,7 @@ router.post(
 router.post(
   '/:id/qr-code',
   asyncRoute(async (req, res) => {
-    res.status(201).json(await batchesService.generateQrCode(String(req.params.id)));
+    res.status(201).json(await batchesService.generateQrCode(String(req.params.id), req.headers.origin));
   }),
 );
 router.put(

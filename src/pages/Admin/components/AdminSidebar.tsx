@@ -1,17 +1,23 @@
 import sidebarBg from '../../../assets/admin/sidebar/sidebar-bg-cropped.png';
 import sidebarLogo from '../../../assets/admin/sidebar/logo.png';
-import vinicolaIcon from '../../../assets/admin/sidebar/vinicola.png';
 import safraIcon from '../../../assets/admin/sidebar/safra.png';
-import vinhoIcon from '../../../assets/admin/sidebar/vinho.png';
 import loteIcon from '../../../assets/admin/sidebar/lote.png';
+import vinicolaIcon from '../../../assets/admin/sidebar/vinicola.png';
+import vinhoIcon from '../../../assets/admin/sidebar/vinho.png';
 import logoutIcon from '../../../assets/admin/sidebar/logout.png';
 
 const items = [
   ['vinicolas','Vinícola',vinicolaIcon],
   ['vinhos','Vinho',vinhoIcon],
+  ['tipos-vinho','Tipo de vinho',vinhoIcon],
+  ['uvas','Uva',vinhoIcon],
   ['safras','Safra',safraIcon],
   ['lotes','Lote',loteIcon]
 ];
+
+// O vinho é um cadastro próprio da vinícola e precisa estar disponível antes
+// de criar um lote que faça referência a ele.
+const visibleItems = items.filter(([key]) => key === 'vinhos' || key === 'lotes' || key === 'safras' || key === 'tipos-vinho' || key === 'uvas');
 
 export default function AdminSidebar({ active, onSelect, onLogout, collapsed, onToggle }) {
   const sidebarPadding = collapsed ? 'pt-5 px-[10px] pb-[22px]' : 'pt-[clamp(20px,1.7vw,26px)] px-[clamp(13px,1.1vw,17px)] pb-[22px]';
@@ -28,7 +34,7 @@ export default function AdminSidebar({ active, onSelect, onLogout, collapsed, on
     >‹</button>
     <img className={`${logoClass} object-contain drop-shadow-[0_5px_10px_rgba(0,0,0,.15)] transition-all duration-200`} src={sidebarLogo} alt="VINUM" />
     <nav className="flex flex-col gap-[clamp(7px,1vh,11px)] mt-2">
-      {items.map(([key,label,icon]) => {
+      {visibleItems.map(([key,label,icon]) => {
         const isActive = active === key;
         return <button
           type="button"

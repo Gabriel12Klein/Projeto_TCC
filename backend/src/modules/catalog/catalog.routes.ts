@@ -5,6 +5,13 @@ import { catalogService } from './catalog.service.js';
 const router = Router();
 
 router.get(
+  '/batches/:code',
+  asyncRoute(async (req, res) => {
+    res.json(await catalogService.findBatchByCode(String(req.params.code)));
+  }),
+);
+
+router.get(
   '/wines',
   asyncRoute(async (req, res) => {
     res.json(

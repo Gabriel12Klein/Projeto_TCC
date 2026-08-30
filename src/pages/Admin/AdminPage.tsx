@@ -15,20 +15,26 @@ import VinhoCadastrar from './modules/Vinho/VinhoCadastrar';
 import VinhoRegistros from './modules/Vinho/VinhoRegistros';
 import LoteCadastrar from './modules/Lote/LoteCadastrar';
 import LoteRegistros from './modules/Lote/LoteRegistros';
+import ModuleForm from './components/ModuleForm';
+import ModuleRecords from './components/ModuleRecords';
 
-const components: Record<ResourceKey, { form: ComponentType<any>; records: ComponentType<any> }> = {
+type AdminModuleKey = Exclude<ResourceKey, 'status-safra' | 'status-lote'>;
+
+const components: Record<AdminModuleKey, { form: ComponentType<any>; records: ComponentType<any> }> = {
   vinicolas: { form: VinicolaCadastrar, records: VinicolaRegistros },
   safras: { form: SafraCadastrar, records: SafraRegistros },
   vinhos: { form: VinhoCadastrar, records: VinhoRegistros },
+  'tipos-vinho': { form: ModuleForm, records: ModuleRecords },
+  uvas: { form: ModuleForm, records: ModuleRecords },
   lotes: { form: LoteCadastrar, records: LoteRegistros },
 };
 
 const ADMIN_MODULE_KEY = 'vinum_admin_module';
 const ADMIN_TAB_KEY = 'vinum_admin_tab';
 
-function getInitialModule(): ResourceKey {
+function getInitialModule(): AdminModuleKey {
   const saved = sessionStorage.getItem(ADMIN_MODULE_KEY);
-  return saved && saved in components ? saved as ResourceKey : 'vinicolas';
+  return saved === 'vinhos' || saved === 'lotes' || saved === 'safras' || saved === 'tipos-vinho' || saved === 'uvas' ? saved : 'lotes';
 }
 
 function getInitialTab() {
@@ -59,7 +65,7 @@ export default function AdminPage({ user, onLogout }: { user: User; onLogout: ()
     setFormMessage('');
   }, [module, tab]);
 
-  function selectModule(key: ResourceKey) {
+  function selectModule(key: AdminModuleKey) {
     setModule(key);
     setTab('form');
     setEditing(null);
@@ -102,7 +108,7 @@ export default function AdminPage({ user, onLogout }: { user: User; onLogout: ()
   return (
     <main className="min-h-screen w-full flex justify-center items-start p-[clamp(10px,1.3vw,22px)] overflow-auto bg-[radial-gradient(circle_at_50%_10%,#731426_0%,#4a0b17_38%,#2b070e_100%)] font-inter text-vinum-text max-[1250px]:justify-start max-[1160px]:p-2">
       <div
-        className={`relative w-[min(97vw,1600px)] min-w-[1180px] h-[clamp(760px,94vh,1040px)] grid ${shellClass} py-[clamp(16px,1.4vw,24px)] px-[clamp(18px,1.7vw,30px)] border-[3px] border-[#c49a57] rounded-[clamp(28px,2.2vw,42px)] shadow-[0_18px_55px_rgb(14_0_4_/_45%),inset_0_0_0_4px_rgba(255,255,255,.75)] overflow-hidden transition-[grid-template-columns,gap] duration-[220ms] max-[1450px]:w-[98vw] max-[1450px]:min-w-[1160px] max-[1450px]:py-4 max-[1450px]:px-[18px] max-[1250px]:min-w-[1140px] max-[1160px]:w-[1140px] max-[1160px]:min-w-[1140px] max-[1160px]:h-[clamp(740px,96vh,920px)]`}
+        className={`relative w-[min(97vw,1600px)] min-w-[1180px] h-[clamp(760px,94vh,1040px)] grid ${shellClass} py-[clamp(16px,1.4vw,24px)] px-[clamp(18px,1.7vw,30px)] border-[3px] border-[#c49a57] rounded-[clamp(28px,2.2vw,42px)] shadow-[0_18px_55px_rgb(14_0_4_/_45%),inset_0_0_0_4px_rgba(255,255,255,.75)] overflow-hidden transition-[grid-template-columns,gap] duration-[220ms] max-[1450px]:w-[98vw] max-[1450px]:min-w-[1160px] max-[1450px]:py-4 max-[1450px]:px-[18px] max-[1250px]:min-w-[1140px] max-[1160px]:w-[1140px] max-[1160px]:min-w-[1140px] max-[1160px]:h-[clamp(740px,96vh,920px)] max-[900px]:min-w-0 max-[900px]:w-full max-[900px]:h-auto max-[900px]:min-h-screen max-[900px]:grid-cols-1 max-[900px]:overflow-visible`}
         style={{ background: `#f9f6f1 url(${adminBackground}) center / cover no-repeat` }}
       >
         <AdminSidebar
@@ -132,6 +138,11 @@ export default function AdminPage({ user, onLogout }: { user: User; onLogout: ()
               onNew={() => {
                 setEditing(null);
                 setTab('form');
+              }}
+              onOpenWine={() => {
+                setModule('vinhos');
+                setTab('form');
+                setEditing(null);
               }}
             />
           </div>

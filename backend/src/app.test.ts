@@ -45,7 +45,21 @@ describe('VINUM API', () => {
         .send({ email, password: 'Cliente123' })
         .expect(200);
 
-      await request(app).get('/api/vinhos').set('Authorization', `Bearer ${login.body.token}`).expect(403);
+      const token = `Bearer ${login.body.token}`;
+      await request(app).get('/api/vinhos').set('Authorization', token).expect(200);
+      await request(app)
+        .post('/api/vinhos')
+        .set('Authorization', token)
+        .send({
+          name: `Vinho do Cliente ${Date.now()}`,
+          type: 'Tinto',
+          grapes: 'Merlot',
+          volume: 750,
+          alcohol: 13,
+          description: 'Vinho criado no fluxo de cliente para teste.',
+          status: 'Ativo',
+        })
+        .expect(403);
     } finally {
       await prisma.user.deleteMany({ where: { email } });
     }

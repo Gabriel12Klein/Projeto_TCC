@@ -1,4 +1,4 @@
-import type { AuthSession, CatalogWine, CatalogWineDetail, EntityRecord, ResourceKey, User } from '../types';
+import type { AuthSession, CatalogWine, CatalogWineDetail, EntityRecord, PublicBatchDetail, ResourceKey, User } from '../types';
 
 const TOKEN_KEY = 'vinum_token';
 const USER_KEY = 'vinum_user';
@@ -31,7 +31,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, { ...options, headers });
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
-  if (!response.ok) throw new Error(data?.message ?? 'Erro ao comunicar com o servidor.');
+  if (!response.ok) {
+    const issueMessage = Array.isArray(data?.issues)
+      ? data.issues
+          .map((issue: { message?: string }) => issue.message)
+          .filter(Boolean)
+          .join(' ')
+      : '';
+    throw new Error(issueMessage || data?.message || 'Erro ao comunicar com o servidor.');
+  }
   return data;
 }
 
@@ -39,6 +47,18 @@ export const api = {
   login: (payload: { email: string; password: string }) =>
     request<AuthSession>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   me: () => request<User>('/auth/me'),
+  updateProfile: (payload: {
+    name: string;
+    age: number | null;
+    birthDate: string | null;
+    street: string | null;
+    addressNumber: string | null;
+    city: string | null;
+    state: string | null;
+    country: string | null;
+    phone: string | null;
+    newPassword?: string;
+  }) => request<User>('/auth/me', { method: 'PATCH', body: JSON.stringify(payload) }),
   register: (payload: { name: string; email: string; password: string }) =>
     request<User>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
   logout: () => request<{ ok: boolean }>('/auth/logout', { method: 'POST' }),
@@ -67,5 +87,6 @@ export const api = {
       return request<CatalogWine[]>(`/catalog/wines${query}`);
     },
     detail: (slug: string) => request<CatalogWineDetail>(`/catalog/wines/${encodeURIComponent(slug)}`),
+    batch: (code: string) => request<PublicBatchDetail>(`/catalog/batches/${encodeURIComponent(code)}`),
   },
 };

@@ -16,8 +16,11 @@ const date = z
 
 const batchBaseSchema = z.object({
   code: z.string().trim().min(3).max(80),
+  wineId: z.string().trim().optional(),
+  wineName: z.string().trim().optional(),
   vintageId: z.string().trim().optional(),
   vintageName: z.string().trim().optional(),
+  grapeIds: z.array(z.string().trim().min(1)).min(1, 'Selecione pelo menos uma uva.'),
   quantity: positiveNumber,
   productionDate: date,
   registrationDate: date,
@@ -27,6 +30,10 @@ const batchBaseSchema = z.object({
 });
 
 export const batchSchema = batchBaseSchema
+  .refine((input) => input.wineId || input.wineName, {
+    message: 'Informe o vinho relacionado.',
+    path: ['wineId'],
+  })
   .refine((input) => input.vintageId || input.vintageName, {
     message: 'Informe a safra relacionada.',
     path: ['vintageId'],

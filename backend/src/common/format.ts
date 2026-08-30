@@ -32,6 +32,5 @@ export function wineStatusToDatabase(value: string) {
 
 export function wineStatusToView(value: string) {
   if (value === 'PUBLISHED') return 'Ativo';
-  if (value === 'ARCHIVED') return 'Inativo';
-  return 'Em produção';
+  return 'Inativo';
 }

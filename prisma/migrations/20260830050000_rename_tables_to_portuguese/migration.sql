@@ -1,0 +1,11 @@
+ALTER TABLE "User" RENAME TO "usuario";
+ALTER TABLE "Session" RENAME TO "sessao";
+ALTER TABLE "Winery" RENAME TO "vinicola";
+ALTER TABLE "Wine" RENAME TO "vinho";
+ALTER TABLE "WineType" RENAME TO "tipo_vinho";
+ALTER TABLE "Grape" RENAME TO "uva";
+ALTER TABLE "WineGrape" RENAME TO "vinho_uva";
+ALTER TABLE "WineImage" RENAME TO "imagem_vinho";
+ALTER TABLE "Vintage" RENAME TO "safra";
+ALTER TABLE "VintageGrape" RENAME TO "safra_uva";
+ALTER TABLE "Batch" RENAME TO "lote";
