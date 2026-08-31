@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isBatchCode, normalizeBatchCode } from '../../common/format.js';
 
 const positiveNumber = z.union([z.string(), z.number()]).transform((value, context) => {
   const parsed = Number(String(value).replace(/\./g, '').replace(',', '.'));
@@ -14,8 +15,19 @@ const date = z
   .trim()
   .refine((value) => !Number.isNaN(Date.parse(value)), 'Data inválida.');
 
+const time = z
+  .string()
+  .trim()
+  .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, 'Informe um horÃ¡rio vÃ¡lido no formato HH:mm.');
+
+const batchCode = z
+  .string()
+  .trim()
+  .transform(normalizeBatchCode)
+  .refine(isBatchCode, 'Use o formato L24160: ano com 2 dígitos e dia do ano com 3 dígitos.');
+
 const batchBaseSchema = z.object({
-  code: z.string().trim().min(3).max(80),
+  code: batchCode,
   wineId: z.string().trim().optional(),
   wineName: z.string().trim().optional(),
   vintageId: z.string().trim().optional(),
@@ -23,6 +35,7 @@ const batchBaseSchema = z.object({
   grapeIds: z.array(z.string().trim().min(1)).min(1, 'Selecione pelo menos uma uva.'),
   quantity: positiveNumber,
   productionDate: date,
+  bottlingTime: time,
   registrationDate: date,
   status: z.string().trim().min(1).max(40),
   blockchain: z.string().trim().optional(),

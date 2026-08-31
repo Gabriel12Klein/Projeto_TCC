@@ -1,12 +1,19 @@
 import { z } from 'zod';
+import { isVintageIdentifier, normalizeVintageIdentifier } from '../../common/format.js';
 
 const year = z
   .union([z.string(), z.number()])
   .transform(Number)
   .refine((value) => Number.isInteger(value) && value >= 1900 && value <= 2100, 'Ano da safra inválido.');
 
+const vintageIdentifier = z
+  .string()
+  .trim()
+  .transform(normalizeVintageIdentifier)
+  .refine(isVintageIdentifier, 'Use o formato SF22-T04: ano e código do tanque com 2 dígitos.');
+
 const vintageBaseSchema = z.object({
-  identifier: z.string().trim().min(3).max(80),
+  identifier: vintageIdentifier,
   wineId: z.string().trim().optional(),
   wineName: z.string().trim().optional(),
   grapeIds: z.array(z.string().trim().min(1)).min(1, 'Selecione pelo menos uma uva.'),

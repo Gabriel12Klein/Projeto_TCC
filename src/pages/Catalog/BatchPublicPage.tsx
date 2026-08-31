@@ -72,6 +72,7 @@ export default function BatchPublicPage() {
             <dl className="mt-5 space-y-4 text-sm">
               <div><dt className="font-semibold text-[#5b0c1b]">Quantidade produzida</dt><dd className="mt-1 text-[#715f59]">{batch.quantityLiters} litros</dd></div>
               <div><dt className="font-semibold text-[#5b0c1b]">Data de produção</dt><dd className="mt-1 text-[#715f59]">{formatDate(batch.productionDate)}</dd></div>
+              <div><dt className="font-semibold text-[#5b0c1b]">Hora do envase</dt><dd className="mt-1 text-[#715f59]">{batch.bottlingTime || 'Não informado'}</dd></div>
               <div><dt className="font-semibold text-[#5b0c1b]">Data de registro</dt><dd className="mt-1 text-[#715f59]">{formatDate(batch.registrationDate)}</dd></div>
               <div><dt className="font-semibold text-[#5b0c1b]">Status</dt><dd className="mt-1 text-[#715f59]">{batch.status}</dd></div>
               {batch.blockchainRef && <div><dt className="font-semibold text-[#5b0c1b]">Registro blockchain</dt><dd className="mt-1 break-all text-[#715f59]">{batch.blockchainRef}</dd></div>}

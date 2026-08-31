@@ -4,33 +4,37 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
 }
 
 model User {
-  id           String    @id @default(cuid())
-  name         String
-  age          Int?
-  address      String?
-  phone        String?
-  birthDate    String?
-  street       String?
+  id            String    @id @default(cuid())
+  name          String
+  age           Int?
+  address       String?
+  phone         String?
+  birthDate     String?
+  street        String?
   addressNumber String?
-  city         String?
-  state        String?
-  country      String?
-  email        String    @unique
-  passwordHash String
-  passwordSalt String?
-  role         String    @default("CUSTOMER")
-  roleId       String?
-  roleRef      Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
-  active       Boolean   @default(true)
-  sessions     Session[]
-  createdWines Wine[]    @relation("WineCreator")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  city          String?
+  state         String?
+  country       String?
+  email         String    @unique
+  passwordHash  String
+  passwordSalt  String?
+  role          String    @default("CUSTOMER")
+  roleId        String?
+  roleRef       Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  active        Boolean   @default(true)
 
+  sessions      Session[]
+  createdWines  Wine[]    @relation("WineCreator")
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([roleId])
+  @@index([email])
   @@map("usuario")
 }
 
@@ -38,7 +42,9 @@ model Role {
   id          String   @id @default(cuid())
   name        String   @unique
   description String?
+
   users       User[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -48,8 +54,10 @@ model Role {
 model Session {
   id        String   @id @default(cuid())
   tokenHash String   @unique
+
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   expiresAt DateTime
   createdAt DateTime @default(now())
 
@@ -67,80 +75,101 @@ model Winery {
   email         String?
   walletAddress String?
   status        String   @default("Ativa")
+
   wines         Wine[]
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  @@index([name])
+  @@index([status])
   @@map("vinicola")
 }
 
 model Wine {
-  id                String      @id @default(cuid())
-  createdById       String?
-  createdBy         User?       @relation("WineCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  wineryId          String?
-  winery            Winery?     @relation(fields: [wineryId], references: [id], onDelete: SetNull)
-  typeId            String?
-  wineType          WineType?   @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  id String @id @default(cuid())
+
+  createdById String?
+  createdBy   User? @relation("WineCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  wineryId String?
+  winery   Winery? @relation(fields: [wineryId], references: [id], onDelete: SetNull)
+
+  typeId   String?
+  wineType WineType? @relation(fields: [typeId], references: [id], onDelete: SetNull)
+
   name              String
-  slug              String      @unique
+  slug              String   @unique
   type              String
   grapes            String
   volumeMl          Int
   alcoholPercentage Float
   description       String
-  characteristics   String?    @map("caracteristicas")
-  aromas            String?    @map("aromas")
-  tastingNotes      String?    @map("notas_degustacao")
-  pairing           String?    @map("harmonizacao")
-  additionalInfo    String?    @map("informacoes_complementares")
-  imagePath         String?
-  status            String      @default("DRAFT")
-  vintages          Vintage[]
-  batches           Batch[]
-  images            WineImage[]
-  grapeLinks        WineGrape[]
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+
+  characteristics String? @map("caracteristicas")
+  aromas          String? @map("aromas")
+  tastingNotes    String? @map("notas_degustacao")
+  pairing         String? @map("harmonizacao")
+  additionalInfo  String? @map("informacoes_complementares")
+
+  imagePath String?
+  status    String @default("DRAFT")
+
+  vintages   Vintage[]
+  batches    Batch[]
+  images     WineImage[]
+  grapeLinks WineGrape[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([wineryId])
   @@index([typeId])
   @@index([createdById])
   @@index([status])
+  @@index([name])
   @@map("vinho")
 }
 
 model WineType {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String  @id @default(cuid())
+  name        String  @unique
   description String?
-  active      Boolean  @default(true)
-  wines       Wine[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  active      Boolean @default(true)
 
+  wines Wine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
   @@map("tipo_vinho")
 }
 
 model Grape {
-  id          String      @id @default(cuid())
-  name        String      @unique
+  id          String  @id @default(cuid())
+  name        String  @unique
   description String?
-  active      Boolean     @default(true)
-  wineLinks   WineGrape[]
+  active      Boolean @default(true)
+
+  wineLinks    WineGrape[]
   vintageLinks VintageGrape[]
   batchLinks   BatchGrape[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
   @@map("uva")
 }
 
 model WineGrape {
   wineId  String
   grapeId String
-  wine    Wine  @relation(fields: [wineId], references: [id], onDelete: Cascade)
-  grape   Grape @relation(fields: [grapeId], references: [id], onDelete: Cascade)
+
+  wine Wine @relation(fields: [wineId], references: [id], onDelete: Cascade)
+
+  grape Grape @relation(fields: [grapeId], references: [id], onDelete: Cascade)
 
   @@id([wineId, grapeId])
   @@index([grapeId])
@@ -148,56 +177,73 @@ model WineGrape {
 }
 
 model WineImage {
-  id        String   @id @default(cuid())
-  wineId    String
-  wine      Wine     @relation(fields: [wineId], references: [id], onDelete: Cascade)
+  id String @id @default(cuid())
+
+  wineId String
+  wine   Wine @relation(fields: [wineId], references: [id], onDelete: Cascade)
+
   path      String
   altText   String?
-  isPrimary Boolean  @default(false)
+  isPrimary Boolean @default(false)
+
   createdAt DateTime @default(now())
 
   @@index([wineId])
+  @@index([isPrimary])
   @@map("imagem_vinho")
 }
 
 model Vintage {
-  id           String   @id @default(cuid())
-  wineId       String?
-  wine         Wine?    @relation(fields: [wineId], references: [id], onDelete: SetNull)
-  identifier   String   @unique
+  id String @id @default(cuid())
+
+  wineId String?
+  wine   Wine? @relation(fields: [wineId], references: [id], onDelete: SetNull)
+
+  identifier   String @unique
   year         Int
   observations String?
   status       String
-  statusId     String?
-  statusRef    VintageStatus? @relation(fields: [statusId], references: [id], onDelete: SetNull)
-  supplier     String?
-  batches      Batch[]
-  grapeLinks   VintageGrape[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+
+  statusId  String?
+  statusRef VintageStatus? @relation(fields: [statusId], references: [id], onDelete: SetNull)
+
+  supplier String?
+
+  batches    Batch[]
+  grapeLinks VintageGrape[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([wineId])
   @@index([year])
+  @@index([statusId])
+  @@index([status])
   @@map("safra")
 }
 
 model VintageStatus {
-  id          String    @id @default(cuid())
-  name        String    @unique
+  id          String  @id @default(cuid())
+  name        String  @unique
   description String?
-  active      Boolean   @default(true)
-  vintages    Vintage[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  active      Boolean @default(true)
 
+  vintages Vintage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
   @@map("status_safra")
 }
 
 model VintageGrape {
   vintageId String
   grapeId   String
-  vintage   Vintage @relation(fields: [vintageId], references: [id], onDelete: Cascade)
-  grape     Grape   @relation(fields: [grapeId], references: [id], onDelete: Cascade)
+
+  vintage Vintage @relation(fields: [vintageId], references: [id], onDelete: Cascade)
+
+  grape Grape @relation(fields: [grapeId], references: [id], onDelete: Cascade)
 
   @@id([vintageId, grapeId])
   @@index([grapeId])
@@ -205,27 +251,38 @@ model VintageGrape {
 }
 
 model Batch {
-  id               String   @id @default(cuid())
-  wineId           String?
-  wine             Wine?    @relation(fields: [wineId], references: [id], onDelete: SetNull)
-  vintageId        String
-  vintage          Vintage  @relation(fields: [vintageId], references: [id], onDelete: Restrict)
+  id String @id @default(cuid())
+
+  wineId String?
+  wine   Wine? @relation(fields: [wineId], references: [id], onDelete: SetNull)
+
+  vintageId String
+  vintage   Vintage @relation(fields: [vintageId], references: [id], onDelete: Restrict)
+
   code             String   @unique
   quantityLiters   Float
   productionDate   DateTime
+  bottlingTime     String?  @map("hora_envase")
   registrationDate DateTime
-  status           String
-  statusId         String?
-  statusRef        BatchStatus? @relation(fields: [statusId], references: [id], onDelete: SetNull)
-  blockchainRef    String?
-  qrCodePath       String?
-  grapeLinks       BatchGrape[]
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+
+  status String
+
+  statusId  String?
+  statusRef BatchStatus? @relation(fields: [statusId], references: [id], onDelete: SetNull)
+
+  blockchainRef String?
+  qrCodePath    String?
+
+  grapeLinks BatchGrape[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([vintageId])
   @@index([wineId])
+  @@index([statusId])
   @@index([status])
+  @@index([productionDate])
   @@map("lote")
 }
 
@@ -234,18 +291,23 @@ model BatchStatus {
   name        String  @unique
   description String?
   active      Boolean @default(true)
-  batches     Batch[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
+  batches Batch[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
   @@map("status_lote")
 }
 
 model BatchGrape {
   batchId String
   grapeId String
-  batch   Batch @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  grape   Grape @relation(fields: [grapeId], references: [id], onDelete: Cascade)
+
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  grape Grape @relation(fields: [grapeId], references: [id], onDelete: Cascade)
 
   @@id([batchId, grapeId])
   @@index([grapeId])

@@ -10,7 +10,7 @@ afterAll(async () => prisma.$disconnect());
 describe('VINUM API', () => {
   it('expõe health e o catálogo sem autenticação', async () => {
     const health = await request(app).get('/api/health').expect(200);
-    expect(health.body).toEqual({ ok: true, storage: 'prisma-sqlite' });
+    expect(health.body).toEqual({ ok: true, storage: 'prisma-mysql' });
 
     const catalog = await request(app).get('/api/catalog/wines').expect(200);
     expect(Array.isArray(catalog.body)).toBe(true);

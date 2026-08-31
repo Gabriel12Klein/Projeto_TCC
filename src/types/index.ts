@@ -53,6 +53,7 @@ export type CatalogWineDetail = CatalogWine & {
       quantityLiters: number;
       status: string;
       productionDate: string;
+      bottlingTime: string | null;
       registrationDate: string;
       grapes: string[];
       blockchainRef: string | null;
@@ -65,6 +66,7 @@ export type PublicBatchDetail = {
   code: string;
   quantityLiters: number;
   productionDate: string;
+  bottlingTime: string | null;
   registrationDate: string;
   status: string;
   grapes: string[];

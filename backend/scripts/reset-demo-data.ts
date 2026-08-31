@@ -1,12 +1,9 @@
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { PrismaClient } from '../src/generated/prisma/client.js';
+import { createMysqlAdapter } from '../src/lib/mysqlAdapter.js';
 
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? 'file:./dev.db',
-});
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient({ adapter: createMysqlAdapter() });
 
 const ADMIN_PASSWORD = 'Admin123!';
 const CUSTOMER_PASSWORD = 'Cliente123!';

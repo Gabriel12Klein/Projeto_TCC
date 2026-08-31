@@ -89,6 +89,7 @@ export default function ClientWinePage({ mode }: { mode: 'create' | 'records' })
           <ModuleForm
             config={config}
             initialData={editing}
+            draftScope="client:vinhos"
             onSave={save}
             onCancel={() => window.location.assign('/catalogo/registros')}
             onMessage={setMessage}

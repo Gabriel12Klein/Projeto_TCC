@@ -111,6 +111,7 @@ export default function WineDetailPage() {
                       <span>Quantidade: {batch.quantityLiters} litros</span>
                       <span>Status: {batch.status}</span>
                       <span>Produção: {new Date(`${batch.productionDate}T00:00:00`).toLocaleDateString('pt-BR')}</span>
+                      <span>Envase: {batch.bottlingTime || 'Não informado'}</span>
                       <span>Registro: {new Date(`${batch.registrationDate}T00:00:00`).toLocaleDateString('pt-BR')}</span>
                       <span className="sm:col-span-2">Uvas utilizadas: {batch.grapes.join(', ') || 'Não informado'}</span>
                     </div>

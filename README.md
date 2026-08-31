@@ -7,7 +7,7 @@ Aplicação do TCC para administrar vinícolas, vinhos, safras e lotes e apresen
 - React, Vite, TypeScript e Tailwind CSS 4;
 - React Router, TanStack Query, React Hook Form e Zod;
 - Node.js, Express e TypeScript;
-- Prisma ORM com SQLite local;
+- Prisma ORM com MySQL local;
 - Sessões persistentes, bcrypt e autorização por papéis;
 - Upload local de imagens e geração local de QR Codes;
 - Vitest, Supertest, ESLint e Prettier.
@@ -19,7 +19,7 @@ Requer Node.js 22 ou superior.
 ```bash
 npm install
 npm run prisma:generate
-npm run prisma:deploy
+npm run prisma:push
 npm run prisma:seed
 ```
 
@@ -51,7 +51,7 @@ Copie `.env.example` para `.env` apenas se quiser alterar os valores locais:
 ```env
 PORT=3001
 VITE_API_URL=/api
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="mysql://usuario:senha@localhost:3306/vinum"
 PUBLIC_APP_URL="http://localhost:5173"
 ```
 
@@ -77,7 +77,7 @@ src/
   types/                   contratos do frontend
 ```
 
-O antigo `backend/data/store.json` permanece somente como origem histórica do seed. A aplicação em execução usa exclusivamente Prisma e SQLite.
+O antigo `backend/data/store.json` permanece somente como origem histórica do seed. A aplicação em execução usa exclusivamente Prisma e MySQL.
 
 ## Modelo de dados
 
@@ -119,7 +119,7 @@ npm run prisma:migrate -- --name descricao_da_alteracao
 
 ## Limites atuais
 
-- O projeto foi preparado para execução local com SQLite;
+- O projeto foi preparado para execução local com MySQL;
 - imagens e QR Codes ficam no sistema de arquivos local;
 - blockchain permanece apenas como campo de referência, sem integração externa;
 - recuperação de senha e gestão administrativa de usuários ainda não fazem parte deste protótipo.

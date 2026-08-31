@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../../api/api';
@@ -37,16 +37,47 @@ const featureItems = [
 const inputShell = 'h-[clamp(46px,4.6vw,52px)] flex items-center gap-[10px] px-[14px] border-2 border-[#c9c5c3] rounded-[6px] bg-white transition-[border-color,box-shadow] duration-150 focus-within:border-[#7d1d2d] focus-within:shadow-[0_0_0_3px_rgb(125_29_45_/_10%)]';
 const inputClass = 'w-full min-w-0 border-0 outline-0 bg-transparent text-[#261b1c] text-[clamp(11px,0.9vw,14px)] placeholder:text-[#c6c4c4]';
 
+const registerDraftKey = 'vinum_form_draft:register';
+
+function readRegisterDraft(): Partial<RegisterForm> {
+  try {
+    const value = sessionStorage.getItem(registerDraftKey);
+    return value ? JSON.parse(value) : {};
+  } catch {
+    return {};
+  }
+}
+
+function clearRegisterDraft() {
+  try {
+    sessionStorage.removeItem(registerDraftKey);
+  } catch {
+    /* armazenamento de rascunho indisponível não impede o uso normal do formulário */
+  }
+}
+
 export default function CadastroPage({ onOpenLogin }) {
   const [message, setMessage] = useState('');
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterForm>({
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<RegisterForm>({
     resolver: zodResolver(registerFormSchema),
+    defaultValues: readRegisterDraft(),
   });
+  const registerDraft = watch();
+
+  useEffect(() => {
+    try {
+      const { password: _password, confirmPassword: _confirmPassword, ...safeDraft } = registerDraft;
+      sessionStorage.setItem(registerDraftKey, JSON.stringify(safeDraft));
+    } catch {
+      /* limites do armazenamento não impedem o uso normal do formulário */
+    }
+  }, [registerDraft]);
 
   async function submit(data: RegisterForm) {
     setMessage('');
     try {
       await api.register({ name: data.name, email: data.email, password: data.password });
+      clearRegisterDraft();
       setMessage('Conta criada com sucesso. Agora faça o login.');
       setTimeout(() => onOpenLogin?.(), 900);
     } catch (error) { setMessage(error.message); }

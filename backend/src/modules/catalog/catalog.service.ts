@@ -43,6 +43,7 @@ function batchView(batch: {
   code: string;
   quantityLiters: number;
   productionDate: Date;
+  bottlingTime: string | null;
   registrationDate: Date;
   status: string;
   statusRef: { name: string } | null;
@@ -54,6 +55,7 @@ function batchView(batch: {
     code: batch.code,
     quantityLiters: batch.quantityLiters,
     productionDate: toInputDate(batch.productionDate),
+    bottlingTime: batch.bottlingTime,
     registrationDate: toInputDate(batch.registrationDate),
     status: batch.statusRef?.name ?? batch.status,
     grapes: batch.grapeLinks.map(({ grape }) => grape.name).length
@@ -259,6 +261,7 @@ export const catalogService = {
       code: batch.code,
       quantityLiters: batch.quantityLiters,
       productionDate: toInputDate(batch.productionDate),
+      bottlingTime: batch.bottlingTime,
       registrationDate: toInputDate(batch.registrationDate),
       status: batch.statusRef?.name ?? batch.status,
       grapes: batch.grapeLinks.map(({ grape }) => grape.name).length

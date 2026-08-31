@@ -19,7 +19,7 @@ export const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: '2mb' }));
 app.use('/uploads', express.static(uploadsRoot, { fallthrough: false, maxAge: '1h' }));
-app.get('/api/health', (_req, res) => res.json({ ok: true, storage: 'prisma-sqlite' }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, storage: 'prisma-mysql' }));
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 app.use('/api/auth', authRouter);
 app.use('/api/catalog', catalogRouter);

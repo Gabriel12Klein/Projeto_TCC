@@ -14,8 +14,9 @@
     "test": "vitest run",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build",
     "prisma:generate": "prisma generate --config prisma.config.ts",
+    "prisma:push": "prisma db push --config prisma.config.ts",
     "prisma:migrate": "prisma migrate dev --config prisma.config.ts",
-    "prisma:deploy": "prisma migrate deploy --config prisma.config.ts",
+    "prisma:deploy": "prisma db push --config prisma.config.ts",
     "prisma:seed": "prisma db seed --config prisma.config.ts",
     "db:reset-demo": "tsx backend/scripts/reset-demo-data.ts",
     "prisma:studio": "prisma studio --config prisma.config.ts",
@@ -24,6 +25,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
     "@prisma/adapter-better-sqlite3": "^7.10.0",
+    "@prisma/adapter-mariadb": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "@tailwindcss/vite": "^4.1.14",
     "@tanstack/react-query": "^5.102.8",

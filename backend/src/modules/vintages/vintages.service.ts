@@ -1,6 +1,6 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import { AppError } from '../../common/http.js';
-import { toPtDate } from '../../common/format.js';
+import { normalizeVintageIdentifier, toPtDate, vintageIdentifierToYear } from '../../common/format.js';
 import { prisma } from '../../lib/prisma.js';
 
 const includeRelations = {
@@ -68,15 +68,17 @@ export const vintagesService = {
   },
 
   async create(input: Record<string, unknown>) {
+    const identifier = normalizeVintageIdentifier(String(input.identifier));
+    const derivedYear = vintageIdentifierToYear(identifier);
     const wineId = await resolveWineId(input);
     const grapeIds = await resolveGrapeIds(input);
     const status = await resolveVintageStatus(input.status);
     const vintage = await prisma.$transaction(async (transaction) => {
       const created = await transaction.vintage.create({
         data: {
-          identifier: String(input.identifier),
+          identifier,
           wineId,
-          year: Number(input.year),
+          year: derivedYear ?? Number(input.year),
           supplier: input.supplier ? String(input.supplier) : null,
           observations: input.observations ? String(input.observations) : null,
           status: String(input.status),
@@ -97,9 +99,15 @@ export const vintagesService = {
     const current = await prisma.vintage.findUniqueOrThrow({ where: { id } });
     const data: Prisma.VintageUncheckedUpdateInput = {};
     const grapeIds = await resolveGrapeIds(input);
-    if (input.identifier !== undefined) data.identifier = String(input.identifier);
+    if (input.identifier !== undefined) data.identifier = normalizeVintageIdentifier(String(input.identifier));
     if (input.wineId !== undefined || input.wineName !== undefined) data.wineId = await resolveWineId(input, current.wineId);
-    if (input.year !== undefined) data.year = Number(input.year);
+    if (input.year !== undefined || input.identifier !== undefined) {
+      const effectiveIdentifier = input.identifier !== undefined
+        ? normalizeVintageIdentifier(String(input.identifier))
+        : current.identifier;
+      const derivedYear = vintageIdentifierToYear(effectiveIdentifier);
+      if (derivedYear !== null) data.year = derivedYear;
+    }
     if (input.supplier !== undefined) data.supplier = input.supplier ? String(input.supplier) : null;
     if (input.observations !== undefined) data.observations = input.observations ? String(input.observations) : null;
     if (input.status !== undefined) {

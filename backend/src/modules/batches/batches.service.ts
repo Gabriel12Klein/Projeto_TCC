@@ -1,6 +1,6 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import { AppError } from '../../common/http.js';
-import { toDate, toInputDate } from '../../common/format.js';
+import { batchCodeToProductionDate, normalizeBatchCode, toDate, toInputDate } from '../../common/format.js';
 import { prisma } from '../../lib/prisma.js';
 import QRCode from 'qrcode';
 import { join } from 'node:path';
@@ -28,6 +28,7 @@ function toView(batch: Prisma.BatchGetPayload<{ include: typeof includeVintage }
     grapes: grapes.map(({ name }) => name).join(', '),
     quantity: String(batch.quantityLiters),
     productionDate: toInputDate(batch.productionDate),
+    bottlingTime: batch.bottlingTime ?? '',
     registrationDate: toInputDate(batch.registrationDate),
     status: batch.statusRef?.name ?? batch.status,
     statusId: batch.statusRef?.id ?? batch.statusId ?? '',
@@ -118,6 +119,8 @@ export const batchesService = {
     return batches.map(toView);
   },
   async create(input: Record<string, unknown>) {
+    const code = normalizeBatchCode(String(input.code));
+    const productionDate = batchCodeToProductionDate(code);
     const wineId = await resolveWineId(input);
     const vintageId = await resolveVintageId(input);
     const grapeIds = await resolveGrapeIds(input);
@@ -125,11 +128,12 @@ export const batchesService = {
     const batch = await prisma.$transaction(async (transaction) => {
       const created = await transaction.batch.create({
         data: {
-          code: String(input.code),
+          code,
           wineId,
           vintageId,
           quantityLiters: Number(input.quantity),
-          productionDate: toDate(String(input.productionDate)),
+          productionDate: toDate(productionDate ?? String(input.productionDate)),
+          bottlingTime: String(input.bottlingTime),
           registrationDate: toDate(String(input.registrationDate)),
           status: String(input.status),
           statusId: status?.id ?? null,
@@ -151,11 +155,16 @@ export const batchesService = {
     const data: Prisma.BatchUncheckedUpdateInput = {};
     if (input.wineId !== undefined || input.wineName !== undefined) data.wineId = await resolveWineId(input, current.wineId);
     const grapeIds = await resolveGrapeIds(input);
-    if (input.code !== undefined) data.code = String(input.code);
+    if (input.code !== undefined) data.code = normalizeBatchCode(String(input.code));
     if (input.vintageId !== undefined || input.vintageName !== undefined)
       data.vintageId = await resolveVintageId(input, current.vintageId);
     if (input.quantity !== undefined) data.quantityLiters = Number(input.quantity);
-    if (input.productionDate !== undefined) data.productionDate = toDate(String(input.productionDate));
+    if (input.bottlingTime !== undefined) data.bottlingTime = String(input.bottlingTime);
+    if (input.productionDate !== undefined || input.code !== undefined) {
+      const effectiveCode = input.code !== undefined ? normalizeBatchCode(String(input.code)) : current.code;
+      const productionDate = batchCodeToProductionDate(effectiveCode);
+      if (productionDate) data.productionDate = toDate(productionDate);
+    }
     if (input.registrationDate !== undefined) data.registrationDate = toDate(String(input.registrationDate));
     if (input.status !== undefined) {
       const status = await resolveBatchStatus(input.status);

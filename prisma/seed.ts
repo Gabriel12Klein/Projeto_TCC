@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { PrismaClient } from '../backend/src/generated/prisma/client.js';
+import { createMysqlAdapter } from '../backend/src/lib/mysqlAdapter.js';
 
 type JsonRecord = Record<string, unknown>;
 type LegacyStore = {
@@ -13,10 +13,7 @@ type LegacyStore = {
   lotes: JsonRecord[];
 };
 
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? 'file:./dev.db',
-});
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient({ adapter: createMysqlAdapter() });
 
 function text(value: unknown, fallback = '') {
   return String(value ?? fallback).trim();

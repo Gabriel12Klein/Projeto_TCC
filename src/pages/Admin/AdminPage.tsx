@@ -127,6 +127,7 @@ export default function AdminPage({ user, onLogout }: { user: User; onLogout: ()
             <Current
               config={config}
               initialData={editing}
+              draftScope={`admin:${module}`}
               refreshKey={refreshKey}
               onSave={save}
               onMessage={setFormMessage}

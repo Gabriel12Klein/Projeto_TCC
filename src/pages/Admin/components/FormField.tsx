@@ -8,8 +8,25 @@ function formatCnpj(value = '') {
     .replace(/(\d{4})(\d)/, '$1-$2');
 }
 
+function formatBatchCode(value = '') {
+  const raw = String(value).toUpperCase();
+  const digits = raw.replace(/\D/g, '').slice(0, 5);
+  if (!digits && raw.startsWith('L')) return 'L';
+  return digits ? `L${digits}` : '';
+}
+
+function formatVintageIdentifier(value = '') {
+  const raw = String(value).toUpperCase();
+  const digits = raw.replace(/\D/g, '').slice(0, 4);
+  if (!digits && raw.startsWith('S')) return 'SF';
+  if (digits.length <= 2) return digits ? `SF${digits}` : '';
+  return `SF${digits.slice(0, 2)}-T${digits.slice(2)}`;
+}
+
 function normalizeFieldValue(field, value) {
   if (field.mask === 'cnpj') return formatCnpj(value);
+  if (field.mask === 'batch-code') return formatBatchCode(value);
+  if (field.mask === 'vintage-identifier') return formatVintageIdentifier(value);
   return value;
 }
 

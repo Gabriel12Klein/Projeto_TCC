@@ -36,7 +36,7 @@ function toView(wine: WineWithReferences) {
 }
 
 async function resolveReferences(input: Record<string, unknown>) {
-  let typeId = input.typeId ? String(input.typeId) : '';
+  const typeId = input.typeId ? String(input.typeId) : '';
   let typeName = input.type ? String(input.type).trim() : '';
   if (typeId) {
     const type = await prisma.wineType.findUnique({ where: { id: typeId } });

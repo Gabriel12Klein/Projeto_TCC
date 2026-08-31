@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/api';
 import type { User } from '../../types';
 
@@ -10,9 +10,12 @@ function formatPhone(value: string) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 3)} ${digits.slice(3, 7)}-${digits.slice(7)}`;
 }
 
-export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: (user: User) => void }) {
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({
+function profileDraftKey(userId: number | string) {
+  return `vinum_form_draft:profile:${String(userId)}`;
+}
+
+function profileFormFromUser(user: User) {
+  return {
     name: user.name,
     age: user.age?.toString() ?? '',
     birthDate: user.birthDate ?? '',
@@ -23,9 +26,44 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
     country: user.country ?? '',
     phone: formatPhone(user.phone ?? ''),
     newPassword: '',
-  });
+  };
+}
+
+function readProfileDraft(user: User) {
+  try {
+    const value = sessionStorage.getItem(profileDraftKey(user.id));
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearProfileDraft(user: User) {
+  try {
+    sessionStorage.removeItem(profileDraftKey(user.id));
+  } catch {
+    /* armazenamento de rascunho indisponível não impede o uso normal do formulário */
+  }
+}
+
+export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: (user: User) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState(() => ({ ...profileFormFromUser(user), ...(readProfileDraft(user) ?? {}) }));
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const skipNextDraftPersist = useRef(false);
+  useEffect(() => {
+    if (skipNextDraftPersist.current) {
+      skipNextDraftPersist.current = false;
+      return;
+    }
+    try {
+      const { newPassword: _newPassword, ...safeDraft } = form;
+      sessionStorage.setItem(profileDraftKey(user.id), JSON.stringify(safeDraft));
+    } catch {
+      /* limites do armazenamento não impedem o uso normal do formulário */
+    }
+  }, [form, user.id]);
   const setField = (field: keyof typeof form, value: string) =>
     setForm((current) => ({ ...current, [field]: value }));
   async function save(event: React.FormEvent) {
@@ -59,6 +97,8 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
         phone: formatPhone(updated.phone ?? ''),
         newPassword: '',
       }));
+      skipNextDraftPersist.current = true;
+      clearProfileDraft(user);
       setEditing(false);
       setMessage('Informações atualizadas com sucesso.');
     } catch (error) {
@@ -228,7 +268,10 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
           <button
             className="rounded-xl border border-[#cdbbaf] px-7 py-3 font-semibold text-[#5b0c1b]"
             type="button"
-            onClick={() => window.location.assign('/catalogo/registros')}
+            onClick={() => {
+              clearProfileDraft(user);
+              window.location.assign('/catalogo/registros');
+            }}
           >
             Cancelar
           </button>
