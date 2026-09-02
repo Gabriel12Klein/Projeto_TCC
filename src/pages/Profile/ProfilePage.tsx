@@ -10,6 +10,31 @@ function formatPhone(value: string) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 3)} ${digits.slice(3, 7)}-${digits.slice(7)}`;
 }
 
+const stateCodes = new Set([
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
+  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+]);
+
+const stateNames: Record<string, string> = {
+  ACRE: 'AC', ALAGOAS: 'AL', AMAPA: 'AP', AMAZONAS: 'AM', BAHIA: 'BA', CEARA: 'CE',
+  'DISTRITO FEDERAL': 'DF', 'ESPIRITO SANTO': 'ES', GOIAS: 'GO', MARANHAO: 'MA',
+  'MATO GROSSO': 'MT', 'MATO GROSSO DO SUL': 'MS', 'MINAS GERAIS': 'MG', PARA: 'PA',
+  PARAIBA: 'PB', PARANA: 'PR', PERNAMBUCO: 'PE', PIAUI: 'PI', 'RIO DE JANEIRO': 'RJ',
+  'RIO GRANDE DO NORTE': 'RN', 'RIO GRANDE DO SUL': 'RS', RONDONIA: 'RO', RORAIMA: 'RR',
+  'SANTA CATARINA': 'SC', 'SAO PAULO': 'SP', SERGIPE: 'SE', TOCANTINS: 'TO',
+};
+
+function normalizeState(value: string) {
+  const normalized = value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+  if (stateCodes.has(normalized)) return normalized;
+  return stateNames[normalized] ?? '';
+}
+
 function profileDraftKey(userId: number | string) {
   return `vinum_form_draft:profile:${String(userId)}`;
 }
@@ -22,7 +47,7 @@ function profileFormFromUser(user: User) {
     street: user.street ?? '',
     addressNumber: user.addressNumber ?? '',
     city: user.city ?? '',
-    state: user.state ?? '',
+    state: normalizeState(user.state ?? '') || user.state || '',
     country: user.country ?? '',
     phone: formatPhone(user.phone ?? ''),
     newPassword: '',
@@ -50,6 +75,7 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(() => ({ ...profileFormFromUser(user), ...(readProfileDraft(user) ?? {}) }));
   const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState<'success' | 'error'>('success');
   const [saving, setSaving] = useState(false);
   const skipNextDraftPersist = useRef(false);
   useEffect(() => {
@@ -66,11 +92,37 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
   }, [form, user.id]);
   const setField = (field: keyof typeof form, value: string) =>
     setForm((current) => ({ ...current, [field]: value }));
+  const profileChecklist = [
+    { label: 'Nome completo', ok: form.name.trim().length >= 3 },
+    { label: 'E-mail', ok: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email) },
+    { label: 'Número da casa', ok: !form.addressNumber || /^\d+$/.test(form.addressNumber) },
+    { label: 'Estado', ok: !form.state || Boolean(normalizeState(form.state)) },
+    { label: 'Telefone', ok: !form.phone || form.phone.replace(/\D/g, '').length >= 10 },
+    {
+      label: 'Nova senha',
+      ok: !form.newPassword || (
+        form.newPassword.length >= 8 && /[a-z]/.test(form.newPassword) && /[A-Z]/.test(form.newPassword) && /\d/.test(form.newPassword)
+      ),
+    },
+  ];
   async function save(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
     setMessage('');
     try {
+      const normalizedState = normalizeState(form.state);
+      if (form.addressNumber && !/^\d+$/.test(form.addressNumber)) {
+        setMessageType('error');
+        setMessage('O número da casa deve conter apenas números.');
+        setSaving(false);
+        return;
+      }
+      if (form.state && !normalizedState) {
+        setMessageType('error');
+        setMessage('Informe o estado por sigla ou nome completo válido.');
+        setSaving(false);
+        return;
+      }
       const updated = await api.updateProfile({
         name: form.name,
         age: form.age ? Number(form.age) : null,
@@ -78,7 +130,7 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
         street: form.street || null,
         addressNumber: form.addressNumber || null,
         city: form.city || null,
-        state: form.state || null,
+        state: normalizedState || null,
         country: form.country || null,
         phone: form.phone || null,
         ...(form.newPassword ? { newPassword: form.newPassword } : {}),
@@ -100,8 +152,10 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
       skipNextDraftPersist.current = true;
       clearProfileDraft(user);
       setEditing(false);
+      setMessageType('success');
       setMessage('Informações atualizadas com sucesso.');
     } catch (error) {
+      setMessageType('error');
       setMessage(error instanceof Error ? error.message : 'Não foi possível atualizar as informações.');
     } finally {
       setSaving(false);
@@ -216,7 +270,10 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
             <input
               className={inputClass}
               value={form.addressNumber}
-              onChange={(event) => setField('addressNumber', event.target.value)}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={20}
+              onChange={(event) => setField('addressNumber', event.target.value.replace(/\D/g, ''))}
             />
           </label>
           <label className="font-semibold">
@@ -233,6 +290,12 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
               className={inputClass}
               value={form.state}
               onChange={(event) => setField('state', event.target.value)}
+              onBlur={() => {
+                const normalized = normalizeState(form.state);
+                if (normalized) setField('state', normalized);
+              }}
+              placeholder="Ex.: RS ou Rio Grande do Sul"
+              maxLength={60}
             />
           </label>
           <label className="font-semibold">
@@ -245,6 +308,18 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
           </label>
         </div>
         <div className="my-8 h-px bg-[#eee3d5]" />
+        <section className="mb-8 rounded-2xl border border-[#eadcca] bg-[#fffaf3] p-5" aria-label="Checklist do perfil">
+          <h2 className="font-playfair text-2xl font-semibold text-[#5b0c1b]">Checklist do perfil</h2>
+          <p className="mt-1 text-sm text-[#715f59]">Confira os campos preenchidos corretamente antes de salvar.</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {profileChecklist.map((item) => (
+              <div key={item.label} className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${item.ok ? 'bg-[#eaf5e6] text-[#2d772d]' : 'bg-[#fff0d8] text-[#9a6200]'}`}>
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white font-bold">{item.ok ? '✓' : '!'}</span>
+                <span>{item.label}: {item.ok ? 'correto' : 'verificar'}</span>
+              </div>
+            ))}
+          </div>
+        </section>
         <h2 className="font-playfair text-2xl font-semibold text-[#5b0c1b]">Alterar senha</h2>
         <p className="mt-2 text-sm text-[#715f59]">Deixe em branco para manter sua senha atual.</p>
         <label className="mt-5 block max-w-xl font-semibold">
@@ -277,7 +352,7 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
           </button>
         </div>
         {message ? (
-          <p className="mt-4 text-sm text-[#7d1d2d]" aria-live="polite">
+          <p className={`mt-4 text-sm ${messageType === 'success' ? 'text-[#2d772d]' : 'text-[#7d1d2d]'}`} aria-live="polite">
             {message}
           </p>
         ) : null}

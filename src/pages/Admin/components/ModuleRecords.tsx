@@ -28,6 +28,7 @@ export default function ModuleRecords({ config, refreshKey, onEdit, onNew }) {
   const queryClient = useQueryClient();
   const [query,setQuery]=useState('');
   const [page,setPage]=useState(1);
+  const [actionMessage,setActionMessage]=useState('');
   const pageSize=5;
   const { data: items = [], isLoading, error } = useQuery({
     queryKey: ['admin-records', config.key, refreshKey],
@@ -41,6 +42,7 @@ export default function ModuleRecords({ config, refreshKey, onEdit, onNew }) {
     event.preventDefault();
     event.stopPropagation();
     if(!confirm(`Excluir ${config.singular}?`)) return;
+    setActionMessage('');
     try {
       await api.remove(config.key,item.id);
       await queryClient.invalidateQueries({ queryKey: ['admin-records', config.key] });
@@ -48,7 +50,7 @@ export default function ModuleRecords({ config, refreshKey, onEdit, onNew }) {
       const nextPages = Math.max(1, Math.ceil(remaining / pageSize));
       setPage(current => Math.min(current, nextPages));
     } catch (error) {
-      alert(error.message || 'Não foi possível excluir o registro.');
+      setActionMessage(error instanceof Error ? error.message : 'Não foi possível excluir o registro.');
     }
   }
 
@@ -78,6 +80,12 @@ export default function ModuleRecords({ config, refreshKey, onEdit, onNew }) {
     </div>
 
     <div className="w-full my-3 mb-[18px] flex items-center justify-center pointer-events-none"><img className="block w-full h-auto max-h-9 object-contain object-center select-none" src={dividerLarge} alt="" aria-hidden="true" /></div>
+
+    {actionMessage && <div className="mb-4 flex items-start gap-3 rounded-xl border border-[#e4a7a7] bg-[#fff3f3] px-4 py-3 text-sm text-[#8d2630]" role="alert">
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#f8dede] font-bold">!</span>
+      <div className="min-w-0 flex-1"><strong className="block">Não foi possível concluir a exclusão</strong><span className="mt-1 block leading-5">{actionMessage}</span></div>
+      <button type="button" className="shrink-0 font-bold text-[#8d2630]" aria-label="Fechar mensagem" onClick={()=>setActionMessage('')}>×</button>
+    </div>}
 
     <div className="flex justify-between items-center gap-[clamp(12px,1.5vw,20px)] mb-[18px] max-[1450px]:mb-[14px]">
       <label className="w-[min(38%,360px)] min-w-[270px] h-[clamp(44px,4.7vh,48px)] border-[1.5px] border-[#d5cfca] rounded-[7px] flex items-center px-[14px] gap-[11px] bg-white">

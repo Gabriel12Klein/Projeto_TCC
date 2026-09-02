@@ -1,6 +1,7 @@
 import { AppError } from '../../common/http.js';
 import { toInputDate } from '../../common/format.js';
 import { prisma } from '../../lib/prisma.js';
+import type { Prisma } from '../../generated/prisma/client.js';
 
 const summarySelect = {
   id: true,
@@ -38,6 +39,13 @@ const publicWineSelect = {
   winery: { select: { name: true, city: true, state: true } },
   images: true,
 } as const;
+
+const publicBatchWhere: Prisma.BatchWhereInput = {
+  OR: [
+    { statusId: 'status-lote-publicado' },
+    { status: { in: ['Publicado', 'Publicado para consulta'] } },
+  ],
+};
 
 function batchView(batch: {
   code: string;
@@ -163,7 +171,7 @@ export const catalogService = {
             statusRef: { select: { name: true } },
             grapeLinks: { include: { grape: { select: { name: true } } } },
             batches: {
-              where: { status: 'Publicado' },
+              where: publicBatchWhere,
               orderBy: { productionDate: 'desc' },
               include: {
                 statusRef: { select: { name: true } },
@@ -173,7 +181,7 @@ export const catalogService = {
           },
         },
         batches: {
-          where: { status: 'Publicado' },
+          where: publicBatchWhere,
           orderBy: { productionDate: 'desc' },
           include: {
             statusRef: { select: { name: true } },

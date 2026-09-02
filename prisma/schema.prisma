@@ -104,13 +104,13 @@ model Wine {
   grapes            String
   volumeMl          Int
   alcoholPercentage Float
-  description       String
+  description       String   @db.Text
 
-  characteristics String? @map("caracteristicas")
-  aromas          String? @map("aromas")
-  tastingNotes    String? @map("notas_degustacao")
-  pairing         String? @map("harmonizacao")
-  additionalInfo  String? @map("informacoes_complementares")
+  characteristics String? @db.Text @map("caracteristicas")
+  aromas          String? @db.Text @map("aromas")
+  tastingNotes    String? @db.Text @map("notas_degustacao")
+  pairing         String? @db.Text @map("harmonizacao")
+  additionalInfo  String? @db.Text @map("informacoes_complementares")
 
   imagePath String?
   status    String @default("DRAFT")

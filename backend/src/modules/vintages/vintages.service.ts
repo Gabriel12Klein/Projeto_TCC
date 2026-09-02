@@ -130,6 +130,13 @@ export const vintagesService = {
   },
 
   async remove(id: string) {
+    const linkedBatches = await prisma.batch.count({ where: { vintageId: id } });
+    if (linkedBatches > 0) {
+      throw new AppError(
+        409,
+        `Esta safra não pode ser excluída porque possui ${linkedBatches === 1 ? '1 lote vinculado' : `${linkedBatches} lotes vinculados`}. Exclua ou ajuste os lotes antes de tentar novamente.`,
+      );
+    }
     await prisma.vintage.delete({ where: { id } });
   },
 };
