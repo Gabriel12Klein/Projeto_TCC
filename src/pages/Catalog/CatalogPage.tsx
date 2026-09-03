@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/api';
 
-const types = ['', 'Tinto', 'Branco', 'Rosé', 'Espumante'];
+const wineTypes = ['Tinto', 'Branco', 'Rosé', 'Espumante'];
 
 export default function CatalogPage() {
   const [query, setQuery] = useState('');
@@ -37,16 +37,31 @@ export default function CatalogPage() {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar por nome, uva ou descrição..."
           />
-          <div className="flex flex-wrap gap-2">
-            {types.map((item) => (
-              <button
-                key={item || 'Todos'}
-                onClick={() => setType(item)}
-                className={`rounded-xl px-4 py-3 text-sm transition ${type === item ? 'bg-[#851329] text-white' : 'bg-[#f4ece6] text-[#5b3035] hover:bg-[#eadbd1]'}`}
-              >
-                {item || 'Todos'}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setType('')}
+              className={`rounded-xl px-4 py-3 text-sm transition ${type === '' ? 'bg-[#851329] text-white' : 'bg-[#f4ece6] text-[#5b3035] hover:bg-[#eadbd1]'}`}
+            >
+              Todos
+            </button>
+            <label className="sr-only" htmlFor="wine-type-filter">
+              Filtrar por tipo de vinho
+            </label>
+            <select
+              id="wine-type-filter"
+              aria-label="Filtrar por tipo de vinho"
+              value={type}
+              onChange={(event) => setType(event.target.value)}
+              className="min-w-44 appearance-none rounded-xl border-0 bg-[#f4ece6] px-4 py-3 text-sm text-[#5b3035] outline-none transition hover:bg-[#eadbd1] focus:ring-2 focus:ring-[#851329]/20"
+            >
+              <option value="">Selecionar tipo</option>
+              {wineTypes.map((wineType) => (
+                <option key={wineType} value={wineType}>
+                  {wineType}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
