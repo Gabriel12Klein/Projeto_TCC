@@ -43,12 +43,16 @@ export default function HomePage() {
                 Conheça a VINUM, seus rótulos e a trajetória que transforma cada safra em uma experiência
                 única.
               </p>
-              <Link
+              <a
                 className="mt-9 inline-flex rounded-full bg-[#d0a565] px-7 py-3.5 font-semibold text-[#4c151c] transition hover:bg-[#e3c17d]"
-                to="#vinhos"
+                href="#vinhos"
+                onClick={(event) => {
+                  event.preventDefault();
+                  document.getElementById('vinhos')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
               >
                 Conheça nossos vinhos
-              </Link>
+              </a>
             </div>
             <div className="hidden rounded-[2rem] border border-white/20 bg-black/20 p-10 backdrop-blur-sm lg:block">
               <p className="font-playfair text-4xl leading-tight text-[#f5dca4]">
@@ -61,7 +65,7 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-        <section id="vinhos" className="mx-auto max-w-7xl px-5 py-16">
+        <section id="vinhos" className="scroll-mt-6 mx-auto max-w-7xl px-5 py-16">
           <div className="mb-10 text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#9a6a2d]">Nossa seleção</p>
             <h2 className="mt-3 font-playfair text-4xl font-semibold text-[#5b0c1b] md:text-5xl">
