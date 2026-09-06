@@ -8,10 +8,6 @@ export default function LoteCadastrar({ config, onOpenWine, ...props }: any) {
     queryKey: ['grapes', 'active'],
     queryFn: () => api.list('uvas'),
   });
-  const { data: statuses = [] } = useQuery({
-    queryKey: ['status-lote', 'active'],
-    queryFn: () => api.list('status-lote'),
-  });
   const { data: vintages = [] } = useQuery({
     queryKey: ['vintages', 'all'],
     queryFn: () => api.list('safras'),
@@ -24,12 +20,11 @@ export default function LoteCadastrar({ config, onOpenWine, ...props }: any) {
     ...config,
     fields: config.fields.map((field) => {
       if (field.name === 'grapeIds') return { ...field, options: grapes.map((item) => ({ value: String(item.id), label: String(item.name) })) };
-      if (field.name === 'status') return { ...field, options: statuses.map((item) => String(item.name)) };
       if (field.name === 'wineId') return { ...field, options: wines.map((item) => ({ value: String(item.id), label: `${String(item.name)} — ${String(item.type)}` })) };
       if (field.name === 'vintageId') return { ...field, options: vintages.map((item) => ({ value: String(item.id), label: `${String(item.identifier)} — ${String(item.year)}` })) };
       return field;
     }),
-  }), [config, grapes, statuses, vintages, wines]);
+  }), [config, grapes, vintages, wines]);
 
   return <>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[9px] border border-[#e4bd84] bg-[#fffaf4] px-4 py-3 text-[13px] text-[#5f5651]" role="note">

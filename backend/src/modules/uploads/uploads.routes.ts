@@ -26,14 +26,14 @@ router.post(
   asyncRoute(async (req, res) => {
     if (!req.file) throw new AppError(400, 'Envie uma imagem JPEG, PNG ou WebP de até 5 MB.');
     const wineId = String(req.params.wineId);
-    await prisma.wine.findUniqueOrThrow({ where: { id: wineId } });
+    const wine = await prisma.wine.findUniqueOrThrow({ where: { id: wineId }, select: { imageId: true } });
     const path = `/uploads/wines/${req.file.filename}`;
     const image = await prisma.$transaction(async (transaction) => {
-      await transaction.wineImage.updateMany({ where: { wineId }, data: { isPrimary: false } });
       const created = await transaction.wineImage.create({
-        data: { wineId, path, altText: req.body.altText || null, isPrimary: true },
+        data: { path, altText: req.body.altText || null, isPrimary: true },
       });
-      await transaction.wine.update({ where: { id: wineId }, data: { imagePath: path } });
+      await transaction.wine.update({ where: { id: wineId }, data: { imageId: created.id } });
+      if (wine.imageId) await transaction.wineImage.delete({ where: { id: wine.imageId } });
       return created;
     });
     res.status(201).json({ id: image.id, path: image.path, isPrimary: image.isPrimary });

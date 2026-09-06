@@ -15,6 +15,13 @@ describe('VINUM API', () => {
     const catalog = await request(app).get('/api/catalog/wines').expect(200);
     expect(Array.isArray(catalog.body)).toBe(true);
     expect(catalog.body.every((wine: { slug?: string }) => Boolean(wine.slug))).toBe(true);
+    if (catalog.body[0]) {
+      const detail = await request(app).get(`/api/catalog/wines/${catalog.body[0].slug}`).expect(200);
+      expect(detail.body.type).toBeTruthy();
+      expect(detail.body.grapes).toBeTruthy();
+      expect(detail.body).not.toHaveProperty('additionalInfo');
+      expect(detail.body).not.toHaveProperty('images');
+    }
   });
 
   it('permite que um administrador consulte os módulos protegidos', async () => {

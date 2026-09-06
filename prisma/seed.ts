@@ -15,15 +15,11 @@ type LegacyStore = {
 
 const prisma = new PrismaClient({ adapter: createMysqlAdapter() });
 
-function text(value: unknown, fallback = '') {
-  return String(value ?? fallback).trim();
-}
-
+const text = (value: unknown, fallback = '') => String(value ?? fallback).trim();
 function number(value: unknown, fallback = 0) {
   const parsed = Number(text(value).replace(/\./g, '').replace(',', '.'));
   return Number.isFinite(parsed) ? parsed : fallback;
 }
-
 function date(value: unknown) {
   const raw = text(value);
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
@@ -33,7 +29,6 @@ function date(value: unknown) {
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
-
 function slugify(value: string) {
   return value
     .normalize('NFD')
@@ -44,8 +39,15 @@ function slugify(value: string) {
 }
 
 async function main() {
-  const storePath = resolve('backend/data/store.json');
-  const store = JSON.parse(await readFile(storePath, 'utf8')) as LegacyStore;
+  const store = JSON.parse(await readFile(resolve('backend/data/store.json'), 'utf8')) as LegacyStore;
+  const [adminRole, customerRole] = await Promise.all([
+    prisma.role.upsert({ where: { name: 'ADMIN' }, update: {}, create: { id: 'role-admin', name: 'ADMIN' } }),
+    prisma.role.upsert({
+      where: { name: 'CUSTOMER' },
+      update: {},
+      create: { id: 'role-customer', name: 'CUSTOMER' },
+    }),
+  ]);
 
   for (const user of store.users) {
     const email = text(user.email).toLowerCase();
@@ -58,7 +60,7 @@ async function main() {
         email,
         passwordHash: text(user.passwordHash),
         passwordSalt: text(user.salt) || null,
-        role: email === 'admin@vinum.local' ? 'ADMIN' : 'CUSTOMER',
+        roleId: email === 'admin@vinum.local' ? adminRole.id : customerRole.id,
         createdAt: date(user.createdAt),
       },
     });
@@ -84,15 +86,20 @@ async function main() {
 
   for (const wine of store.vinhos) {
     const name = text(wine.name);
-    await prisma.wine.upsert({
+    const typeName = text(wine.type, 'Não informado');
+    const type = await prisma.wineType.upsert({
+      where: { name: typeName },
+      update: {},
+      create: { name: typeName },
+    });
+    const created = await prisma.wine.upsert({
       where: { id: text(wine.id) },
       update: {},
       create: {
         id: text(wine.id),
         name,
         slug: `${slugify(name)}-${text(wine.id)}`,
-        type: text(wine.type),
-        grapes: text(wine.grapes),
+        typeId: type.id,
         volumeMl: Math.round(number(wine.volume, 750)),
         alcoholPercentage: number(wine.alcohol),
         description: text(wine.description),
@@ -105,6 +112,21 @@ async function main() {
         createdAt: date(wine.createdAt),
       },
     });
+    for (const grapeName of text(wine.grapes)
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)) {
+      const grape = await prisma.grape.upsert({
+        where: { name: grapeName },
+        update: {},
+        create: { name: grapeName },
+      });
+      await prisma.wineGrape.upsert({
+        where: { wineId_grapeId: { wineId: created.id, grapeId: grape.id } },
+        update: {},
+        create: { wineId: created.id, grapeId: grape.id },
+      });
+    }
   }
 
   for (const vintage of store.safras) {
@@ -145,14 +167,13 @@ async function main() {
     });
   }
 
-  const [users, wineries, wines, vintages, batches] = await Promise.all([
-    prisma.user.count(),
-    prisma.winery.count(),
-    prisma.wine.count(),
-    prisma.vintage.count(),
-    prisma.batch.count(),
-  ]);
-  console.log({ users, wineries, wines, vintages, batches });
+  console.log({
+    users: await prisma.user.count(),
+    wineries: await prisma.winery.count(),
+    wines: await prisma.wine.count(),
+    vintages: await prisma.vintage.count(),
+    batches: await prisma.batch.count(),
+  });
 }
 
 main()

@@ -5,7 +5,6 @@ import { prisma } from '../../lib/prisma.js';
 
 const includeRelations = {
   wine: { select: { id: true, name: true } },
-  statusRef: { select: { id: true, name: true } },
   grapeLinks: { include: { grape: { select: { id: true, name: true } } } },
 } as const;
 
@@ -22,8 +21,7 @@ function toView(vintage: VintageWithRelations) {
     grapes: grapes.map(({ name }) => name).join(', '),
     year: String(vintage.year),
     observations: vintage.observations ?? '',
-    status: vintage.statusRef?.name ?? vintage.status,
-    statusId: vintage.statusRef?.id ?? vintage.statusId ?? '',
+    status: vintage.status,
     supplier: vintage.supplier ?? '',
     createdAt: toPtDate(vintage.createdAt),
   };
@@ -43,16 +41,9 @@ async function resolveGrapeIds(input: Record<string, unknown>) {
   if (!Array.isArray(input.grapeIds)) return undefined;
   const grapeIds = input.grapeIds.map(String);
   const grapes = await prisma.grape.findMany({ where: { id: { in: grapeIds } } });
-  if (grapes.length !== grapeIds.length) throw new AppError(400, 'Uma das uvas selecionadas não foi encontrada.');
+  if (grapes.length !== grapeIds.length)
+    throw new AppError(400, 'Uma das uvas selecionadas não foi encontrada.');
   return grapeIds;
-}
-
-async function resolveVintageStatus(status: unknown) {
-  const name = String(status ?? '').trim();
-  if (!name) return null;
-  const current = await prisma.vintageStatus.findUnique({ where: { name } });
-  if (!current) throw new AppError(400, 'O status da safra selecionado não foi encontrado.');
-  return current;
 }
 
 export const vintagesService = {
@@ -72,7 +63,6 @@ export const vintagesService = {
     const derivedYear = vintageIdentifierToYear(identifier);
     const wineId = await resolveWineId(input);
     const grapeIds = await resolveGrapeIds(input);
-    const status = await resolveVintageStatus(input.status);
     const vintage = await prisma.$transaction(async (transaction) => {
       const created = await transaction.vintage.create({
         data: {
@@ -82,7 +72,6 @@ export const vintagesService = {
           supplier: input.supplier ? String(input.supplier) : null,
           observations: input.observations ? String(input.observations) : null,
           status: String(input.status),
-          statusId: status?.id ?? null,
         },
       });
       if (grapeIds?.length) {
@@ -99,21 +88,23 @@ export const vintagesService = {
     const current = await prisma.vintage.findUniqueOrThrow({ where: { id } });
     const data: Prisma.VintageUncheckedUpdateInput = {};
     const grapeIds = await resolveGrapeIds(input);
-    if (input.identifier !== undefined) data.identifier = normalizeVintageIdentifier(String(input.identifier));
-    if (input.wineId !== undefined || input.wineName !== undefined) data.wineId = await resolveWineId(input, current.wineId);
+    if (input.identifier !== undefined)
+      data.identifier = normalizeVintageIdentifier(String(input.identifier));
+    if (input.wineId !== undefined || input.wineName !== undefined)
+      data.wineId = await resolveWineId(input, current.wineId);
     if (input.year !== undefined || input.identifier !== undefined) {
-      const effectiveIdentifier = input.identifier !== undefined
-        ? normalizeVintageIdentifier(String(input.identifier))
-        : current.identifier;
+      const effectiveIdentifier =
+        input.identifier !== undefined
+          ? normalizeVintageIdentifier(String(input.identifier))
+          : current.identifier;
       const derivedYear = vintageIdentifierToYear(effectiveIdentifier);
       if (derivedYear !== null) data.year = derivedYear;
     }
     if (input.supplier !== undefined) data.supplier = input.supplier ? String(input.supplier) : null;
-    if (input.observations !== undefined) data.observations = input.observations ? String(input.observations) : null;
+    if (input.observations !== undefined)
+      data.observations = input.observations ? String(input.observations) : null;
     if (input.status !== undefined) {
-      const status = await resolveVintageStatus(input.status);
       data.status = String(input.status);
-      data.statusId = status?.id ?? null;
     }
 
     const vintage = await prisma.$transaction(async (transaction) => {

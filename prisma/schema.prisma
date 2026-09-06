@@ -22,7 +22,6 @@ model User {
   email         String    @unique
   passwordHash  String
   passwordSalt  String?
-  role          String    @default("CUSTOMER")
   roleId        String?
   roleRef       Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
   active        Boolean   @default(true)
@@ -100,8 +99,6 @@ model Wine {
 
   name              String
   slug              String   @unique
-  type              String
-  grapes            String
   volumeMl          Int
   alcoholPercentage Float
   description       String   @db.Text
@@ -110,14 +107,13 @@ model Wine {
   aromas          String? @db.Text @map("aromas")
   tastingNotes    String? @db.Text @map("notas_degustacao")
   pairing         String? @db.Text @map("harmonizacao")
-  additionalInfo  String? @db.Text @map("informacoes_complementares")
-
-  imagePath String?
   status    String @default("DRAFT")
+
+  imageId String?    @unique @map("imagem_vinho_id")
+  image   WineImage? @relation(fields: [imageId], references: [id], onDelete: SetNull)
 
   vintages   Vintage[]
   batches    Batch[]
-  images     WineImage[]
   grapeLinks WineGrape[]
 
   createdAt DateTime @default(now())
@@ -179,16 +175,14 @@ model WineGrape {
 model WineImage {
   id String @id @default(cuid())
 
-  wineId String
-  wine   Wine @relation(fields: [wineId], references: [id], onDelete: Cascade)
-
   path      String
   altText   String?
   isPrimary Boolean @default(false)
 
   createdAt DateTime @default(now())
 
-  @@index([wineId])
+  wine Wine?
+
   @@index([isPrimary])
   @@map("imagem_vinho")
 }
@@ -204,9 +198,6 @@ model Vintage {
   observations String?
   status       String
 
-  statusId  String?
-  statusRef VintageStatus? @relation(fields: [statusId], references: [id], onDelete: SetNull)
-
   supplier String?
 
   batches    Batch[]
@@ -217,24 +208,8 @@ model Vintage {
 
   @@index([wineId])
   @@index([year])
-  @@index([statusId])
   @@index([status])
   @@map("safra")
-}
-
-model VintageStatus {
-  id          String  @id @default(cuid())
-  name        String  @unique
-  description String?
-  active      Boolean @default(true)
-
-  vintages Vintage[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([active])
-  @@map("status_safra")
 }
 
 model VintageGrape {
@@ -263,12 +238,9 @@ model Batch {
   quantityLiters   Float
   productionDate   DateTime
   bottlingTime     String?  @map("hora_envase")
-  registrationDate DateTime
+  registrationDate DateTime?
 
   status String
-
-  statusId  String?
-  statusRef BatchStatus? @relation(fields: [statusId], references: [id], onDelete: SetNull)
 
   blockchainRef String?
   qrCodePath    String?
@@ -280,25 +252,9 @@ model Batch {
 
   @@index([vintageId])
   @@index([wineId])
-  @@index([statusId])
   @@index([status])
   @@index([productionDate])
   @@map("lote")
-}
-
-model BatchStatus {
-  id          String  @id @default(cuid())
-  name        String  @unique
-  description String?
-  active      Boolean @default(true)
-
-  batches Batch[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([active])
-  @@map("status_lote")
 }
 
 model BatchGrape {

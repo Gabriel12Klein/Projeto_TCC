@@ -7,8 +7,6 @@ const summarySelect = {
   id: true,
   name: true,
   slug: true,
-  type: true,
-  grapes: true,
   volumeMl: true,
   alcoholPercentage: true,
   description: true,
@@ -16,15 +14,14 @@ const summarySelect = {
   aromas: true,
   tastingNotes: true,
   pairing: true,
-  additionalInfo: true,
-  imagePath: true,
+  wineType: { select: { name: true } },
+  grapeLinks: { include: { grape: { select: { name: true } } } },
+  image: { select: { path: true } },
 } as const;
 
 const publicWineSelect = {
   id: true,
   name: true,
-  type: true,
-  grapes: true,
   volumeMl: true,
   alcoholPercentage: true,
   description: true,
@@ -32,43 +29,39 @@ const publicWineSelect = {
   aromas: true,
   tastingNotes: true,
   pairing: true,
-  additionalInfo: true,
-  imagePath: true,
   wineType: { select: { name: true } },
   grapeLinks: { include: { grape: { select: { name: true } } } },
   winery: { select: { name: true, city: true, state: true } },
-  images: true,
+  image: { select: { path: true } },
 } as const;
 
 const publicBatchWhere: Prisma.BatchWhereInput = {
-  OR: [
-    { statusId: 'status-lote-publicado' },
-    { status: { in: ['Publicado', 'Publicado para consulta'] } },
-  ],
+  status: { in: ['Publicado', 'Publicado para consulta'] },
 };
 
-function batchView(batch: {
-  code: string;
-  quantityLiters: number;
-  productionDate: Date;
-  bottlingTime: string | null;
-  registrationDate: Date;
-  status: string;
-  statusRef: { name: string } | null;
-  blockchainRef: string | null;
-  qrCodePath: string | null;
-  grapeLinks: { grape: { name: string } }[];
-}, fallbackGrapes: string[]) {
+function batchView(
+  batch: {
+    code: string;
+    quantityLiters: number;
+    productionDate: Date;
+    bottlingTime: string | null;
+  registrationDate: Date | null;
+    status: string;
+    blockchainRef: string | null;
+    qrCodePath: string | null;
+    grapeLinks: { grape: { name: string } }[];
+  },
+  fallbackGrapes: string[],
+) {
+  const grapes = batch.grapeLinks.map(({ grape }) => grape.name);
   return {
     code: batch.code,
     quantityLiters: batch.quantityLiters,
     productionDate: toInputDate(batch.productionDate),
     bottlingTime: batch.bottlingTime,
-    registrationDate: toInputDate(batch.registrationDate),
-    status: batch.statusRef?.name ?? batch.status,
-    grapes: batch.grapeLinks.map(({ grape }) => grape.name).length
-      ? batch.grapeLinks.map(({ grape }) => grape.name)
-      : fallbackGrapes,
+    registrationDate: batch.registrationDate ? toInputDate(batch.registrationDate) : null,
+    status: batch.status,
+    grapes: grapes.length ? grapes : fallbackGrapes,
     blockchainRef: batch.blockchainRef,
     qrCodePath: batch.qrCodePath,
   };
@@ -81,7 +74,6 @@ function vintageView(vintage: {
   observations: string | null;
   supplier: string | null;
   status: string;
-  statusRef: { name: string } | null;
   grapeLinks: { grape: { name: string } }[];
   batches: Parameters<typeof batchView>[0][];
 }) {
@@ -92,38 +84,19 @@ function vintageView(vintage: {
     year: vintage.year,
     observations: vintage.observations,
     supplier: vintage.supplier,
-    status: vintage.statusRef?.name ?? vintage.status,
+    status: vintage.status,
     grapes,
     batches: vintage.batches.map((batch) => batchView(batch, grapes)),
   };
 }
 
-function publicWineView(wine: {
-  id: string;
-  name: string;
-  type: string;
-  grapes: string;
-  volumeMl: number;
-  alcoholPercentage: number;
-  description: string;
-  characteristics: string | null;
-  aromas: string | null;
-  tastingNotes: string | null;
-  pairing: string | null;
-  additionalInfo: string | null;
-  imagePath: string | null;
-  wineType: { name: string } | null;
-  grapeLinks: { grape: { name: string } }[];
-  winery: { name: string; city: string; state: string } | null;
-  images: { path: string; altText: string | null; isPrimary: boolean }[];
-} | null) {
+function publicWineView(wine: Prisma.WineGetPayload<{ select: typeof publicWineSelect }> | null) {
   if (!wine) return null;
-  const grapes = wine.grapeLinks.map(({ grape }) => grape.name);
   return {
     id: wine.id,
     name: wine.name,
-    type: wine.wineType?.name ?? wine.type,
-    grapes: grapes.length ? grapes : wine.grapes.split(',').map((item) => item.trim()).filter(Boolean),
+    type: wine.wineType?.name ?? '',
+    grapes: wine.grapeLinks.map(({ grape }) => grape.name),
     volumeMl: wine.volumeMl,
     alcoholPercentage: wine.alcoholPercentage,
     description: wine.description,
@@ -131,32 +104,45 @@ function publicWineView(wine: {
     aromas: wine.aromas,
     tastingNotes: wine.tastingNotes,
     pairing: wine.pairing,
-    additionalInfo: wine.additionalInfo,
-    imagePath: wine.imagePath,
+    imagePath: wine.image?.path ?? null,
     winery: wine.winery,
-    images: wine.images,
   };
 }
 
 export const catalogService = {
   async list(query = '', type = '') {
-    return prisma.wine.findMany({
+    const wines = await prisma.wine.findMany({
       where: {
         status: 'PUBLISHED',
         ...(query
           ? {
               OR: [
                 { name: { contains: query } },
-                { grapes: { contains: query } },
                 { description: { contains: query } },
+                { grapeLinks: { some: { grape: { name: { contains: query } } } } },
               ],
             }
           : {}),
-        ...(type ? { type } : {}),
+        ...(type ? { wineType: { name: type } } : {}),
       },
       select: summarySelect,
       orderBy: { name: 'asc' },
     });
+    return wines.map((wine) => ({
+      id: wine.id,
+      name: wine.name,
+      slug: wine.slug,
+      type: wine.wineType?.name ?? '',
+      grapes: wine.grapeLinks.map(({ grape }) => grape.name).join(', '),
+      volumeMl: wine.volumeMl,
+      alcoholPercentage: wine.alcoholPercentage,
+      description: wine.description,
+      characteristics: wine.characteristics,
+      aromas: wine.aromas,
+      tastingNotes: wine.tastingNotes,
+      pairing: wine.pairing,
+      imagePath: wine.image?.path ?? null,
+    }));
   },
 
   async findBySlug(slug: string) {
@@ -164,19 +150,15 @@ export const catalogService = {
       where: { slug, status: 'PUBLISHED' },
       include: {
         winery: { select: { name: true, city: true, state: true } },
-        images: { orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }] },
+        image: { select: { path: true } },
         vintages: {
           orderBy: { year: 'desc' },
           include: {
-            statusRef: { select: { name: true } },
             grapeLinks: { include: { grape: { select: { name: true } } } },
             batches: {
               where: publicBatchWhere,
               orderBy: { productionDate: 'desc' },
-              include: {
-                statusRef: { select: { name: true } },
-                grapeLinks: { include: { grape: { select: { name: true } } } },
-              },
+              include: { grapeLinks: { include: { grape: { select: { name: true } } } } },
             },
           },
         },
@@ -184,14 +166,8 @@ export const catalogService = {
           where: publicBatchWhere,
           orderBy: { productionDate: 'desc' },
           include: {
-            statusRef: { select: { name: true } },
             grapeLinks: { include: { grape: { select: { name: true } } } },
-            vintage: {
-              include: {
-                statusRef: { select: { name: true } },
-                grapeLinks: { include: { grape: { select: { name: true } } } },
-              },
-            },
+            vintage: { include: { grapeLinks: { include: { grape: { select: { name: true } } } } } },
           },
         },
         grapeLinks: { include: { grape: { select: { name: true } } } },
@@ -211,7 +187,7 @@ export const catalogService = {
         year: batch.vintage.year,
         observations: batch.vintage.observations,
         supplier: batch.vintage.supplier,
-        status: batch.vintage.statusRef?.name ?? batch.vintage.status,
+        status: batch.vintage.status,
         grapes,
         batches: [],
       };
@@ -221,13 +197,12 @@ export const catalogService = {
       vintageMap.set(item.id, item);
     }
 
-    const wineGrapes = wine.grapeLinks.map(({ grape }) => grape.name);
     return {
       id: wine.id,
       name: wine.name,
       slug: wine.slug,
-      type: wine.wineType?.name ?? wine.type,
-      grapes: wineGrapes.length ? wineGrapes.join(', ') : wine.grapes,
+      type: wine.wineType?.name ?? '',
+      grapes: wine.grapeLinks.map(({ grape }) => grape.name).join(', '),
       volumeMl: wine.volumeMl,
       alcoholPercentage: wine.alcoholPercentage,
       description: wine.description,
@@ -235,14 +210,8 @@ export const catalogService = {
       aromas: wine.aromas,
       tastingNotes: wine.tastingNotes,
       pairing: wine.pairing,
-      additionalInfo: wine.additionalInfo,
-      imagePath: wine.imagePath,
+      imagePath: wine.image?.path ?? null,
       winery: wine.winery,
-      images: wine.images.map((image) => ({
-        path: image.path,
-        altText: image.altText,
-        isPrimary: image.isPrimary,
-      })),
       vintages: [...vintageMap.values()].sort((a, b) => b.year - a.year),
     };
   },
@@ -251,12 +220,10 @@ export const catalogService = {
     const batch = await prisma.batch.findFirst({
       where: { code },
       include: {
-        statusRef: { select: { name: true } },
         grapeLinks: { include: { grape: { select: { name: true } } } },
         wine: { select: publicWineSelect },
         vintage: {
           include: {
-            statusRef: { select: { name: true } },
             grapeLinks: { include: { grape: { select: { name: true } } } },
             wine: { select: publicWineSelect },
           },
@@ -265,16 +232,15 @@ export const catalogService = {
     });
     if (!batch) throw new AppError(404, 'Lote não encontrado.');
     const vintageGrapes = batch.vintage.grapeLinks.map(({ grape }) => grape.name);
+    const batchGrapes = batch.grapeLinks.map(({ grape }) => grape.name);
     return {
       code: batch.code,
       quantityLiters: batch.quantityLiters,
       productionDate: toInputDate(batch.productionDate),
       bottlingTime: batch.bottlingTime,
-      registrationDate: toInputDate(batch.registrationDate),
-      status: batch.statusRef?.name ?? batch.status,
-      grapes: batch.grapeLinks.map(({ grape }) => grape.name).length
-        ? batch.grapeLinks.map(({ grape }) => grape.name)
-        : vintageGrapes,
+      registrationDate: batch.registrationDate ? toInputDate(batch.registrationDate) : null,
+      status: batch.status,
+      grapes: batchGrapes.length ? batchGrapes : vintageGrapes,
       blockchainRef: batch.blockchainRef,
       qrCodePath: batch.qrCodePath,
       wine: publicWineView(batch.wine ?? batch.vintage.wine),
@@ -283,7 +249,7 @@ export const catalogService = {
         year: batch.vintage.year,
         observations: batch.vintage.observations,
         supplier: batch.vintage.supplier,
-        status: batch.vintage.statusRef?.name ?? batch.vintage.status,
+        status: batch.vintage.status,
         grapes: vintageGrapes,
       },
     };

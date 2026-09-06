@@ -27,18 +27,27 @@ export default function ClientWinePage({ mode }: { mode: 'create' | 'records' })
     queryKey: ['grapes', 'active'],
     queryFn: () => api.list('uvas'),
   });
-  const config = useMemo(() => ({
-    ...moduleConfigs.vinhos,
-    fields: moduleConfigs.vinhos.fields.map((field) => {
-      if (field.name === 'typeId') {
-        return { ...field, options: wineTypes.map((item) => ({ value: String(item.id), label: String(item.name) })) };
-      }
-      if (field.name === 'grapeIds') {
-        return { ...field, options: grapes.map((item) => ({ value: String(item.id), label: String(item.name) })) };
-      }
-      return field;
+  const config = useMemo(
+    () => ({
+      ...moduleConfigs.vinhos,
+      fields: moduleConfigs.vinhos.fields.map((field) => {
+        if (field.name === 'typeId') {
+          return {
+            ...field,
+            options: wineTypes.map((item) => ({ value: String(item.id), label: String(item.name) })),
+          };
+        }
+        if (field.name === 'grapeIds') {
+          return {
+            ...field,
+            options: grapes.map((item) => ({ value: String(item.id), label: String(item.name) })),
+          };
+        }
+        return field;
+      }),
     }),
-  }), [grapes, wineTypes]);
+    [grapes, wineTypes],
+  );
 
   async function save(payload: Record<string, unknown>) {
     const saved = editing?.id
@@ -67,8 +76,8 @@ export default function ClientWinePage({ mode }: { mode: 'create' | 'records' })
     try {
       await api.create('vinhos', {
         name: deletedWine.name,
-        type: deletedWine.type,
-        grapes: deletedWine.grapes,
+        typeId: deletedWine.typeId,
+        grapeIds: deletedWine.grapeIds,
         volume: deletedWine.volume,
         alcohol: deletedWine.alcohol,
         description: deletedWine.description,

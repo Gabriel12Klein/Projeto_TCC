@@ -158,6 +158,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     if (config.key === 'lotes') {
       const productionDate = batchCodeToProductionDate(nextForm.code);
       if (productionDate) nextForm.productionDate = productionDate;
+      nextForm.registrationDate = initialData?.registrationDate ?? '';
     }
     if (config.key === 'safras') {
       const year = vintageIdentifierToYear(nextForm.identifier);
@@ -250,7 +251,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
       }
       setForm({});
       clearDraft(draftKey);
-      showMessage('Cadastro salvo localmente.');
+      showMessage('Cadastro salvo com sucesso.');
       onSaved?.(saved);
     } catch(err) { showMessage(err.message); }
   }
@@ -283,7 +284,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     </div>}
 
     <div className="grid grid-cols-2 gap-y-[clamp(14px,1.25vw,18px)] gap-x-[clamp(22px,2.5vw,38px)] max-[1450px]:gap-y-[14px] max-[1450px]:gap-x-6">
-      {config.fields.map((f, fieldIndex)=>{
+      {(config.blockchainInfo ? config.fields.filter((field) => field.name !== 'registrationDate') : config.fields).map((f, fieldIndex)=>{
         const wrapper = f.full
           ? `min-w-0 col-span-2 ${f.action ? 'grid grid-cols-[minmax(0,1fr)_auto] gap-[14px] items-end' : ''}`
           : 'min-w-0';
@@ -296,18 +297,30 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
       })}
     </div>
 
-    {config.blockchainInfo && <div className="grid grid-cols-2 mt-[clamp(15px,1.5vw,20px)] border border-[#e4bd84] rounded-[10px] bg-[#fffaf4] py-[clamp(14px,1.3vw,18px)] px-[clamp(16px,1.5vw,20px)] gap-[clamp(18px,2vw,25px)]">
-      <div className="flex gap-[14px] items-start"><img className="w-[42px] h-[42px] object-contain" src={blockchainIcon} alt=""/><p className="m-0 flex flex-col gap-[5px]"><b className="text-[13px]">Blockchain</b><span className="text-[11.5px] leading-[1.35] text-[#5f5651]">Ao registrar na blockchain, as informações do lote serão armazenadas futuramente de forma imutável.</span></p></div>
-      <div className="flex gap-[14px] items-start border-l border-[#d9b680] pl-[clamp(18px,1.8vw,25px)]"><img className="w-[42px] h-[42px] object-contain" src={qrIcon} alt=""/><p className="m-0 flex flex-col gap-[5px]"><b className="text-[13px]">QR Code</b><span className="text-[11.5px] leading-[1.35] text-[#5f5651]">Gere um QR Code exclusivo para este lote e facilite a consulta das informações.</span></p></div>
-    </div>}
-
-    <div className="flex flex-wrap gap-[clamp(10px,1vw,14px)] mt-[clamp(18px,2vw,26px)] pt-[clamp(15px,1.5vw,20px)] border-t border-[#ece6e1] max-[1450px]:mt-[18px] max-[1450px]:pt-[15px]">
+    {config.blockchainInfo && <div className="mt-2 flex flex-wrap gap-[clamp(10px,1vw,14px)] border-b border-[#ece6e1] pb-[clamp(15px,1.5vw,20px)]">
       <button className="min-w-[clamp(200px,18vw,230px)] min-h-12 h-[clamp(48px,5vh,54px)] rounded-[7px] px-[clamp(16px,1.5vw,24px)] flex items-center justify-center gap-[10px] text-[clamp(13px,1vw,15px)] cursor-pointer border-0 bg-[linear-gradient(100deg,#8f0826,#5d0c1c)] text-white transition-[transform,box-shadow,filter] duration-150 hover:brightness-[1.08] hover:shadow-[0_7px_16px_rgba(105,10,31,.22)] hover:-translate-y-px active:translate-y-0 active:scale-[.98] focus-visible:outline-[3px] focus-visible:outline-[rgba(194,137,57,.42)] focus-visible:outline-offset-2" type="submit"><img className="w-[25px] h-[25px] object-contain" src={saveIcon} alt=""/>{initialData?.id?'Salvar alterações':'Salvar cadastro'}</button>
-      {config.blockchainInfo && <button type="button" className={secondaryButton} onClick={()=>showMessage('Blockchain ainda não foi implementada nesta versão local.')}><img className="w-[25px] h-[25px] object-contain" src={linkIcon} alt=""/>Registrar na blockchain</button>}
-      {config.blockchainInfo && <button type="button" className={secondaryButton} onClick={generateQrCode}><img className="w-[25px] h-[25px] object-contain" src={qrIcon} alt=""/>Gerar QR Code</button>}
-      {config.blockchainInfo && <span className="basis-full h-0" />}
       <button type="button" className={secondaryButton} onClick={clearForm}><img className="w-[25px] h-[25px] object-contain" src={clearIcon} alt=""/>Limpar</button>
       <button type="button" className={secondaryButton} onClick={cancelForm}><img className="w-[25px] h-[25px] object-contain" src={cancelIcon} alt=""/>Cancelar</button>
-    </div>
+    </div>}
+
+    {config.blockchainInfo && <div className="mt-[clamp(15px,1.5vw,20px)] grid grid-cols-[minmax(220px,.65fr)_minmax(0,1.35fr)] items-start gap-x-[clamp(22px,2.5vw,38px)] gap-y-[clamp(14px,1.25vw,18px)] max-md:grid-cols-1">
+      <button type="button" className={`${secondaryButton} w-full`} onClick={()=>showMessage('Blockchain ainda não foi implementada nesta versão.')}><img className="w-[25px] h-[25px] object-contain" src={linkIcon} alt=""/>Registrar na blockchain</button>
+      <button type="button" className={`${secondaryButton} w-full`} onClick={generateQrCode}><img className="w-[25px] h-[25px] object-contain" src={qrIcon} alt=""/>Gerar QR Code</button>
+      {config.fields.filter((field) => field.name === 'registrationDate').map((field) => <FormField key={field.name} field={field} value={form[field.name]} valid={fieldValidity[field.name]} invalid={false} unlocked={true} onChange={change} onRequestFocus={() => {}} />)}
+      <div className="flex min-h-[150px] items-center justify-center rounded-[10px] border border-dashed border-[#d8b77f] bg-[#fffdf9] p-4" aria-live="polite">
+        {form.qrCode ? <img className="h-32 w-32 object-contain" src={String(form.qrCode)} alt="QR Code do lote" /> : <span className="max-w-sm text-center text-[12px] leading-relaxed text-[#857d79]">O QR Code aparecerá aqui após ser gerado.</span>}
+      </div>
+    </div>}
+
+    {config.blockchainInfo && <div className="mt-[clamp(12px,1.2vw,16px)] flex items-center gap-3 rounded-[9px] border border-[#e4bd84] bg-[#fffaf4] px-[clamp(14px,1.4vw,18px)] py-2.5">
+      <img className="h-9 w-9 shrink-0 object-contain" src={blockchainIcon} alt=""/>
+      <p className="m-0 flex min-w-0 items-baseline gap-2 text-[12px] leading-[1.35]"><b className="shrink-0 text-[#302627]">Blockchain:</b><span className="text-[#5f5651]">Ao registrar na blockchain, as informações do lote serão armazenadas futuramente de forma imutável.</span></p>
+    </div>}
+
+    {!config.blockchainInfo && <div className="flex flex-wrap gap-[clamp(10px,1vw,14px)] mt-[clamp(18px,2vw,26px)] pt-[clamp(15px,1.5vw,20px)] border-t border-[#ece6e1] max-[1450px]:mt-[18px] max-[1450px]:pt-[15px]">
+      <button className="min-w-[clamp(200px,18vw,230px)] min-h-12 h-[clamp(48px,5vh,54px)] rounded-[7px] px-[clamp(16px,1.5vw,24px)] flex items-center justify-center gap-[10px] text-[clamp(13px,1vw,15px)] cursor-pointer border-0 bg-[linear-gradient(100deg,#8f0826,#5d0c1c)] text-white transition-[transform,box-shadow,filter] duration-150 hover:brightness-[1.08] hover:shadow-[0_7px_16px_rgba(105,10,31,.22)] hover:-translate-y-px active:translate-y-0 active:scale-[.98] focus-visible:outline-[3px] focus-visible:outline-[rgba(194,137,57,.42)] focus-visible:outline-offset-2" type="submit"><img className="w-[25px] h-[25px] object-contain" src={saveIcon} alt=""/>{initialData?.id?'Salvar alterações':'Salvar cadastro'}</button>
+      <button type="button" className={secondaryButton} onClick={clearForm}><img className="w-[25px] h-[25px] object-contain" src={clearIcon} alt=""/>Limpar</button>
+      <button type="button" className={secondaryButton} onClick={cancelForm}><img className="w-[25px] h-[25px] object-contain" src={cancelIcon} alt=""/>Cancelar</button>
+    </div>}
   </form>;
 }

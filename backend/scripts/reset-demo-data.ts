@@ -10,22 +10,17 @@ const CUSTOMER_PASSWORD = 'Cliente123!';
 
 async function main() {
   const result = await prisma.$transaction(async (database) => {
-    // Remove dados operacionais e de demonstração, respeitando as relações.
     await database.session.deleteMany();
     await database.batchGrape.deleteMany();
     await database.batch.deleteMany();
     await database.vintageGrape.deleteMany();
     await database.vintage.deleteMany();
-    await database.wineImage.deleteMany();
     await database.wineGrape.deleteMany();
     await database.wine.deleteMany();
+    await database.wineImage.deleteMany();
     await database.winery.deleteMany();
     await database.user.deleteMany();
-
-    // Roles, tipos de vinho e uvas são referências necessárias para novos cadastros.
     await database.role.deleteMany();
-    await database.vintageStatus.deleteMany();
-    await database.batchStatus.deleteMany();
 
     await database.role.createMany({
       data: [
@@ -41,7 +36,6 @@ async function main() {
           name: 'Administrador',
           email: 'admin@vinum.local',
           passwordHash: await bcrypt.hash(ADMIN_PASSWORD, 12),
-          role: 'ADMIN',
           roleId: 'role-admin',
         },
         {
@@ -49,28 +43,12 @@ async function main() {
           name: 'Cliente',
           email: 'cliente@vinum.local',
           passwordHash: await bcrypt.hash(CUSTOMER_PASSWORD, 12),
-          role: 'CUSTOMER',
           roleId: 'role-customer',
         },
       ],
     });
 
-    await database.vintageStatus.createMany({
-      data: [
-        { id: 'status-safra-producao', name: 'Em processamento', description: 'Safra recebida e em processamento pela vinícola.' },
-        { id: 'status-safra-finalizada', name: 'Concluída', description: 'Processamento da safra encerrado.' },
-      ],
-    });
-
-    await database.batchStatus.createMany({
-      data: [
-        { id: 'status-lote-pendente', name: 'Aguardando registro', description: 'Lote ainda não foi registrado na blockchain.' },
-        { id: 'status-lote-registrado', name: 'Registrado na blockchain', description: 'Lote registrado na blockchain.' },
-        { id: 'status-lote-publicado', name: 'Publicado para consulta', description: 'Informações do lote disponíveis para consulta.' },
-      ],
-    });
-
-    const [users, wineries, wines, vintages, batches, grapes, wineTypes, vintageStatuses, batchStatuses] = await Promise.all([
+    const [users, wineries, wines, vintages, batches, grapes, wineTypes] = await Promise.all([
       database.user.count(),
       database.winery.count(),
       database.wine.count(),
@@ -78,11 +56,9 @@ async function main() {
       database.batch.count(),
       database.grape.count(),
       database.wineType.count(),
-      database.vintageStatus.count(),
-      database.batchStatus.count(),
     ]);
 
-    return { users, wineries, wines, vintages, batches, grapes, wineTypes, vintageStatuses, batchStatuses };
+    return { users, wineries, wines, vintages, batches, grapes, wineTypes };
   });
 
   console.log('Banco limpo:', result);

@@ -10,7 +10,6 @@ import batchesRouter from './modules/batches/batches.routes.js';
 import catalogRouter from './modules/catalog/catalog.routes.js';
 import uploadsRouter from './modules/uploads/uploads.routes.js';
 import { createReferenceRouter } from './modules/references/reference.routes.js';
-import { createStatusRouter } from './modules/statuses/status.routes.js';
 import swaggerUi from 'swagger-ui-express';
 import { openApiDocument } from './docs/openapi.js';
 
@@ -26,8 +25,6 @@ app.use('/api/catalog', catalogRouter);
 app.use('/api/uploads', requireAuth, requireRoles('ADMIN', 'EDITOR'), uploadsRouter);
 app.use('/api/tipos-vinho', requireAuth, createReferenceRouter('wineType'));
 app.use('/api/uvas', requireAuth, createReferenceRouter('grape'));
-app.use('/api/status-safra', requireAuth, createStatusRouter('vintage'));
-app.use('/api/status-lote', requireAuth, createStatusRouter('batch'));
 app.use('/api/vinicolas', requireAuth, requireRoles('ADMIN', 'EDITOR'), wineriesRouter);
 app.use('/api/vinhos', requireAuth, winesRouter);
 app.use('/api/safras', requireAuth, requireRoles('ADMIN', 'EDITOR'), vintagesRouter);

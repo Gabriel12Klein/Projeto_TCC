@@ -26,8 +26,6 @@ async function main() {
   const wineries = rows('vinicola');
   const wineTypes = rows('tipo_vinho');
   const grapes = rows('uva');
-  const vintageStatuses = rows('status_safra');
-  const batchStatuses = rows('status_lote');
   const wines = rows('vinho');
   const wineGrapes = rows('vinho_uva');
   const wineImages = rows('imagem_vinho');
@@ -64,8 +62,10 @@ async function main() {
       email: String(row.email),
       passwordHash: String(row.passwordHash),
       passwordSalt: row.passwordSalt == null ? null : String(row.passwordSalt),
-      role: String(row.role),
-      roleId: row.roleId == null ? null : String(row.roleId),
+      roleId:
+        row.roleId == null
+          ? ((roles.find((role) => String(role.name) === String(row.role))?.id as string | undefined) ?? null)
+          : String(row.roleId),
       active: bool(row.active),
       createdAt: date(row.createdAt),
       updatedAt: date(row.updatedAt),
@@ -113,49 +113,27 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.vintageStatus.createMany({
-    data: vintageStatuses.map((row) => ({
-      id: String(row.id),
-      name: String(row.name),
-      description: row.description == null ? null : String(row.description),
-      active: bool(row.active),
-      createdAt: date(row.createdAt),
-      updatedAt: date(row.updatedAt),
-    })),
-    skipDuplicates: true,
-  });
-
-  await prisma.batchStatus.createMany({
-    data: batchStatuses.map((row) => ({
-      id: String(row.id),
-      name: String(row.name),
-      description: row.description == null ? null : String(row.description),
-      active: bool(row.active),
-      createdAt: date(row.createdAt),
-      updatedAt: date(row.updatedAt),
-    })),
-    skipDuplicates: true,
-  });
-
   await prisma.wine.createMany({
     data: wines.map((row) => ({
       id: String(row.id),
       createdById: row.createdById == null ? null : String(row.createdById),
       wineryId: row.wineryId == null ? null : String(row.wineryId),
-      typeId: row.typeId == null ? null : String(row.typeId),
+      typeId:
+        row.typeId == null
+          ? String(wineTypes.find((type) => String(type.name) === String(row.type))?.id ?? '') || null
+          : String(row.typeId),
       name: String(row.name),
       slug: String(row.slug),
-      type: String(row.type),
-      grapes: String(row.grapes),
       volumeMl: Number(row.volumeMl),
       alcoholPercentage: Number(row.alcoholPercentage),
-      description: String(row.description),
+      description:
+        row.informacoes_complementares == null
+          ? String(row.description)
+          : `${String(row.description)}\n\nInformações complementares: ${String(row.informacoes_complementares)}`,
       characteristics: row.caracteristicas == null ? null : String(row.caracteristicas),
       aromas: row.aromas == null ? null : String(row.aromas),
       tastingNotes: row.notas_degustacao == null ? null : String(row.notas_degustacao),
       pairing: row.harmonizacao == null ? null : String(row.harmonizacao),
-      additionalInfo: row.informacoes_complementares == null ? null : String(row.informacoes_complementares),
-      imagePath: row.imagePath == null ? null : String(row.imagePath),
       status: String(row.status),
       createdAt: date(row.createdAt),
       updatedAt: date(row.updatedAt),
@@ -171,7 +149,6 @@ async function main() {
   await prisma.wineImage.createMany({
     data: wineImages.map((row) => ({
       id: String(row.id),
-      wineId: String(row.wineId),
       path: String(row.path),
       altText: row.altText == null ? null : String(row.altText),
       isPrimary: bool(row.isPrimary),
@@ -179,6 +156,13 @@ async function main() {
     })),
     skipDuplicates: true,
   });
+
+  for (const image of wineImages.filter((row) => bool(row.isPrimary))) {
+    await prisma.wine.update({
+      where: { id: String(image.wineId) },
+      data: { imageId: String(image.id) },
+    });
+  }
 
   await prisma.vintage.createMany({
     data: vintages.map((row) => ({
@@ -188,7 +172,6 @@ async function main() {
       year: Number(row.year),
       observations: row.observations == null ? null : String(row.observations),
       status: String(row.status),
-      statusId: row.statusId == null ? null : String(row.statusId),
       supplier: row.supplier == null ? null : String(row.supplier),
       createdAt: date(row.createdAt),
       updatedAt: date(row.updatedAt),
@@ -212,7 +195,6 @@ async function main() {
       bottlingTime: row.hora_envase == null ? null : String(row.hora_envase),
       registrationDate: date(row.registrationDate),
       status: String(row.status),
-      statusId: row.statusId == null ? null : String(row.statusId),
       blockchainRef: row.blockchainRef == null ? null : String(row.blockchainRef),
       qrCodePath: row.qrCodePath == null ? null : String(row.qrCodePath),
       createdAt: date(row.createdAt),
@@ -237,7 +219,9 @@ async function main() {
     skipDuplicates: true,
   });
 
-  console.log(`Migração concluída: ${users.length} usuários, ${wines.length} vinhos, ${vintages.length} safras e ${batches.length} lotes.`);
+  console.log(
+    `Migração concluída: ${users.length} usuários, ${wines.length} vinhos, ${vintages.length} safras e ${batches.length} lotes.`,
+  );
 }
 
 main()

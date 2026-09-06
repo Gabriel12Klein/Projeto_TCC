@@ -24,7 +24,6 @@ const databaseFieldLabels: Record<string, string> = {
   aromas: 'Aromas',
   tastingNotes: 'Notas de degustação',
   pairing: 'Harmonização',
-  additionalInfo: 'Informações complementares',
   code: 'Código do lote',
   identifier: 'Identificador da safra',
   cnpj: 'CNPJ',
@@ -35,7 +34,6 @@ const databaseFieldLabels: Record<string, string> = {
   bottlingTime: 'Hora do envase',
   registrationDate: 'Data de registro',
   status: 'Status',
-  statusId: 'Status',
   typeId: 'Tipo do vinho',
   grapeId: 'Uva',
   grapeIds: 'Uvas',
@@ -116,7 +114,8 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
     return;
   }
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    const status = error.code === 'P2002' || error.code === 'P2003' ? 409 : error.code === 'P2025' ? 404 : 400;
+    const status =
+      error.code === 'P2002' || error.code === 'P2003' ? 409 : error.code === 'P2025' ? 404 : 400;
     res.status(status).json({ message: databaseErrorMessage(error) });
     return;
   }

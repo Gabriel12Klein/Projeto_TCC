@@ -18,7 +18,7 @@ import LoteRegistros from './modules/Lote/LoteRegistros';
 import ModuleForm from './components/ModuleForm';
 import ModuleRecords from './components/ModuleRecords';
 
-type AdminModuleKey = Exclude<ResourceKey, 'status-safra' | 'status-lote'>;
+type AdminModuleKey = ResourceKey;
 
 const components: Record<AdminModuleKey, { form: ComponentType<any>; records: ComponentType<any> }> = {
   vinicolas: { form: VinicolaCadastrar, records: VinicolaRegistros },

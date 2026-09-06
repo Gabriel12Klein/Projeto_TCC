@@ -12,12 +12,12 @@ function tokenHash(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
-function publicUser(user: User & { roleRef?: { name: string } | null }) {
+function publicUser(user: User & { roleRef: { name: string } | null }) {
   return {
     id: user.id,
     name: user.name,
     email: user.email,
-    role: user.roleRef?.name ?? user.role,
+    role: user.roleRef?.name ?? 'CUSTOMER',
     age: user.age,
     address: user.address,
     phone: user.phone,
@@ -65,8 +65,8 @@ export async function ensureSeedAdmin() {
   ]);
   const current = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
   if (current) {
-    if (current.role !== 'ADMIN' || current.roleId !== adminRole.id)
-      await prisma.user.update({ where: { id: current.id }, data: { role: 'ADMIN', roleId: adminRole.id } });
+    if (current.roleId !== adminRole.id)
+      await prisma.user.update({ where: { id: current.id }, data: { roleId: adminRole.id } });
     return;
   }
   await prisma.user.create({
@@ -74,7 +74,6 @@ export async function ensureSeedAdmin() {
       name: 'Administrador',
       email: ADMIN_EMAIL,
       passwordHash: await bcrypt.hash(ADMIN_PASSWORD, 12),
-      role: 'ADMIN',
       roleId: adminRole.id,
     },
   });
@@ -90,9 +89,9 @@ export const authService = {
         name: input.name,
         email: input.email,
         passwordHash: await bcrypt.hash(input.password, 12),
-        role: 'CUSTOMER',
         roleId: customerRole.id,
       },
+      include: { roleRef: true },
     });
     return publicUser(user);
   },
@@ -146,6 +145,7 @@ export const authService = {
           ? { passwordHash: await bcrypt.hash(input.newPassword, 12), passwordSalt: null }
           : {}),
       },
+      include: { roleRef: true },
     });
     return publicUser(user);
   },

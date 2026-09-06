@@ -37,13 +37,12 @@ export const moduleConfigs = {
     formTitle:'Dados da Safra', formSubtitle:'Preencha as informações para cadastrar uma nova safra.', recordsTitle:'Registros de Safras', recordsSubtitle:'Consulte e gerencie todas as safras cadastradas.', searchPlaceholder:'Buscar por identificador ou uva...',
     fields:[
       { name:'identifier', label:'Identificador da safra', required:true, placeholder:'Ex.: SF22-T04', icon:safraIdentifier, mask:'vintage-identifier', maxLength:8, validation:'vintageIdentifier', note:'Padrão: SF + ano da colheita + código do tanque. Digite os 4 números, por exemplo: 22 04.' },
-      { name:'grapeIds', label:'Uvas da safra', required:true, type:'multi-select', options:[], validation:{ minLength:1 }, note:'Selecione uma ou mais uvas recebidas ou colhidas nesta safra.' },
       { name:'year', label:'Ano da safra', required:true, placeholder:'Ex.: 2025', icon:safraYear, validation:'year', inputMode:'numeric', maxLength:4, note:'Preenchido automaticamente a partir dos dois primeiros números do identificador.' },
       { name:'supplier', label:'Fornecedor / origem', placeholder:'Ex.: Fazenda ou fornecedor da uva', validation:{ minLength:2 } },
-      { name:'status', label:'Status / Situação', required:true, type:'select', icon:safraStatus, options:['Em produção','Finalizada'] },
+      { name:'status', label:'Status / Situação', required:true, type:'select', icon:safraStatus, options:['Em processamento','Concluída'] },
       { name:'observations', label:'Observações', type:'textarea', full:true, icon:safraObservation, placeholder:'Adicione observações relevantes sobre a safra (clima, características, particularidades, etc.).', maxLength:500, note:'Informações adicionais que podem ajudar no acompanhamento e na análise da safra.' }
     ],
-    columns:[['identifier','Identificador'],['grapes','Uvas da safra'],['year','Ano da safra'],['observations','Observações'],['status','Situação'],['createdAt','Data de cadastro']]
+    columns:[['identifier','Identificador'],['year','Ano da safra'],['observations','Observações'],['status','Situação'],['createdAt','Data de cadastro']]
   },
   vinhos: {
     key:'vinhos', label:'Vinho', singular:'vinho', heading:'Gerenciamento do Vinho', icon:vinhoRepresentative,
@@ -59,7 +58,6 @@ export const moduleConfigs = {
       { name:'aromas', label:'Aromas', type:'textarea', full:true, placeholder:'Descreva os aromas percebidos no vinho.', maxLength:2000 },
       { name:'tastingNotes', label:'Notas de degustação', type:'textarea', full:true, placeholder:'Registre as notas e percepções da degustação.', maxLength:2000 },
       { name:'pairing', label:'Harmonização', type:'textarea', full:true, placeholder:'Sugira pratos e ocasiões para harmonizar com este vinho.', maxLength:2000 },
-      { name:'additionalInfo', label:'Informações complementares', type:'textarea', full:true, placeholder:'Adicione outras informações relevantes para o cliente.', maxLength:2000 },
       { name:'imageFile', label:'Imagem do vinho', type:'file', placeholder:'Selecione uma imagem JPEG, PNG ou WebP de até 5 MB' },
       { name:'status', label:'Situação / Status', required:true, type:'select', options:['Ativo','Inativo'] }
     ],
@@ -93,13 +91,12 @@ export const moduleConfigs = {
       { name:'wineId', label:'Vinho produzido', required:true, type:'select', icon:vinhoRepresentative, options:[] },
       { name:'vintageId', label:'Safra relacionada', required:true, type:'select', icon:loteVintage, options:[] },
       { name:'grapeIds', label:'Uva ou composição de uvas', required:true, type:'multi-select', options:[], validation:{ minLength:1 } },
+      { name:'status', label:'Situação / Status', required:true, type:'select', icon:loteStatus, options:['Aguardando registro','Registrado na blockchain','Publicado para consulta'], full:true },
       { name:'quantity', label:'Quantidade produzida', required:true, placeholder:'Ex.: 1.250', icon:loteQuantity, suffix:'L', validation:'positiveNumber', inputMode:'decimal' },
       { name:'productionDate', label:'Data de produção', required:true, type:'date', icon:loteDate, validation:'date', note:'Preenchida automaticamente a partir do código do lote.' },
-      { name:'bottlingTime', label:'Hora do envase / engarrafamento', required:true, type:'time', validation:'time', note:'Informe o horário em que o lote foi envasado.' },
-      { name:'registrationDate', label:'Data de registro', required:true, type:'date', icon:loteDate, validation:'registrationDate' },
-      { name:'status', label:'Situação / Status', required:true, type:'select', icon:loteStatus, options:[] }
+      { name:'registrationDate', label:'Data de registro', type:'date', icon:loteDate, disabled:true, note:'Preenchida automaticamente quando o lote for salvo com o status Registrado na blockchain.' }
     ],
-    columns:[['code','Código do lote'],['wineName','Vinho produzido'],['vintageName','Safra relacionada'],['grapes','Uvas utilizadas'],['quantity','Quantidade produzida'],['productionDate','Data de produção'],['bottlingTime','Hora do envase'],['registrationDate','Data de registro'],['status','Situação'],['blockchain','Blockchain'],['qrCode','QR Code']],
+    columns:[['code','Código do lote'],['wineName','Vinho produzido'],['vintageName','Safra relacionada'],['grapes','Uvas utilizadas'],['quantity','Quantidade produzida'],['productionDate','Data de produção'],['registrationDate','Data de registro'],['status','Situação'],['blockchain','Blockchain'],['qrCode','QR Code']],
     blockchainInfo:true
   }
 };

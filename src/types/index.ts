@@ -17,7 +17,7 @@ export type User = {
 };
 
 export type AuthSession = { token: string; user: User };
-export type ResourceKey = 'vinicolas' | 'vinhos' | 'tipos-vinho' | 'uvas' | 'safras' | 'lotes' | 'status-safra' | 'status-lote';
+export type ResourceKey = 'vinicolas' | 'vinhos' | 'tipos-vinho' | 'uvas' | 'safras' | 'lotes';
 export type EntityRecord = { id: string; [key: string]: unknown };
 
 export type CatalogWine = {
@@ -33,13 +33,11 @@ export type CatalogWine = {
   aromas: string | null;
   tastingNotes: string | null;
   pairing: string | null;
-  additionalInfo: string | null;
   imagePath: string | null;
 };
 
 export type CatalogWineDetail = CatalogWine & {
   winery: { name: string; city: string; state: string } | null;
-  images: { path: string; altText: string | null; isPrimary: boolean }[];
   vintages: {
     id: string;
     identifier: string;
@@ -54,7 +52,7 @@ export type CatalogWineDetail = CatalogWine & {
       status: string;
       productionDate: string;
       bottlingTime: string | null;
-      registrationDate: string;
+      registrationDate: string | null;
       grapes: string[];
       blockchainRef: string | null;
       qrCodePath: string | null;
@@ -67,7 +65,7 @@ export type PublicBatchDetail = {
   quantityLiters: number;
   productionDate: string;
   bottlingTime: string | null;
-  registrationDate: string;
+  registrationDate: string | null;
   status: string;
   grapes: string[];
   blockchainRef: string | null;
@@ -84,10 +82,8 @@ export type PublicBatchDetail = {
     aromas: string | null;
     tastingNotes: string | null;
     pairing: string | null;
-    additionalInfo: string | null;
     imagePath: string | null;
     winery: { name: string; city: string; state: string } | null;
-    images: { path: string; altText: string | null; isPrimary: boolean }[];
   } | null;
   vintage: {
     identifier: string;

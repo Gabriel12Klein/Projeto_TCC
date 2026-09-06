@@ -35,8 +35,7 @@ const batchBaseSchema = z.object({
   grapeIds: z.array(z.string().trim().min(1)).min(1, 'Selecione pelo menos uma uva.'),
   quantity: positiveNumber,
   productionDate: date,
-  bottlingTime: time,
-  registrationDate: date,
+  bottlingTime: time.optional(),
   status: z.string().trim().min(1).max(40),
   blockchain: z.string().trim().optional(),
   qrCode: z.string().trim().optional(),
@@ -50,10 +49,6 @@ export const batchSchema = batchBaseSchema
   .refine((input) => input.vintageId || input.vintageName, {
     message: 'Informe a safra relacionada.',
     path: ['vintageId'],
-  })
-  .refine((input) => new Date(input.registrationDate) >= new Date(input.productionDate), {
-    message: 'A data de registro deve ser posterior ou igual à produção.',
-    path: ['registrationDate'],
   });
 
 export const batchUpdateSchema = batchBaseSchema.partial();

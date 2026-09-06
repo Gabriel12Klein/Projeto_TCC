@@ -16,7 +16,7 @@ const vintageBaseSchema = z.object({
   identifier: vintageIdentifier,
   wineId: z.string().trim().optional(),
   wineName: z.string().trim().optional(),
-  grapeIds: z.array(z.string().trim().min(1)).min(1, 'Selecione pelo menos uma uva.'),
+  grapeIds: z.array(z.string().trim().min(1)).optional(),
   year,
   supplier: z.string().trim().max(160).optional(),
   observations: z.string().trim().max(1000).optional(),
