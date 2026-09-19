@@ -74,10 +74,10 @@ export const moduleConfigs = {
     columns:[['name','Nome'],['description','Descrição'],['status','Situação']]
   },
   uvas: {
-    key:'uvas', label:'Uva', singular:'uva', heading:'Gerenciamento das Uvas', icon:vinhoRepresentative,
-    formTitle:'Dados da Uva', formSubtitle:'Cadastre as uvas utilizadas nas composições dos vinhos.', recordsTitle:'Uvas Cadastradas', recordsSubtitle:'Consulte e gerencie as uvas disponíveis para seleção.', searchPlaceholder:'Buscar por uva...',
+    key:'uvas', label:'Tipo de uva', singular:'tipo de uva', heading:'Gerenciamento dos Tipos de Uva', icon:vinhoRepresentative,
+    formTitle:'Dados do Tipo de Uva', formSubtitle:'Cadastre os tipos de uva utilizados nas composições dos vinhos.', recordsTitle:'Tipos de Uva Cadastrados', recordsSubtitle:'Consulte e gerencie os tipos de uva disponíveis para seleção.', searchPlaceholder:'Buscar por tipo de uva...',
     fields:[
-      { name:'name', label:'Nome da uva', required:true, placeholder:'Ex.: Cabernet Sauvignon', validation:{ minLength:2 } },
+      { name:'name', label:'Nome do tipo de uva', required:true, placeholder:'Ex.: Cabernet Sauvignon', validation:{ minLength:2 } },
       { name:'description', label:'Descrição', type:'textarea', full:true, placeholder:'Adicione informações sobre a uva, se necessário.', maxLength:500 },
       { name:'status', label:'Situação', required:true, type:'select', options:['Ativo','Inativo'] }
     ],
@@ -90,7 +90,7 @@ export const moduleConfigs = {
       { name:'code', label:'Código do lote', required:true, placeholder:'Ex.: L24160', icon:loteCode, mask:'batch-code', maxLength:6, validation:'batchCode', note:'Padrão: L + ano do envase + dia do ano (001 a 365, ou 366 em ano bissexto). A data de produção é preenchida automaticamente.' },
       { name:'wineId', label:'Vinho produzido', required:true, type:'select', icon:vinhoRepresentative, options:[] },
       { name:'vintageId', label:'Safra relacionada', required:true, type:'select', icon:loteVintage, options:[] },
-      { name:'grapeIds', label:'Uva ou composição de uvas', required:true, type:'multi-select', options:[], validation:{ minLength:1 } },
+      { name:'grapeIds', label:'Uvas da composição do vinho', required:true, type:'multi-select', options:[], validation:{ minLength:1 }, disabled:true, note:'Preenchida automaticamente com as uvas selecionadas na composição do vinho.' },
       { name:'status', label:'Situação / Status', required:true, type:'select', icon:loteStatus, options:['Aguardando registro','Registrado na blockchain','Publicado para consulta'], full:true },
       { name:'quantity', label:'Quantidade produzida', required:true, placeholder:'Ex.: 1.250', icon:loteQuantity, suffix:'L', validation:'positiveNumber', inputMode:'decimal' },
       { name:'productionDate', label:'Data de produção', required:true, type:'date', icon:loteDate, validation:'date', note:'Preenchida automaticamente a partir do código do lote.' },

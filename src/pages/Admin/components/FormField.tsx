@@ -73,7 +73,7 @@ export default function FormField({ field, value, existingImage = '', onChange, 
             </select>
             {Array.isArray(value) && value.map(selectedValue => {
               const selectedOption = field.options?.find(option => optionValue(option) === selectedValue);
-              return <button type="button" key={selectedValue} className="rounded-full border border-[#c9a66e] bg-[#fff4df] px-2.5 py-1 text-xs text-[#6a1424]" onClick={event => { event.preventDefault(); event.stopPropagation(); onChange(field.name, value.filter(item => item !== selectedValue)); }} aria-label={`Remover ${selectedOption ? optionLabel(selectedOption) : selectedValue}`}>
+              return <button type="button" key={selectedValue} disabled={field.disabled} className={`rounded-full border border-[#c9a66e] bg-[#fff4df] px-2.5 py-1 text-xs text-[#6a1424] ${field.disabled ? 'cursor-default opacity-80' : ''}`} onClick={event => { event.preventDefault(); event.stopPropagation(); onChange(field.name, value.filter(item => item !== selectedValue)); }} aria-label={`Remover ${selectedOption ? optionLabel(selectedOption) : selectedValue}`}>
                 {selectedOption ? optionLabel(selectedOption) : selectedValue} ×
               </button>;
             })}

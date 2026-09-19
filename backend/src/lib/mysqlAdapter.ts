@@ -15,6 +15,7 @@ function connectionOptions() {
     password: decodeURIComponent(url.password),
     database: decodeURIComponent(url.pathname.replace(/^\//, '')),
     connectionLimit: 5,
+    allowPublicKeyRetrieval: true,
   };
 }
 

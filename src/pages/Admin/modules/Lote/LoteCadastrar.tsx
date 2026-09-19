@@ -16,15 +16,27 @@ export default function LoteCadastrar({ config, onOpenWine, ...props }: any) {
     queryKey: ['wines', 'all'],
     queryFn: () => api.list('vinhos'),
   });
+  const wineGrapeMap = useMemo(
+    () => Object.fromEntries(wines.map((item) => [String(item.id), Array.isArray(item.grapeIds) ? item.grapeIds.map(String) : []])),
+    [wines],
+  );
   const formConfig = useMemo(() => ({
     ...config,
+    wineGrapeMap,
     fields: config.fields.map((field) => {
-      if (field.name === 'grapeIds') return { ...field, options: grapes.map((item) => ({ value: String(item.id), label: String(item.name) })) };
+      if (field.name === 'grapeIds') {
+        return {
+          ...field,
+          disabled: true,
+          options: grapes.map((item) => ({ value: String(item.id), label: String(item.name) })),
+          note: 'Preenchida automaticamente com as uvas selecionadas na composição do vinho.',
+        };
+      }
       if (field.name === 'wineId') return { ...field, options: wines.map((item) => ({ value: String(item.id), label: `${String(item.name)} — ${String(item.type)}` })) };
       if (field.name === 'vintageId') return { ...field, options: vintages.map((item) => ({ value: String(item.id), label: `${String(item.identifier)} — ${String(item.year)}` })) };
       return field;
     }),
-  }), [config, grapes, vintages, wines]);
+  }), [config, grapes, vintages, wineGrapeMap, wines]);
 
   return <>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[9px] border border-[#e4bd84] bg-[#fffaf4] px-4 py-3 text-[13px] text-[#5f5651]" role="note">

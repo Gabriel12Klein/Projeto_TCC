@@ -32,7 +32,7 @@ const batchBaseSchema = z.object({
   wineName: z.string().trim().optional(),
   vintageId: z.string().trim().optional(),
   vintageName: z.string().trim().optional(),
-  grapeIds: z.array(z.string().trim().min(1)).min(1, 'Selecione pelo menos uma uva.'),
+  grapeIds: z.array(z.string().trim().min(1)).min(1, 'Selecione pelo menos uma uva.').optional(),
   quantity: positiveNumber,
   productionDate: date,
   bottlingTime: time.optional(),

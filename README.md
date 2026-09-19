@@ -137,7 +137,16 @@ Endereços locais:
 - Documentação da API: <http://localhost:3001/api/docs>
 - Prisma Studio: `npm run prisma:studio`
 
-Também existe o arquivo `start.js`, que pode ser executado pelo VS Code para iniciar frontend e backend juntos:
+
+### 6.1 Iniciar e encerrar os processos
+
+Para encerrar os processos Node:
+
+```powershell
+Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
+```
+
+Para iniciar o backend e o frontend:
 
 ```bash
 node start.js

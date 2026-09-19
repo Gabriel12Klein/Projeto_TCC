@@ -158,6 +158,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     if (config.key === 'lotes') {
       const productionDate = batchCodeToProductionDate(nextForm.code);
       if (productionDate) nextForm.productionDate = productionDate;
+      if (nextForm.wineId) nextForm.grapeIds = config.wineGrapeMap?.[String(nextForm.wineId)] ?? [];
       nextForm.registrationDate = initialData?.registrationDate ?? '';
     }
     if (config.key === 'safras') {
@@ -168,7 +169,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     setTouched({});
     setSubmitted(false);
     setHydratedDraftKey(draftKey);
-  },[draftKey,initialData,config.key]);
+  },[draftKey,initialData,config.key,config.wineGrapeMap]);
   useEffect(()=>{
     if (hydratedDraftKey !== draftKey) return;
     try {
@@ -187,6 +188,9 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
       const next: Record<string, any> = {...prev,[name]:value};
       if (config.key === 'lotes' && name === 'code') {
         next.productionDate = batchCodeToProductionDate(value);
+      }
+      if (config.key === 'lotes' && name === 'wineId') {
+        next.grapeIds = config.wineGrapeMap?.[String(value)] ?? [];
       }
       if (config.key === 'safras' && name === 'identifier') {
         next.year = vintageIdentifierToYear(value);

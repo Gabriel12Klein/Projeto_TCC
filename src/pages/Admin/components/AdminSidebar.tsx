@@ -4,13 +4,15 @@ import safraIcon from '../../../assets/admin/sidebar/safra.png';
 import loteIcon from '../../../assets/admin/sidebar/lote.png';
 import vinicolaIcon from '../../../assets/admin/sidebar/vinicola.png';
 import vinhoIcon from '../../../assets/admin/sidebar/vinho.png';
+import tipoVinhoIcon from '../../../assets/admin/vinho/tipo-vinho.png';
+import tipoUvaIcon from '../../../assets/admin/vinho/tipo-uva.png';
 import logoutIcon from '../../../assets/admin/sidebar/logout.png';
 
 const items = [
   ['vinicolas','Vinícola',vinicolaIcon],
   ['vinhos','Vinho',vinhoIcon],
-  ['tipos-vinho','Tipo de vinho',vinhoIcon],
-  ['uvas','Uva',vinhoIcon],
+  ['tipos-vinho','Tipo de vinho',tipoVinhoIcon],
+  ['uvas','Tipo de uva',tipoUvaIcon],
   ['safras','Safra',safraIcon],
   ['lotes','Lote',loteIcon]
 ];

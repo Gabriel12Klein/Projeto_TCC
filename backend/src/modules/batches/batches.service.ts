@@ -84,8 +84,12 @@ async function resolveVintageId(input: Record<string, unknown>, currentId?: stri
   throw new AppError(400, 'Informe a safra relacionada.');
 }
 
-async function resolveGrapeIds(input: Record<string, unknown>) {
-  if (!Array.isArray(input.grapeIds)) return undefined;
+async function resolveGrapeIds(input: Record<string, unknown>, wineId?: string | null) {
+  if (wineId) {
+    const links = await prisma.wineGrape.findMany({ where: { wineId }, select: { grapeId: true } });
+    if (links.length) return links.map(({ grapeId }) => grapeId);
+  }
+  if (!Array.isArray(input.grapeIds)) throw new AppError(400, 'O vinho selecionado não possui uvas cadastradas.');
   const grapeIds = input.grapeIds.map(String);
   const grapes = await prisma.grape.findMany({ where: { id: { in: grapeIds } } });
   if (grapes.length !== grapeIds.length)
@@ -135,7 +139,7 @@ export const batchesService = {
     const productionDate = batchCodeToProductionDate(code);
     const wineId = await resolveWineId(input);
     const vintageId = await resolveVintageId(input);
-    const grapeIds = await resolveGrapeIds(input);
+    const grapeIds = await resolveGrapeIds(input, wineId);
     const batch = await prisma.$transaction(async (transaction) => {
       const created = await transaction.batch.create({
         data: {
@@ -168,7 +172,8 @@ export const batchesService = {
     const data: Prisma.BatchUncheckedUpdateInput = {};
     if (input.wineId !== undefined || input.wineName !== undefined)
       data.wineId = await resolveWineId(input, current.wineId);
-    const grapeIds = await resolveGrapeIds(input);
+    const effectiveWineId = input.wineId !== undefined ? await resolveWineId(input, current.wineId) : current.wineId;
+    const grapeIds = await resolveGrapeIds(input, effectiveWineId);
     if (input.code !== undefined) data.code = normalizeBatchCode(String(input.code));
     if (input.vintageId !== undefined || input.vintageName !== undefined)
       data.vintageId = await resolveVintageId(input, current.vintageId);
@@ -190,12 +195,10 @@ export const batchesService = {
     if (input.qrCode !== undefined) data.qrCodePath = input.qrCode ? String(input.qrCode) : null;
     const batch = await prisma.$transaction(async (transaction) => {
       await transaction.batch.update({ where: { id }, data });
-      if (grapeIds !== undefined) {
-        await transaction.batchGrape.deleteMany({ where: { batchId: id } });
-        await transaction.batchGrape.createMany({
-          data: grapeIds.map((grapeId) => ({ batchId: id, grapeId })),
-        });
-      }
+      await transaction.batchGrape.deleteMany({ where: { batchId: id } });
+      await transaction.batchGrape.createMany({
+        data: grapeIds.map((grapeId) => ({ batchId: id, grapeId })),
+      });
       return transaction.batch.findUniqueOrThrow({ where: { id }, include: includeVintage });
     });
     return toView(batch);
