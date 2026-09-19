@@ -15,7 +15,6 @@ const dependenciesReady =
 const generatedClientReady = existsSync(
   join(projectDir, 'backend', 'src', 'generated', 'prisma', 'client.ts'),
 );
-const databaseReady = existsSync(join(projectDir, 'dev.db'));
 
 function runNpmScript(script) {
   const result = spawnSync('npm', ['run', script], { cwd: projectDir, shell: true, stdio: 'inherit' });
@@ -29,11 +28,9 @@ if (!dependenciesReady) {
 }
 
 if (!generatedClientReady) runNpmScript('prisma:generate');
-if (!databaseReady) {
-  console.log('\n[VINUM] Preparando banco de dados local...\n');
-  runNpmScript('prisma:deploy');
-  runNpmScript('prisma:seed');
-}
+console.log('\n[VINUM] Preparando banco de dados MySQL...\n');
+runNpmScript('prisma:deploy');
+runNpmScript('prisma:seed');
 
 console.log('\n[VINUM] Iniciando backend local e frontend...\n');
 const backend = spawn('npm', ['run', 'backend'], { cwd: projectDir, shell: true, stdio: 'inherit' });

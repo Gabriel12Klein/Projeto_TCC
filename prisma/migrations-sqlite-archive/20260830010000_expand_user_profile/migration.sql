@@ -1,6 +1,0 @@
-ALTER TABLE "User" ADD COLUMN "birthDate" TEXT;
-ALTER TABLE "User" ADD COLUMN "street" TEXT;
-ALTER TABLE "User" ADD COLUMN "addressNumber" TEXT;
-ALTER TABLE "User" ADD COLUMN "city" TEXT;
-ALTER TABLE "User" ADD COLUMN "state" TEXT;
-ALTER TABLE "User" ADD COLUMN "country" TEXT;

@@ -8,10 +8,6 @@ dist/
 *.tsbuildinfo
 backend/uploads/*
 !backend/uploads/.gitkeep
-prisma/dev.db
-prisma/dev.db-journal
-dev.db
-dev.db-journal
 backups/*.json
 backend/src/generated/prisma/
 
