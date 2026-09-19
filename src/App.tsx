@@ -6,11 +6,11 @@ import AdminPage from './pages/Admin/AdminPage';
 import { api, clearSession, getToken, getStoredUser } from './api/api';
 import type { User } from './types';
 import CatalogLayout from './pages/Catalog/CatalogLayout';
-import CatalogPage from './pages/Catalog/CatalogPage';
 import WineDetailPage from './pages/Catalog/WineDetailPage';
 import HomePage from './pages/Home/HomePage';
 import ProfilePage from './pages/Profile/ProfilePage';
 import BatchPublicPage from './pages/Catalog/BatchPublicPage';
+import ClientSectionPage from './pages/Client/ClientSectionPage';
 
 function Loading() {
   return (
@@ -63,13 +63,14 @@ export default function App() {
 
   function loginSuccess(loggedUser: User) {
     setUser(loggedUser);
-    navigate(loggedUser.role === 'ADMIN' || loggedUser.role === 'EDITOR' ? '/admin' : '/catalogo');
+    navigate(loggedUser.role === 'ADMIN' || loggedUser.role === 'EDITOR' ? '/admin' : '/');
   }
 
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/consulta/lotes/:code" element={<BatchPublicPage />} />
+      <Route path="/catalogo/vinhos/:slug" element={<WineDetailPage />} />
       <Route
         path="/catalogo"
         element={
@@ -80,8 +81,7 @@ export default function App() {
           )
         }
       >
-        <Route index element={<CatalogPage />} />
-        <Route path="vinhos/:slug" element={<WineDetailPage />} />
+        <Route index element={<Navigate to="/" replace />} />
         <Route path="cadastrar" element={<Navigate to="/catalogo" replace />} />
         <Route path="registros" element={<Navigate to="/catalogo" replace />} />
       </Route>
@@ -96,6 +96,46 @@ export default function App() {
         }
       >
         <Route index element={<ProfilePage user={user as User} onUpdate={setUser} />} />
+      </Route>
+      <Route
+        path="/estoque"
+        element={
+          user?.role === 'CUSTOMER' ? (
+            <CatalogLayout user={user} onLogout={logout} />
+          ) : (
+            <Navigate to={user ? '/admin' : '/'} replace />
+          )
+        }
+      >
+        <Route
+          index
+          element={
+            <ClientSectionPage
+              title="Meu estoque"
+              description="Aqui você poderá acompanhar os vinhos e lotes vinculados ao seu estoque."
+            />
+          }
+        />
+      </Route>
+      <Route
+        path="/pedidos"
+        element={
+          user?.role === 'CUSTOMER' ? (
+            <CatalogLayout user={user} onLogout={logout} />
+          ) : (
+            <Navigate to={user ? '/admin' : '/'} replace />
+          )
+        }
+      >
+        <Route
+          index
+          element={
+            <ClientSectionPage
+              title="Meus pedidos"
+              description="Aqui você poderá acompanhar seus pedidos, status e histórico de compras."
+            />
+          }
+        />
       </Route>
       <Route
         path="/login"

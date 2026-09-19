@@ -1,10 +1,15 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { api } from '../../api/api';
+import { api, clearSession, getStoredUser } from '../../api/api';
 import logo from '../Login/assets/logo-vinum.png';
 import background from '../Login/assets/background-login.png';
+import profileIcon from '../../assets/admin/common/profile.png';
 
 export default function HomePage() {
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const user = getStoredUser();
+  const firstName = user?.name.trim().split(/\s+/)[0] ?? '';
   const { data: wines = [], isLoading } = useQuery({
     queryKey: ['public-home-wines'],
     queryFn: () => api.catalog.list(),
@@ -16,12 +21,72 @@ export default function HomePage() {
           <Link to="/" aria-label="Página inicial da VINUM">
             <img className="h-14 w-auto brightness-0 invert" src={logo} alt="VINUM" />
           </Link>
-          <Link
-            className="rounded-full border border-[#e0bc72] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
-            to="/login"
-          >
-            Login
-          </Link>
+          {user?.role === 'CUSTOMER' ? (
+            <div className="relative">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-full border border-[#e0bc72] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                aria-expanded={profileMenuOpen}
+                aria-haspopup="menu"
+                aria-label={`Abrir menu de ${firstName}`}
+                onClick={() => setProfileMenuOpen((open) => !open)}
+              >
+                <img className="h-8 w-8 rounded-full object-contain" src={profileIcon} alt="" aria-hidden="true" />
+                <span>{firstName}</span>
+                <span className="text-xs" aria-hidden="true">⌄</span>
+              </button>
+              {profileMenuOpen ? (
+                <div
+                  className="absolute right-0 mt-2 w-48 rounded-2xl border border-[#e0bc72] bg-[#fffaf4] p-2 text-left shadow-xl"
+                  role="menu"
+                >
+                  <Link
+                    className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#5b0c1b] transition hover:bg-[#f3e4d2]"
+                    to="/perfil"
+                    role="menuitem"
+                    onClick={() => setProfileMenuOpen(false)}
+                  >
+                    Meu perfil
+                  </Link>
+                  <Link
+                    className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#5b0c1b] transition hover:bg-[#f3e4d2]"
+                    to="/estoque"
+                    role="menuitem"
+                    onClick={() => setProfileMenuOpen(false)}
+                  >
+                    Meu estoque
+                  </Link>
+                  <Link
+                    className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#5b0c1b] transition hover:bg-[#f3e4d2]"
+                    to="/pedidos"
+                    role="menuitem"
+                    onClick={() => setProfileMenuOpen(false)}
+                  >
+                    Meus pedidos
+                  </Link>
+                  <button
+                    type="button"
+                    className="block w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-[#5b0c1b] transition hover:bg-[#f3e4d2]"
+                    role="menuitem"
+                    onClick={() => {
+                      clearSession();
+                      setProfileMenuOpen(false);
+                      window.location.assign('/');
+                    }}
+                  >
+                    Sair
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <Link
+              className="rounded-full border border-[#e0bc72] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+              to="/login"
+            >
+              Login
+            </Link>
+          )}
         </div>
       </header>
       <main>
@@ -85,7 +150,7 @@ export default function HomePage() {
             {wines.slice(0, 6).map((wine) => (
               <article
                 key={wine.id}
-                className="overflow-hidden rounded-3xl border border-[#dfd0bd] bg-white shadow-[0_12px_35px_rgba(76,21,28,.08)]"
+                className="group overflow-hidden rounded-3xl border border-[#dfd0bd] bg-white shadow-[0_12px_35px_rgba(76,21,28,.08)] transition hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(76,21,28,.14)]"
               >
                 <div className="grid h-72 place-items-center overflow-hidden bg-[radial-gradient(circle,#f2dfc1,#dbc19a)] p-6">
                   {wine.imagePath ? (
@@ -100,6 +165,17 @@ export default function HomePage() {
                   </span>
                   <h3 className="mt-2 font-playfair text-2xl font-semibold text-[#5b0c1b]">{wine.name}</h3>
                   <p className="mt-3 line-clamp-2 text-sm leading-6 text-[#715f59]">{wine.description}</p>
+                  <div className="mt-5 flex items-center justify-between border-t border-[#eee3d5] pt-4 text-sm">
+                    <span>
+                      {wine.volumeMl} ml · {wine.alcoholPercentage}% vol
+                    </span>
+                    <Link
+                      className="font-semibold text-[#851329] group-hover:underline"
+                      to={`/catalogo/vinhos/${wine.slug}`}
+                    >
+                      Ver detalhes →
+                    </Link>
+                  </div>
                 </div>
               </article>
             ))}

@@ -6,7 +6,7 @@ export default function CatalogLayout({ user, onLogout }: { user: User; onLogout
   return (
     <div className="min-h-screen bg-[#f7f2eb] text-[#321b1c] lg:flex">
       <aside className="flex w-full shrink-0 flex-col bg-[linear-gradient(165deg,#5b0c1b,#351416)] p-5 text-white shadow-xl lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:p-7">
-        <Link to="/catalogo" className="mb-8 flex justify-center border-b border-white/15 pb-7">
+        <Link to="/" className="mb-8 flex justify-center border-b border-white/15 pb-7">
           <img className="h-20 w-auto brightness-0 invert" src={logo} alt="VINUM" />
         </Link>
         <div className="mb-5 rounded-2xl border border-white/15 bg-white/10 p-4">
@@ -16,13 +16,13 @@ export default function CatalogLayout({ user, onLogout }: { user: User; onLogout
         <nav className="flex flex-col gap-2" aria-label="Menu do cliente">
           <p className="px-3 pb-1 text-xs font-bold uppercase tracking-[0.2em] text-[#e2bd76]">Vinho</p>
           <NavLink
-            to="/catalogo"
+            to="/"
             end
             className={({ isActive }) =>
               `rounded-xl px-4 py-3 transition ${isActive ? 'bg-[#d0a565] font-semibold text-[#4c151c]' : 'text-white/85 hover:bg-white/10'}`
             }
           >
-            Ver vinhos
+            Início
           </NavLink>
           <p className="mb-1 mt-8 px-3 text-xs font-bold uppercase tracking-[0.2em] text-[#e2bd76]">Conta</p>
           <NavLink
@@ -32,6 +32,22 @@ export default function CatalogLayout({ user, onLogout }: { user: User; onLogout
             }
           >
             Perfil
+          </NavLink>
+          <NavLink
+            to="/estoque"
+            className={({ isActive }) =>
+              `rounded-xl px-4 py-3 transition ${isActive ? 'bg-[#d0a565] font-semibold text-[#4c151c]' : 'text-white/85 hover:bg-white/10'}`
+            }
+          >
+            Meu estoque
+          </NavLink>
+          <NavLink
+            to="/pedidos"
+            className={({ isActive }) =>
+              `rounded-xl px-4 py-3 transition ${isActive ? 'bg-[#d0a565] font-semibold text-[#4c151c]' : 'text-white/85 hover:bg-white/10'}`
+            }
+          >
+            Meus pedidos
           </NavLink>
         </nav>
         <button
