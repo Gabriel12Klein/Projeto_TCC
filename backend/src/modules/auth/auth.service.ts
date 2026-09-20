@@ -3,6 +3,9 @@ import bcrypt from 'bcryptjs';
 import type { User } from '../../generated/prisma/client.js';
 import { AppError } from '../../common/http.js';
 import { prisma } from '../../lib/prisma.js';
+import { ageFromBirthDate } from '../../../../shared/profile.js';
+import type { z } from 'zod';
+import type { profileSchema } from './auth.schema.js';
 
 const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
 
@@ -17,7 +20,7 @@ export function publicUser(user: User & { roleRef: { name: string } | null }) {
     email: user.email,
     role: user.roleRef?.name ?? 'CUSTOMER',
     wineryId: user.wineryId,
-    age: user.age,
+    age: ageFromBirthDate(user.birthDate),
     address: user.address,
     phone: user.phone,
     birthDate: user.birthDate,
@@ -118,24 +121,22 @@ export const authService = {
 
   async updateProfile(
     userId: string,
-    input: {
-      name: string;
-      age: number | null;
-      birthDate: string | null;
-      street: string | null;
-      addressNumber: string | null;
-      city: string | null;
-      state: string | null;
-      country: string | null;
-      phone: string | null;
-      newPassword?: string;
-    },
+    input: z.infer<typeof profileSchema>,
+    token = '',
   ) {
-    const user = await prisma.user.update({
+    return prisma.$transaction(async (tx) => {
+    const current = await tx.user.findUniqueOrThrow({ where: { id: userId }, include: { roleRef: true } });
+    if (current.roleRef.name !== 'CUSTOMER') throw new AppError(403, 'Use Meu cadastro para editar a conta administrativa.');
+    const credentialsChanged = Boolean(input.email && input.email !== current.email) || Boolean(input.newPassword);
+    if (credentialsChanged && (!input.currentPassword || !(await verifyPassword(input.currentPassword, current))))
+      throw new AppError(400, 'Confirme a senha atual para alterar o e-mail ou a senha.');
+    if (input.email && await tx.user.findFirst({ where: { email: input.email, id: { not: userId } } }))
+      throw new AppError(409, 'Já existe uma conta com este e-mail.');
+    const user = await tx.user.update({
       where: { id: userId },
       data: {
         name: input.name,
-        age: input.age,
+        email: input.email,
         birthDate: input.birthDate || null,
         street: input.street || null,
         addressNumber: input.addressNumber || null,
@@ -149,7 +150,9 @@ export const authService = {
       },
       include: { roleRef: true },
     });
+    if (credentialsChanged) await tx.session.deleteMany({ where: { userId, tokenHash: { not: tokenHash(token) } } });
     return publicUser(user);
+    }, { timeout: 15000 });
   },
 
   async authenticate(token: string) {

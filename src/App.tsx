@@ -96,7 +96,7 @@ export default function App() {
           )
         }
       >
-        <Route index element={<ProfilePage user={user as User} onUpdate={setUser} />} />
+        <Route index element={<ProfilePage user={user as User} onUpdate={updated => { const token = getToken(); if (token) saveSession({ token, user: updated }); setUser(updated); }} />} />
       </Route>
       <Route
         path="/estoque"

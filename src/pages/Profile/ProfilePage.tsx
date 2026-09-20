@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/api';
 import type { User } from '../../types';
+import { ageFromBirthDate } from '../../../shared/profile';
 
 function formatPhone(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -42,6 +43,8 @@ function profileDraftKey(userId: number | string) {
 function profileFormFromUser(user: User) {
   return {
     name: user.name,
+    email: user.email,
+    currentPassword: '',
     age: user.age?.toString() ?? '',
     birthDate: user.birthDate ?? '',
     street: user.street ?? '',
@@ -84,7 +87,7 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
       return;
     }
     try {
-      const { newPassword: _newPassword, ...safeDraft } = form;
+      const { newPassword: _newPassword, currentPassword: _currentPassword, ...safeDraft } = form;
       sessionStorage.setItem(profileDraftKey(user.id), JSON.stringify(safeDraft));
     } catch {
       /* limites do armazenamento não impedem o uso normal do formulário */
@@ -94,7 +97,7 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
     setForm((current) => ({ ...current, [field]: value }));
   const profileChecklist = [
     { label: 'Nome completo', ok: form.name.trim().length >= 3 },
-    { label: 'E-mail', ok: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email) },
+    { label: 'E-mail', ok: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) },
     { label: 'Número da casa', ok: !form.addressNumber || /^\d+$/.test(form.addressNumber) },
     { label: 'Estado', ok: !form.state || Boolean(normalizeState(form.state)) },
     { label: 'Telefone', ok: !form.phone || form.phone.replace(/\D/g, '').length >= 10 },
@@ -125,7 +128,8 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
       }
       const updated = await api.updateProfile({
         name: form.name,
-        age: form.age ? Number(form.age) : null,
+        email: form.email,
+        currentPassword: form.currentPassword || undefined,
         birthDate: form.birthDate || null,
         street: form.street || null,
         addressNumber: form.addressNumber || null,
@@ -139,6 +143,8 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
       setForm((current) => ({
         ...current,
         name: updated.name,
+        email: updated.email,
+        currentPassword: '',
         age: updated.age?.toString() ?? '',
         birthDate: updated.birthDate ?? '',
         street: updated.street ?? '',
@@ -227,7 +233,7 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
           </label>
           <label className="font-semibold">
             E-mail
-            <input className={`${inputClass} bg-[#f4eee8] text-[#776b66]`} value={user.email} readOnly />
+            <input className={inputClass} type="email" value={form.email} onChange={(event) => setField('email', event.target.value)} required />
           </label>
           <label className="font-semibold">
             Idade
@@ -236,8 +242,8 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
               type="number"
               min="0"
               max="130"
-              value={form.age}
-              onChange={(event) => setField('age', event.target.value)}
+              value={ageFromBirthDate(form.birthDate) ?? ''}
+              readOnly
             />
           </label>
           <label className="font-semibold">
@@ -333,6 +339,9 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
           />
         </label>
         <div className="mt-8 flex gap-3">
+          {(form.email.trim().toLowerCase() !== user.email || form.newPassword) && <label>Senha atual
+            <input className={inputClass} type="password" autoComplete="current-password" value={form.currentPassword} onChange={(event) => setField('currentPassword', event.target.value)} required />
+          </label>}
           <button
             disabled={saving}
             className="rounded-xl bg-[#5b0c1b] px-7 py-3 font-semibold text-[#f4d58e] disabled:opacity-60"

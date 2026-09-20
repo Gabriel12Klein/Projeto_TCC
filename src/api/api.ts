@@ -55,7 +55,9 @@ export const api = {
   me: () => request<User>('/auth/me'),
   updateProfile: (payload: {
     name: string;
-    age: number | null;
+    email?: string;
+    currentPassword?: string;
+    age?: number | null;
     birthDate: string | null;
     street: string | null;
     addressNumber: string | null;
