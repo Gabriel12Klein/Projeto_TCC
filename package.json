@@ -14,9 +14,9 @@
     "test": "vitest run",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build",
     "prisma:generate": "prisma generate --config prisma.config.ts",
-    "prisma:push": "prisma migrate deploy --config prisma.config.ts",
+    "prisma:push": "npm run prisma:deploy",
     "prisma:migrate": "prisma migrate dev --config prisma.config.ts",
-    "prisma:deploy": "prisma migrate deploy --config prisma.config.ts",
+    "prisma:deploy": "tsx backend/scripts/deploy.ts",
     "prisma:seed": "prisma db seed --config prisma.config.ts",
     "prisma:studio": "prisma studio --config prisma.config.ts",
     "preview": "vite preview"
