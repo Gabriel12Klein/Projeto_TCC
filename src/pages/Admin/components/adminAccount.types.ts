@@ -10,7 +10,7 @@ export type WineryAccountInput = {
   currentPassword: string; newPassword: string; confirmPassword: string;
 };
 export type AdminSummary = {
-  wines: number; batches: number; vintages: number; grapes: number; wineTypes: number;
+  wines: number; batches: number; vintages: number; grapes: number; wineTypes: number; classifications: number;
   wineStatuses: { status: string; count: number }[];
   batchStatuses: { status: string; count: number }[];
   updatedAt: string;

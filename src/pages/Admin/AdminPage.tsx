@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { ComponentType } from 'react';
 import adminBackground from '../../assets/admin/common/admin-background.png';
 import AdminSidebar from './components/AdminSidebar';
@@ -26,6 +27,7 @@ const components: Record<AdminModuleKey, { form: ComponentType<any>; records: Co
   vinhos: { form: VinhoCadastrar, records: VinhoRegistros },
   'tipos-vinho': { form: ModuleForm, records: ModuleRecords },
   uvas: { form: ModuleForm, records: ModuleRecords },
+  classificacoes: { form: ModuleForm, records: ModuleRecords },
   lotes: { form: LoteCadastrar, records: LoteRegistros },
 };
 
@@ -34,7 +36,7 @@ const ADMIN_TAB_KEY = 'vinum_admin_tab';
 
 function getInitialModule(): AdminModuleKey {
   const saved = sessionStorage.getItem(ADMIN_MODULE_KEY);
-  return saved === 'vinhos' || saved === 'lotes' || saved === 'safras' || saved === 'tipos-vinho' || saved === 'uvas' ? saved : 'lotes';
+  return saved === 'vinhos' || saved === 'lotes' || saved === 'safras' || saved === 'tipos-vinho' || saved === 'uvas' || saved === 'classificacoes' ? saved : 'lotes';
 }
 
 function getInitialTab() {
@@ -43,6 +45,7 @@ function getInitialTab() {
 }
 
 export default function AdminPage({ user, onLogout, onUserUpdate }: { user: User; onLogout: () => void; onUserUpdate: (user: User) => void }) {
+  const queryClient = useQueryClient();
   const [module, setModule] = useState(getInitialModule);
   const [tab, setTab] = useState(getInitialTab);
   const [editing, setEditing] = useState<EntityRecord | null>(null);
@@ -81,6 +84,7 @@ export default function AdminPage({ user, onLogout, onUserUpdate }: { user: User
 
     setEditing(null);
     setRefreshKey((value) => value + 1);
+    await queryClient.invalidateQueries();
     setTab('records');
     return saved;
   }

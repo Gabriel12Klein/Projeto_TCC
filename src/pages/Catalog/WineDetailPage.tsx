@@ -51,6 +51,7 @@ export default function WineDetailPage() {
           <h1 className="mt-3 font-playfair text-5xl font-semibold text-[#5b0c1b]">{wine.name}</h1>
           <p className="mt-6 leading-7 text-[#66534f]">{wine.description}</p>
           <dl className="mt-8 grid grid-cols-2 gap-5 border-y border-[#eee3d5] py-6 text-sm">
+            <div><dt className="font-bold text-[#5b0c1b]">Classificação</dt><dd className="mt-1 text-[#715f59]">{wine.classification || 'Ainda não informada'}</dd></div>
             <div>
               <dt className="font-bold text-[#5b0c1b]">Uvas</dt>
               <dd className="mt-1 text-[#715f59]">{wine.grapes}</dd>

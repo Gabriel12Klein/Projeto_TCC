@@ -1,7 +1,7 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../lib/prisma.js';
 
-export type ReferenceKind = 'wineType' | 'grape';
+export type ReferenceKind = 'wineType' | 'grape' | 'classification';
 
 type ReferenceInput = {
   name?: unknown;
@@ -28,6 +28,7 @@ function data(input: ReferenceInput) {
 
 export const referenceService = {
   async list(kind: ReferenceKind, onlyActive = false) {
+    if (kind === 'classification') return (await prisma.classification.findMany({ where: onlyActive ? { active: true } : undefined, orderBy: { name: 'asc' } })).map(view);
     if (kind === 'wineType') {
       const items = await prisma.wineType.findMany({
         where: onlyActive ? { active: true } : undefined,
@@ -44,17 +45,23 @@ export const referenceService = {
 
   async create(kind: ReferenceKind, input: ReferenceInput) {
     const values = data(input);
+    if (kind === 'classification') return view(await prisma.classification.create({ data: { name: String(values.name), description: values.description ?? null, active: values.active ?? true } }));
     if (kind === 'wineType') return view(await prisma.wineType.create({ data: { name: String(values.name), description: values.description ?? null, active: values.active ?? true } }));
     return view(await prisma.grape.create({ data: { name: String(values.name), description: values.description ?? null, active: values.active ?? true } }));
   },
 
   async update(kind: ReferenceKind, id: string, input: ReferenceInput) {
     const values = data(input);
+    if (kind === 'classification') return view(await prisma.classification.update({ where: { id }, data: values }));
     if (kind === 'wineType') return view(await prisma.wineType.update({ where: { id }, data: values as Prisma.WineTypeUpdateInput }));
     return view(await prisma.grape.update({ where: { id }, data: values as Prisma.GrapeUpdateInput }));
   },
 
   async remove(kind: ReferenceKind, id: string) {
+    if (kind === 'classification') {
+      await prisma.classification.update({ where: { id }, data: { active: false } });
+      return;
+    }
     if (kind === 'wineType') {
       await prisma.wineType.update({ where: { id }, data: { active: false } });
       return;

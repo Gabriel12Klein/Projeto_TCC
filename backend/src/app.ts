@@ -27,6 +27,7 @@ app.use('/api/catalog', catalogRouter);
 app.use('/api/uploads', requireAuth, requireRoles('ADMIN', 'EDITOR'), uploadsRouter);
 app.use('/api/tipos-vinho', requireAuth, createReferenceRouter('wineType'));
 app.use('/api/uvas', requireAuth, createReferenceRouter('grape'));
+app.use('/api/classificacoes', requireAuth, createReferenceRouter('classification'));
 app.use('/api/vinicolas', requireAuth, requireRoles('ADMIN', 'EDITOR'), wineriesRouter);
 app.use('/api/vinhos', requireAuth, winesRouter);
 app.use('/api/safras', requireAuth, requireRoles('ADMIN', 'EDITOR'), vintagesRouter);

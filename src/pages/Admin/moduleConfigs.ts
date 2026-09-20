@@ -18,6 +18,16 @@ import loteVintage from '../../assets/admin/lote/vintage-related.png';
 import loteStatus from '../../assets/admin/lote/status.png';
 
 export const moduleConfigs = {
+  classificacoes: {
+    key:'classificacoes', label:'Classificação', singular:'classificação', heading:'Gerenciamento das Classificações', icon:vinhoRepresentative,
+    formTitle:'Dados da Classificação', formSubtitle:'Classificação é independente do tipo de vinho.', recordsTitle:'Classificações', recordsSubtitle:'Referências persistidas no banco de dados.', searchPlaceholder:'Buscar classificação...',
+    fields:[
+      { name:'name', label:'Nome', required:true, validation:{ minLength:2 } },
+      { name:'description', label:'Descrição', type:'textarea', full:true, maxLength:500 },
+      { name:'status', label:'Situação', required:true, type:'select', options:['Ativo','Inativo'] }
+    ],
+    columns:[['name','Nome'],['description','Descrição'],['status','Situação']]
+  },
   vinicolas: {
     key: 'vinicolas', label: 'Vinícola', singular: 'vinícola', heading: 'Gerenciamento da Vinícola', icon: vinicolaRepresentative,
     formTitle: 'Dados da Vinícola', formSubtitle: 'Preencha as informações para cadastrar uma nova vinícola.', recordsTitle: 'Registros de Vinícolas', recordsSubtitle: 'Lista e gerenciamento de todas as vinícolas cadastradas.',
@@ -52,6 +62,7 @@ export const moduleConfigs = {
     fields:[
       { name:'name', label:'Nome do vinho', required:true, placeholder:'Ex.: Reserva Especial Cabernet Sauvignon', validation:{ minLength:2 } },
       { name:'typeId', label:'Tipo do vinho', required:true, type:'select', options:[] },
+      { name:'classificationId', label:'Classificação', required:true, type:'select', options:[] },
       { name:'grapeIds', label:'Uvas utilizadas na composição', required:true, type:'multi-select', options:[], validation:{ minLength:1 }, note:'Selecione uma ou mais uvas que fazem parte da composição deste vinho.' },
       { name:'volume', label:'Volume', required:true, placeholder:'Ex.: 750', suffix:'ml', validation:'positiveNumber', inputMode:'decimal' },
       { name:'alcohol', label:'Teor alcoólico', required:true, placeholder:'Ex.: 13,5', suffix:'% vol', validation:'alcohol', inputMode:'decimal' },

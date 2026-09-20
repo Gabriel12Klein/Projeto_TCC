@@ -4,6 +4,7 @@ import { prisma } from '../../lib/prisma.js';
 import { AppError } from '../../common/http.js';
 
 const includeReferences = {
+  classification: { select: { id: true, name: true } },
   wineType: { select: { id: true, name: true } },
   grapeLinks: { include: { grape: { select: { id: true, name: true } } } },
   image: { select: { path: true } },
@@ -16,6 +17,8 @@ function toView(wine: WineWithReferences) {
   return {
     id: wine.id,
     wineryId: wine.wineryId ?? '',
+    classificationId: wine.classificationId ?? '',
+    classification: wine.classification?.name ?? '',
     name: wine.name,
     slug: wine.slug,
     type: wine.wineType?.name ?? '',
@@ -96,6 +99,8 @@ export const winesService = {
   },
 
   async create(input: Record<string, unknown>, createdById: string) {
+    if (!input.classificationId || !(await prisma.classification.findFirst({ where: { id: String(input.classificationId), active: true } })))
+      throw new AppError(400, 'Selecione uma classificação ativa para o vinho.');
     const name = String(input.name);
     const references = await resolveReferences(input);
     const data: Prisma.WineUncheckedCreateInput = {
@@ -104,6 +109,7 @@ export const winesService = {
       slug: `${slugify(name)}-${Date.now().toString(36)}`,
       wineryId: await resolveWinery(input.wineryId),
       typeId: references.typeId,
+      classificationId: String(input.classificationId),
       volumeMl: Math.round(Number(input.volume)),
       alcoholPercentage: Number(input.alcohol),
       description: String(input.description),
@@ -126,6 +132,13 @@ export const winesService = {
   async update(id: string, input: Record<string, unknown>, userId: string, role: string) {
     await assertCanManage(id, userId, role);
     const data: Prisma.WineUncheckedUpdateInput = {};
+    if (input.classificationId !== undefined) {
+      const current = await prisma.wine.findUniqueOrThrow({ where: { id } });
+      const classification = await prisma.classification.findUnique({ where: { id: String(input.classificationId) } });
+      if (!classification || (!classification.active && current.classificationId !== classification.id))
+        throw new AppError(400, 'Selecione uma classificação válida e ativa.');
+      data.classificationId = classification.id;
+    }
     const hasReferenceChange = input.typeId !== undefined || input.grapeIds !== undefined;
     const currentReferences = hasReferenceChange
       ? await prisma.wine.findUniqueOrThrow({

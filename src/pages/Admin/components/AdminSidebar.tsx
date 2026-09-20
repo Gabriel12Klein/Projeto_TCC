@@ -12,6 +12,7 @@ const items = [
   ['vinicolas','Vinícola',vinicolaIcon],
   ['vinhos','Vinho',vinhoIcon],
   ['tipos-vinho','Tipo de vinho',tipoVinhoIcon],
+  ['classificacoes','Classificação',tipoVinhoIcon],
   ['uvas','Tipo de uva',tipoUvaIcon],
   ['safras','Safra',safraIcon],
   ['lotes','Lote',loteIcon]
@@ -19,7 +20,7 @@ const items = [
 
 // O vinho é um cadastro próprio da vinícola e precisa estar disponível antes
 // de criar um lote que faça referência a ele.
-const visibleItems = items.filter(([key]) => key === 'vinhos' || key === 'lotes' || key === 'safras' || key === 'tipos-vinho' || key === 'uvas');
+const visibleItems = items.filter(([key]) => key !== 'vinicolas');
 
 export default function AdminSidebar({ active, onSelect, onLogout, collapsed, onToggle }) {
   const sidebarPadding = collapsed ? 'pt-5 px-[10px] pb-[22px]' : 'pt-[clamp(20px,1.7vw,26px)] px-[clamp(13px,1.1vw,17px)] pb-[22px]';

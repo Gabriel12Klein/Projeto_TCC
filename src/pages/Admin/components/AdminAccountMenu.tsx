@@ -130,6 +130,7 @@ function RegistrationSummary({ onOpenModule }: { onOpenModule: (module: Resource
     {query.isError && <p role="alert">Não foi possível carregar o resumo. Tente atualizar novamente.</p>}
     {query.data && <>
       <div className="admin-registration-summary__cards">{([
+        ['classificacoes', 'Classificações', query.data.classifications],
         ['vinhos', 'Vinhos', query.data.wines], ['lotes', 'Lotes', query.data.batches], ['safras', 'Safras', query.data.vintages], ['uvas', 'Tipos de uva', query.data.grapes], ['tipos-vinho', 'Tipos de vinho', query.data.wineTypes],
       ] as const).map(([module, label, count]) => <button type="button" key={module} onClick={() => onOpenModule(module)}><span>{label}</span><strong>{count.toLocaleString('pt-BR')}</strong><small>Ver registros →</small></button>)}</div>
       <div className="admin-registration-summary__statuses">{[['Situação dos vinhos', query.data.wineStatuses], ['Situação dos lotes', query.data.batchStatuses]].map(([title, rows]) => <section key={String(title)}><h3>{String(title)}</h3>{(rows as { status: string; count: number }[]).length ? <dl>{(rows as { status: string; count: number }[]).map(row => <div key={row.status}><dt>{labels[row.status] || row.status}</dt><dd>{row.count}</dd></div>)}</dl> : <p>Nenhum registro cadastrado.</p>}</section>)}</div>

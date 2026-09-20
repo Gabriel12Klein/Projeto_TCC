@@ -17,10 +17,11 @@ export type User = {
 };
 
 export type AuthSession = { token: string; user: User };
-export type ResourceKey = 'vinicolas' | 'vinhos' | 'tipos-vinho' | 'uvas' | 'safras' | 'lotes';
+export type ResourceKey = 'vinicolas' | 'vinhos' | 'tipos-vinho' | 'uvas' | 'safras' | 'lotes' | 'classificacoes';
 export type EntityRecord = { id: string; [key: string]: unknown };
 
 export type CatalogWine = {
+  classification: string | null;
   id: string;
   name: string;
   slug: string;

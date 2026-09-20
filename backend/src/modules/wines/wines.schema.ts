@@ -13,6 +13,7 @@ const wineFields = z.object({
   wineryId: z.string().trim().optional(),
   name: z.string().trim().min(2).max(150),
   typeId: z.string().trim().min(1),
+  classificationId: z.string().trim().min(1, 'Selecione a classificação do vinho.'),
   grapeIds: z.array(z.string().trim().min(1)).min(1),
   volume: decimal,
   alcohol: decimal.refine((value) => value <= 100, 'Teor alcoólico inválido.'),

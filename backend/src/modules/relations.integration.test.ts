@@ -21,7 +21,7 @@ beforeAll(async () => {
   secondGrapeId = (await prisma.grape.create({ data: { name: tag + '-second' } })).id;
   for (const suffix of ['a', 'b']) {
     const wine = await winesService.create({
-      name: tag + suffix, wineryId, typeId, grapeIds: suffix === 'a' ? [grapeId] : [grapeId, secondGrapeId], volume: 750,
+      name: tag + suffix, wineryId, typeId, classificationId: 'classification-seco', grapeIds: suffix === 'a' ? [grapeId] : [grapeId, secondGrapeId], volume: 750,
       alcohol: 13.5, description: 'Cadastro isolado para teste de integridade.', status: 'Ativo',
     }, userId);
     wineIds.push(wine.id);

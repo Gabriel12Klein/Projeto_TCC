@@ -43,11 +43,12 @@ export const adminSettingsService = {
     }, { isolationLevel: 'Serializable', timeout: 15000 });
   },
   async summary() {
-    const [wines, batches, vintages, grapes, wineTypes, wineStatuses, batchStatuses] = await prisma.$transaction([
+    const [wines, batches, vintages, grapes, wineTypes, wineStatuses, batchStatuses, classifications] = await prisma.$transaction([
       prisma.wine.count(), prisma.batch.count(), prisma.vintage.count(), prisma.grape.count(), prisma.wineType.count(),
       prisma.wine.groupBy({ by: ['status'], _count: { _all: true } }),
       prisma.batch.groupBy({ by: ['status'], _count: { _all: true } }),
+      prisma.classification.count(),
     ], { isolationLevel: 'RepeatableRead' });
-    return { wines, batches, vintages, grapes, wineTypes, wineStatuses: wineStatuses.map(s => ({ status: s.status, count: s._count._all })), batchStatuses: batchStatuses.map(s => ({ status: s.status, count: s._count._all })), updatedAt: new Date().toISOString() };
+    return { wines, batches, vintages, grapes, wineTypes, classifications, wineStatuses: wineStatuses.map(s => ({ status: s.status, count: s._count._all })), batchStatuses: batchStatuses.map(s => ({ status: s.status, count: s._count._all })), updatedAt: new Date().toISOString() };
   },
 };

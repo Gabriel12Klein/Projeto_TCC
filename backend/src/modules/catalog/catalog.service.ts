@@ -15,6 +15,7 @@ const summarySelect = {
   tastingNotes: true,
   pairing: true,
   wineType: { select: { name: true } },
+  classification: { select: { name: true } },
   grapeLinks: { include: { grape: { select: { name: true } } } },
   image: { select: { path: true } },
 } as const;
@@ -30,6 +31,7 @@ const publicWineSelect = {
   tastingNotes: true,
   pairing: true,
   wineType: { select: { name: true } },
+  classification: { select: { name: true } },
   grapeLinks: { include: { grape: { select: { name: true } } } },
   winery: { select: { name: true, city: true, state: true } },
   image: { select: { path: true } },
@@ -94,6 +96,7 @@ function publicWineView(wine: Prisma.WineGetPayload<{ select: typeof publicWineS
     id: wine.id,
     name: wine.name,
     type: wine.wineType?.name ?? '',
+    classification: wine.classification?.name ?? null,
     grapes: wine.grapeLinks.map(({ grape }) => grape.name),
     volumeMl: wine.volumeMl,
     alcoholPercentage: wine.alcoholPercentage,
@@ -131,6 +134,7 @@ export const catalogService = {
       name: wine.name,
       slug: wine.slug,
       type: wine.wineType?.name ?? '',
+    classification: wine.classification?.name ?? null,
       grapes: wine.grapeLinks.map(({ grape }) => grape.name).join(', '),
       volumeMl: wine.volumeMl,
       alcoholPercentage: wine.alcoholPercentage,
@@ -170,6 +174,7 @@ export const catalogService = {
         },
         grapeLinks: { include: { grape: { select: { name: true } } } },
         wineType: { select: { name: true } },
+  classification: { select: { name: true } },
       },
     });
     if (!wine) throw new AppError(404, 'Vinho não encontrado no catálogo.');
@@ -200,6 +205,7 @@ export const catalogService = {
       name: wine.name,
       slug: wine.slug,
       type: wine.wineType?.name ?? '',
+    classification: wine.classification?.name ?? null,
       grapes: wine.grapeLinks.map(({ grape }) => grape.name).join(', '),
       volumeMl: wine.volumeMl,
       alcoholPercentage: wine.alcoholPercentage,
