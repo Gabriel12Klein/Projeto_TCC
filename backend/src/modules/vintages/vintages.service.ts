@@ -28,22 +28,24 @@ function toView(vintage: VintageWithRelations) {
 }
 
 async function resolveWineId(input: Record<string, unknown>, currentId?: string | null) {
-  if (input.wineId) return String(input.wineId);
-  if (input.wineName) {
-    const wine = await prisma.wine.findFirst({ where: { name: String(input.wineName) } });
+  if (input.wineId) {
+    const wine = await prisma.wine.findUnique({ where: { id: String(input.wineId) } });
     if (!wine) throw new AppError(400, 'O vinho relacionado não foi encontrado.');
     return wine.id;
   }
-  return currentId ?? null;
+  if (input.wineName) {
+    const wines = await prisma.wine.findMany({ where: { name: String(input.wineName) }, take: 2 });
+    if (wines.length !== 1) throw new AppError(400, 'Selecione um vinho pelo identificador; o nome não é único ou não existe.');
+    return wines[0].id;
+  }
+  if (currentId) return currentId;
+  throw new AppError(400, 'Selecione o vinho relacionado à safra.');
 }
 
-async function resolveGrapeIds(input: Record<string, unknown>) {
-  if (!Array.isArray(input.grapeIds)) return undefined;
-  const grapeIds = input.grapeIds.map(String);
-  const grapes = await prisma.grape.findMany({ where: { id: { in: grapeIds } } });
-  if (grapes.length !== grapeIds.length)
-    throw new AppError(400, 'Uma das uvas selecionadas não foi encontrada.');
-  return grapeIds;
+async function resolveGrapeIds(transaction: Prisma.TransactionClient, wineId: string) {
+  const links = await transaction.wineGrape.findMany({ where: { wineId }, select: { grapeId: true } });
+  if (!links.length) throw new AppError(400, 'Cadastre as uvas do vinho selecionado antes de salvar a safra.');
+  return links.map(({ grapeId }) => grapeId);
 }
 
 export const vintagesService = {
@@ -62,8 +64,8 @@ export const vintagesService = {
     const identifier = normalizeVintageIdentifier(String(input.identifier));
     const derivedYear = vintageIdentifierToYear(identifier);
     const wineId = await resolveWineId(input);
-    const grapeIds = await resolveGrapeIds(input);
     const vintage = await prisma.$transaction(async (transaction) => {
+      const grapeIds = await resolveGrapeIds(transaction, wineId);
       const created = await transaction.vintage.create({
         data: {
           identifier,
@@ -87,11 +89,11 @@ export const vintagesService = {
   async update(id: string, input: Record<string, unknown>) {
     const current = await prisma.vintage.findUniqueOrThrow({ where: { id } });
     const data: Prisma.VintageUncheckedUpdateInput = {};
-    const grapeIds = await resolveGrapeIds(input);
+    const wineId = await resolveWineId(input, current.wineId);
     if (input.identifier !== undefined)
       data.identifier = normalizeVintageIdentifier(String(input.identifier));
     if (input.wineId !== undefined || input.wineName !== undefined)
-      data.wineId = await resolveWineId(input, current.wineId);
+      data.wineId = wineId;
     if (input.year !== undefined || input.identifier !== undefined) {
       const effectiveIdentifier =
         input.identifier !== undefined
@@ -108,6 +110,7 @@ export const vintagesService = {
     }
 
     const vintage = await prisma.$transaction(async (transaction) => {
+      const grapeIds = await resolveGrapeIds(transaction, wineId);
       await transaction.vintage.update({ where: { id }, data });
       if (grapeIds !== undefined) {
         await transaction.vintageGrape.deleteMany({ where: { vintageId: id } });

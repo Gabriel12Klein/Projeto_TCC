@@ -63,6 +63,17 @@ async function assertCanManage(id: string, userId: string, role: string) {
   }
 }
 
+async function resolveWinery(input: unknown) {
+  if (input) {
+    const winery = await prisma.winery.findUnique({ where: { id: String(input) } });
+    if (!winery) throw new AppError(400, 'A vinícola selecionada não foi encontrada.');
+    return winery.id;
+  }
+  const wineries = await prisma.winery.findMany({ take: 2, select: { id: true } });
+  if (wineries.length !== 1) throw new AppError(400, 'Selecione a vinícola do vinho.');
+  return wineries[0].id;
+}
+
 export const winesService = {
   async list(query = '', createdById?: string) {
     const wines = await prisma.wine.findMany({
@@ -91,7 +102,7 @@ export const winesService = {
       name,
       createdById,
       slug: `${slugify(name)}-${Date.now().toString(36)}`,
-      wineryId: input.wineryId ? String(input.wineryId) : null,
+      wineryId: await resolveWinery(input.wineryId),
       typeId: references.typeId,
       volumeMl: Math.round(Number(input.volume)),
       alcoholPercentage: Number(input.alcohol),
@@ -129,7 +140,7 @@ export const winesService = {
         })
       : null;
     if (input.name !== undefined) data.name = String(input.name);
-    if (input.wineryId !== undefined) data.wineryId = input.wineryId ? String(input.wineryId) : null;
+    if (input.wineryId !== undefined) data.wineryId = await resolveWinery(input.wineryId);
     if (references && input.typeId !== undefined) data.typeId = references.typeId;
     if (input.volume !== undefined) data.volumeMl = Math.round(Number(input.volume));
     if (input.alcohol !== undefined) data.alcoholPercentage = Number(input.alcohol);

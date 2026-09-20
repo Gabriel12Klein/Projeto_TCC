@@ -9,6 +9,7 @@ dist/
 backend/uploads/*
 !backend/uploads/.gitkeep
 backups/*.json
+*.dump
 backend/src/generated/prisma/
 
 /src/generated/prisma

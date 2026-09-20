@@ -33,7 +33,9 @@ export default function HomePage() {
               >
                 <img className="h-8 w-8 rounded-full object-contain" src={profileIcon} alt="" aria-hidden="true" />
                 <span>{firstName}</span>
-                <span className="text-xs" aria-hidden="true">⌄</span>
+                <svg className="h-4 w-4 shrink-0 self-center" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
               </button>
               {profileMenuOpen ? (
                 <div
@@ -150,27 +152,27 @@ export default function HomePage() {
             {wines.slice(0, 6).map((wine) => (
               <article
                 key={wine.id}
-                className="group overflow-hidden rounded-3xl border border-[#dfd0bd] bg-white shadow-[0_12px_35px_rgba(76,21,28,.08)] transition hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(76,21,28,.14)]"
+                className="home-wine-card group overflow-hidden rounded-3xl border border-[#dfd0bd] bg-white shadow-[0_12px_35px_rgba(76,21,28,.08)] transition hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(76,21,28,.14)]"
               >
-                <div className="grid h-72 place-items-center overflow-hidden bg-[radial-gradient(circle,#f2dfc1,#dbc19a)] p-6">
+                <div className="grid h-72 w-full shrink-0 place-items-center overflow-hidden bg-[radial-gradient(circle,#f2dfc1,#dbc19a)] p-6">
                   {wine.imagePath ? (
                     <img className="block h-auto max-h-[230px] w-auto max-w-[170px] object-contain mix-blend-multiply" src={wine.imagePath} alt={wine.name} />
                   ) : (
                     <span className="font-playfair text-7xl text-[#851329]/35">V</span>
                   )}
                 </div>
-                <div className="p-6">
+                <div className="w-full p-6">
                   <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6a2d]">
                     {wine.type}
                   </span>
                   <h3 className="mt-2 font-playfair text-2xl font-semibold text-[#5b0c1b]">{wine.name}</h3>
                   <p className="mt-3 line-clamp-2 text-sm leading-6 text-[#715f59]">{wine.description}</p>
-                  <div className="mt-5 flex items-center justify-between border-t border-[#eee3d5] pt-4 text-sm">
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#eee3d5] pt-4 text-sm">
                     <span>
                       {wine.volumeMl} ml · {wine.alcoholPercentage}% vol
                     </span>
                     <Link
-                      className="font-semibold text-[#851329] group-hover:underline"
+                      className="whitespace-nowrap font-semibold text-[#851329] group-hover:underline"
                       to={`/catalogo/vinhos/${wine.slug}`}
                     >
                       Ver detalhes →

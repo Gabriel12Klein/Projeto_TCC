@@ -12,7 +12,7 @@ function tokenHash(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
-function publicUser(user: User & { roleRef: { name: string } | null }) {
+export function publicUser(user: User & { roleRef: { name: string } | null }) {
   return {
     id: user.id,
     name: user.name,
@@ -30,7 +30,7 @@ function publicUser(user: User & { roleRef: { name: string } | null }) {
   };
 }
 
-async function verifyPassword(password: string, user: User) {
+export async function verifyPassword(password: string, user: User) {
   if (!user.passwordSalt) return bcrypt.compare(password, user.passwordHash);
   const candidate = scryptSync(password, user.passwordSalt, 64);
   const original = Buffer.from(user.passwordHash, 'hex');
@@ -63,12 +63,10 @@ export async function ensureSeedAdmin() {
       create: { id: 'role-editor', name: 'EDITOR', description: 'Editor administrativo legado.' },
     }),
   ]);
-  const current = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
-  if (current) {
-    if (current.roleId !== adminRole.id)
-      await prisma.user.update({ where: { id: current.id }, data: { roleId: adminRole.id } });
-    return;
-  }
+  // A troca do e-mail do administrador não pode recriar o acesso padrão.
+  const current = await prisma.user.findFirst({ where: { roleId: adminRole.id } });
+  if (current) return;
+  if (await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } })) return;
   await prisma.user.create({
     data: {
       name: 'Administrador',

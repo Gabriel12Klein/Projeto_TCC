@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import LoginPage from './pages/Login/LoginPage';
 import CadastroPage from './pages/Cadastro/CadastroPage';
 import AdminPage from './pages/Admin/AdminPage';
-import { api, clearSession, getToken, getStoredUser } from './api/api';
+import { api, clearSession, getToken, getStoredUser, saveSession } from './api/api';
 import type { User } from './types';
 import CatalogLayout from './pages/Catalog/CatalogLayout';
 import WineDetailPage from './pages/Catalog/WineDetailPage';
@@ -50,15 +50,16 @@ export default function App() {
       .finally(() => setCheckingSession(false));
   }, []);
 
-  async function logout() {
+  async function logout(destination = '/login') {
     try {
       await api.logout();
     } catch {
       /* sessão local pode já ter expirado */
     }
     clearSession();
-    setUser(null);
-    navigate('/login');
+    // Carrega uma nova página para evitar disputa com o redirecionamento
+    // da rota protegida e descartar os dados em memória da sessão anterior.
+    window.location.replace(destination);
   }
 
   function loginSuccess(loggedUser: User) {
@@ -148,7 +149,7 @@ export default function App() {
           checkingSession ? (
             <Loading />
           ) : user && (user.role === 'ADMIN' || user.role === 'EDITOR') ? (
-            <AdminPage user={user} onLogout={logout} />
+            <AdminPage user={user} onLogout={() => void logout('/')} onUserUpdate={updated => { const token = getToken(); if (token) saveSession({ token, user: updated }); setUser(updated); }} />
           ) : (
             <Navigate to={user ? '/catalogo' : '/login'} replace />
           )

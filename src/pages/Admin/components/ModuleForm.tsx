@@ -158,10 +158,11 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     if (config.key === 'lotes') {
       const productionDate = batchCodeToProductionDate(nextForm.code);
       if (productionDate) nextForm.productionDate = productionDate;
-      if (nextForm.wineId) nextForm.grapeIds = config.wineGrapeMap?.[String(nextForm.wineId)] ?? [];
+      if (nextForm.vintageId) nextForm.grapeIds = config.vintageGrapeMap?.[String(nextForm.vintageId)] ?? nextForm.grapeIds ?? [];
       nextForm.registrationDate = initialData?.registrationDate ?? '';
     }
     if (config.key === 'safras') {
+      nextForm.grapeIds = config.wineGrapeMap?.[String(nextForm.wineId ?? '')] ?? [];
       const year = vintageIdentifierToYear(nextForm.identifier);
       if (year) nextForm.year = year;
     }
@@ -169,7 +170,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     setTouched({});
     setSubmitted(false);
     setHydratedDraftKey(draftKey);
-  },[draftKey,initialData,config.key,config.wineGrapeMap]);
+  },[draftKey,initialData,config.key,config.wineGrapeMap,config.vintageGrapeMap]);
   useEffect(()=>{
     if (hydratedDraftKey !== draftKey) return;
     try {
@@ -190,10 +191,17 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
         next.productionDate = batchCodeToProductionDate(value);
       }
       if (config.key === 'lotes' && name === 'wineId') {
-        next.grapeIds = config.wineGrapeMap?.[String(value)] ?? [];
+        next.vintageId = '';
+        next.grapeIds = [];
+      }
+      if (config.key === 'lotes' && name === 'vintageId') {
+        next.grapeIds = config.vintageGrapeMap?.[String(value)] ?? [];
       }
       if (config.key === 'safras' && name === 'identifier') {
         next.year = vintageIdentifierToYear(value);
+      }
+      if (config.key === 'safras' && name === 'wineId') {
+        next.grapeIds = config.wineGrapeMap?.[String(value)] ?? [];
       }
       return next;
     });
@@ -289,6 +297,9 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
 
     <div className="grid grid-cols-2 gap-y-[clamp(14px,1.25vw,18px)] gap-x-[clamp(22px,2.5vw,38px)] max-[1450px]:gap-y-[14px] max-[1450px]:gap-x-6">
       {(config.blockchainInfo ? config.fields.filter((field) => field.name !== 'registrationDate') : config.fields).map((f, fieldIndex)=>{
+        if (config.key === 'lotes' && f.name === 'vintageId') {
+          f = { ...f, options: f.options.filter((option) => option.wineId === String(form.wineId ?? '')) };
+        }
         const wrapper = f.full
           ? `min-w-0 col-span-2 ${f.action ? 'grid grid-cols-[minmax(0,1fr)_auto] gap-[14px] items-end' : ''}`
           : 'min-w-0';

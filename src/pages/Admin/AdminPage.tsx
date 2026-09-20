@@ -42,7 +42,7 @@ function getInitialTab() {
   return saved === 'records' ? 'records' : 'form';
 }
 
-export default function AdminPage({ user, onLogout }: { user: User; onLogout: () => void }) {
+export default function AdminPage({ user, onLogout, onUserUpdate }: { user: User; onLogout: () => void; onUserUpdate: (user: User) => void }) {
   const [module, setModule] = useState(getInitialModule);
   const [tab, setTab] = useState(getInitialTab);
   const [editing, setEditing] = useState<EntityRecord | null>(null);
@@ -120,7 +120,7 @@ export default function AdminPage({ user, onLogout }: { user: User; onLogout: ()
         />
 
         <section className="relative min-w-0 h-full flex flex-col pt-1 px-0.5 pb-0 overflow-hidden">
-          <AdminHeader heading={config.heading} user={user} />
+          <AdminHeader heading={config.heading} user={user} onUserUpdate={onUserUpdate} onOpenModule={key => { setModule(key); setTab('records'); setEditing(null); setRefreshKey(value => value + 1); }} />
           <ModuleTabs tab={tab} onChange={changeTab} />
 
           <div className="relative flex-1 min-h-0 -mt-px p-[clamp(18px,1.7vw,27px)_clamp(16px,1.5vw,24px)] bg-[rgba(255,255,255,.55)] border border-[#e7e1db] rounded-[18px] shadow-[0_8px_20px_rgb(73_37_29_/_10%)] overflow-y-auto overflow-x-hidden [scrollbar-color:#8d817c_#f0ece8] [scrollbar-width:thin] max-[1450px]:p-[18px_18px_16px]">

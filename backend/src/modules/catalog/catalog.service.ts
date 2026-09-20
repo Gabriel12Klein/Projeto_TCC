@@ -36,7 +36,7 @@ const publicWineSelect = {
 } as const;
 
 const publicBatchWhere: Prisma.BatchWhereInput = {
-  status: { in: ['Publicado', 'Publicado para consulta'] },
+  status: 'Publicado para consulta no banco de dados',
 };
 
 function batchView(
@@ -44,8 +44,7 @@ function batchView(
     code: string;
     quantityLiters: number;
     productionDate: Date;
-    bottlingTime: string | null;
-  registrationDate: Date | null;
+    registrationDate: Date | null;
     status: string;
     blockchainRef: string | null;
     qrCodePath: string | null;
@@ -58,7 +57,6 @@ function batchView(
     code: batch.code,
     quantityLiters: batch.quantityLiters,
     productionDate: toInputDate(batch.productionDate),
-    bottlingTime: batch.bottlingTime,
     registrationDate: batch.registrationDate ? toInputDate(batch.registrationDate) : null,
     status: batch.status,
     grapes: grapes.length ? grapes : fallbackGrapes,
@@ -237,7 +235,6 @@ export const catalogService = {
       code: batch.code,
       quantityLiters: batch.quantityLiters,
       productionDate: toInputDate(batch.productionDate),
-      bottlingTime: batch.bottlingTime,
       registrationDate: batch.registrationDate ? toInputDate(batch.registrationDate) : null,
       status: batch.status,
       grapes: batchGrapes.length ? batchGrapes : vintageGrapes,

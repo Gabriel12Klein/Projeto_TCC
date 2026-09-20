@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { isBatchCode, normalizeBatchCode } from '../../common/format.js';
 
 const positiveNumber = z.union([z.string(), z.number()]).transform((value, context) => {
-  const parsed = Number(String(value).replace(/\./g, '').replace(',', '.'));
+  const text = String(value).trim();
+  const parsed = Number(text.includes(',') ? text.replace(/\./g, '').replace(',', '.') : text);
   if (!Number.isFinite(parsed) || parsed <= 0) {
     context.addIssue({ code: 'custom', message: 'Informe uma quantidade positiva.' });
     return z.NEVER;
@@ -14,11 +15,6 @@ const date = z
   .string()
   .trim()
   .refine((value) => !Number.isNaN(Date.parse(value)), 'Data inválida.');
-
-const time = z
-  .string()
-  .trim()
-  .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, 'Informe um horÃ¡rio vÃ¡lido no formato HH:mm.');
 
 const batchCode = z
   .string()
@@ -35,8 +31,7 @@ const batchBaseSchema = z.object({
   grapeIds: z.array(z.string().trim().min(1)).min(1, 'Selecione pelo menos uma uva.').optional(),
   quantity: positiveNumber,
   productionDate: date,
-  bottlingTime: time.optional(),
-  status: z.string().trim().min(1).max(40),
+  status: z.enum(['Aguardando registro', 'Registrado na blockchain', 'Publicado para consulta no banco de dados']),
   blockchain: z.string().trim().optional(),
   qrCode: z.string().trim().optional(),
 });

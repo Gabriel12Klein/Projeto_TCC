@@ -12,9 +12,6 @@ const projectDir = dirname(fileURLToPath(import.meta.url));
 const dependenciesReady =
   existsSync(join(projectDir, 'node_modules', 'vite')) &&
   existsSync(join(projectDir, 'node_modules', 'express'));
-const generatedClientReady = existsSync(
-  join(projectDir, 'backend', 'src', 'generated', 'prisma', 'client.ts'),
-);
 
 function runNpmScript(script) {
   const result = spawnSync('npm', ['run', script], { cwd: projectDir, shell: true, stdio: 'inherit' });
@@ -27,9 +24,9 @@ if (!dependenciesReady) {
   if (install.status !== 0) process.exit(install.status ?? 1);
 }
 
-if (!generatedClientReady) runNpmScript('prisma:generate');
-console.log('\n[VINUM] Preparando banco de dados MySQL...\n');
+console.log('\n[VINUM] Preparando banco de dados PostgreSQL...\n');
 runNpmScript('prisma:deploy');
+runNpmScript('prisma:generate');
 runNpmScript('prisma:seed');
 
 console.log('\n[VINUM] Iniciando backend local e frontend...\n');

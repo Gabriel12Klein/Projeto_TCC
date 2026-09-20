@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
 }
 
 model User {
@@ -22,12 +22,14 @@ model User {
   email         String    @unique
   passwordHash  String
   passwordSalt  String?
-  roleId        String?
-  roleRef       Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  roleId        String
+  roleRef       Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
   active        Boolean   @default(true)
 
   sessions      Session[]
   createdWines  Wine[]    @relation("WineCreator")
+  orders        CustomerOrder[]
+  inventory     InventoryItem[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -91,11 +93,11 @@ model Wine {
   createdById String?
   createdBy   User? @relation("WineCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
-  wineryId String?
-  winery   Winery? @relation(fields: [wineryId], references: [id], onDelete: SetNull)
+  wineryId String
+  winery   Winery @relation(fields: [wineryId], references: [id], onDelete: Restrict)
 
-  typeId   String?
-  wineType WineType? @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  typeId   String
+  wineType WineType @relation(fields: [typeId], references: [id], onDelete: Restrict)
 
   name              String
   slug              String   @unique
@@ -115,6 +117,8 @@ model Wine {
   vintages   Vintage[]
   batches    Batch[]
   grapeLinks WineGrape[]
+  orderItems CustomerOrderItem[]
+  inventory  InventoryItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -165,7 +169,7 @@ model WineGrape {
 
   wine Wine @relation(fields: [wineId], references: [id], onDelete: Cascade)
 
-  grape Grape @relation(fields: [grapeId], references: [id], onDelete: Cascade)
+  grape Grape @relation(fields: [grapeId], references: [id], onDelete: Restrict)
 
   @@id([wineId, grapeId])
   @@index([grapeId])
@@ -190,8 +194,8 @@ model WineImage {
 model Vintage {
   id String @id @default(cuid())
 
-  wineId String?
-  wine   Wine? @relation(fields: [wineId], references: [id], onDelete: SetNull)
+  wineId String
+  wine   Wine @relation(fields: [wineId], references: [id], onDelete: Restrict)
 
   identifier   String @unique
   year         Int
@@ -209,6 +213,7 @@ model Vintage {
   @@index([wineId])
   @@index([year])
   @@index([status])
+  @@unique([id, wineId])
   @@map("safra")
 }
 
@@ -218,7 +223,7 @@ model VintageGrape {
 
   vintage Vintage @relation(fields: [vintageId], references: [id], onDelete: Cascade)
 
-  grape Grape @relation(fields: [grapeId], references: [id], onDelete: Cascade)
+  grape Grape @relation(fields: [grapeId], references: [id], onDelete: Restrict)
 
   @@id([vintageId, grapeId])
   @@index([grapeId])
@@ -228,16 +233,15 @@ model VintageGrape {
 model Batch {
   id String @id @default(cuid())
 
-  wineId String?
-  wine   Wine? @relation(fields: [wineId], references: [id], onDelete: SetNull)
+  wineId String
+  wine   Wine @relation(fields: [wineId], references: [id], onDelete: Restrict)
 
   vintageId String
-  vintage   Vintage @relation(fields: [vintageId], references: [id], onDelete: Restrict)
+  vintage   Vintage @relation(fields: [vintageId, wineId], references: [id, wineId], onDelete: Restrict, onUpdate: Restrict)
 
   code             String   @unique
   quantityLiters   Float
   productionDate   DateTime
-  bottlingTime     String?  @map("hora_envase")
   registrationDate DateTime?
 
   status String
@@ -263,9 +267,100 @@ model BatchGrape {
 
   batch Batch @relation(fields: [batchId], references: [id], onDelete: Cascade)
 
-  grape Grape @relation(fields: [grapeId], references: [id], onDelete: Cascade)
+  grape Grape @relation(fields: [grapeId], references: [id], onDelete: Restrict)
 
   @@id([batchId, grapeId])
   @@index([grapeId])
   @@map("lote_uva")
+}
+
+model CustomerOrder {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source       String   @default("VINICULA")
+  status       String   @default("REGISTRADO")
+  purchaseDate DateTime
+  purchaseLocation String?
+  notes        String?  @db.Text
+
+  items        CustomerOrderItem[]
+  movements    InventoryMovement[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([purchaseDate])
+  @@map("pedido")
+}
+
+model CustomerOrderItem {
+  id              String         @id @default(cuid())
+  orderId         String
+  order           CustomerOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  wineId          String?
+  wine            Wine?          @relation(fields: [wineId], references: [id], onDelete: Restrict)
+  wineName        String
+  photoPath       String?
+  wineryName      String?
+  vintageYear     Int?
+  quantityBottles Int
+  volumeMl        Int?
+  unitPrice       Decimal?       @db.Decimal(10, 2)
+
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime       @default(now())
+
+  @@index([orderId])
+  @@index([wineId])
+  @@index([inventoryItemId])
+  @@map("item_pedido")
+}
+
+model InventoryItem {
+  id              String              @id @default(cuid())
+  userId          String
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wineId          String?
+  wine            Wine?               @relation(fields: [wineId], references: [id], onDelete: Restrict)
+  name            String
+  wineryName      String?
+  photoPath       String?
+  quantityBottles Int                 @default(0)
+  active          Boolean             @default(true)
+
+  orderItems      CustomerOrderItem[]
+  movements       InventoryMovement[]
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([userId])
+  @@index([wineId])
+  @@index([active])
+  @@unique([userId, wineId])
+  @@map("estoque_item")
+}
+
+model InventoryMovement {
+  id              String        @id @default(cuid())
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  orderId         String?
+  order           CustomerOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  type            String
+  quantityBottles Int
+  reason          String?
+  purchaseLocation String?
+  occurredAt      DateTime      @default(now())
+
+  @@index([inventoryItemId])
+  @@index([type])
+  @@index([occurredAt])
+  @@index([orderId])
+  @@map("movimentacao_estoque")
 }

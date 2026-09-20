@@ -55,6 +55,7 @@ export default function ModuleRecords({ config, refreshKey, onEdit, onNew }) {
   }
 
   function display(col,value){
+    if(col==='observations') return <span className="line-clamp-2 whitespace-normal break-words" title={value ? String(value) : undefined}>{value || '–'}</span>;
     if(col==='volume' && value) return `${value} ml`;
     if(col==='alcohol'&&value) return `${value}% vol`;
     if(col==='quantity'&&value) return `${value}`;

@@ -3,7 +3,6 @@ dist
 package-lock.json
 backend/src/generated
 backend/uploads
-backend/data/store.json
 design-reference
 src/assets
 src/pages/Admin

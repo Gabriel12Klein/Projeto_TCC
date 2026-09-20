@@ -1,4 +1,5 @@
-import type { AuthSession, CatalogWine, CatalogWineDetail, EntityRecord, PublicBatchDetail, ResourceKey, User } from '../types';
+import type { AuthSession, CatalogWine, CatalogWineDetail, CustomerOrder, EntityRecord, InventoryItem, PublicBatchDetail, ResourceKey, User } from '../types';
+import type { AdminSummary, WineryAccount, WineryAccountInput } from '../pages/Admin/components/adminAccount.types';
 
 const TOKEN_KEY = 'vinum_token';
 const USER_KEY = 'vinum_user';
@@ -44,6 +45,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
+  admin: {
+    account: () => request<WineryAccount>('/admin/cadastro'),
+    updateAccount: (payload: WineryAccountInput) => request<WineryAccount>('/admin/cadastro', { method: 'PUT', body: JSON.stringify(payload) }),
+    summary: () => request<AdminSummary>('/admin/resumo'),
+  },
   login: (payload: { email: string; password: string }) =>
     request<AuthSession>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   me: () => request<User>('/auth/me'),
@@ -88,5 +94,37 @@ export const api = {
     },
     detail: (slug: string) => request<CatalogWineDetail>(`/catalog/wines/${encodeURIComponent(slug)}`),
     batch: (code: string) => request<PublicBatchDetail>(`/catalog/batches/${encodeURIComponent(code)}`),
+  },
+  customer: {
+    orders: () => request<CustomerOrder[]>('/cliente/pedidos'),
+    createOrder: (payload: { source: 'VINICULA' | 'OUTRO_LOCAL'; purchaseDate: string; purchaseLocation?: string; photo?: File; notes?: string; items: Array<{ wineId?: string; wineName?: string; wineryName?: string; vintageYear?: number; quantityBottles: number; volumeMl?: number; unitPrice?: number }> }) => {
+      const { photo, ...data } = payload;
+      if (!photo) return request<CustomerOrder>('/cliente/pedidos', { method: 'POST', body: JSON.stringify(data) });
+      const body = new FormData();
+      body.append('payload', JSON.stringify(data));
+      body.append('photo', photo);
+      return request<CustomerOrder>('/cliente/pedidos', { method: 'POST', body });
+    },
+    removeOrder: (id: string) => request<void>(`/cliente/pedidos/${id}`, { method: 'DELETE' }),
+    updateOrderItem: (orderId: string, itemId: string, payload: { source: 'VINICULA' | 'OUTRO_LOCAL'; purchaseDate: string; purchaseLocation?: string; photo?: File; items: Array<{ wineId?: string; wineName?: string; quantityBottles: number }> }) => {
+      const { photo, ...data } = payload;
+      const url = `/cliente/pedidos/${encodeURIComponent(orderId)}/itens/${encodeURIComponent(itemId)}`;
+      if (!photo) return request<CustomerOrder>(url, { method: 'PUT', body: JSON.stringify(data) });
+      const body = new FormData();
+      body.append('payload', JSON.stringify(data));
+      body.append('photo', photo);
+      return request<CustomerOrder>(url, { method: 'PUT', body });
+    },
+    inventory: () => request<InventoryItem[]>('/cliente/estoque'),
+    createInventoryItem: (payload: { name: string; wineryName?: string; quantityBottles: number; photo: File }) => {
+      const body = new FormData();
+      body.append('name', payload.name);
+      body.append('quantityBottles', String(payload.quantityBottles));
+      if (payload.wineryName) body.append('wineryName', payload.wineryName);
+      body.append('photo', payload.photo);
+      return request<InventoryItem>('/cliente/estoque', { method: 'POST', body });
+    },
+    movement: (itemId: string, payload: { type: 'CONSUMO' | 'ENTRADA' | 'AJUSTE'; quantityBottles: number; reason?: string }) =>
+      request<InventoryItem>(`/cliente/estoque/${itemId}/movimentos`, { method: 'POST', body: JSON.stringify(payload) }),
   },
 };

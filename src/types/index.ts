@@ -51,7 +51,6 @@ export type CatalogWineDetail = CatalogWine & {
       quantityLiters: number;
       status: string;
       productionDate: string;
-      bottlingTime: string | null;
       registrationDate: string | null;
       grapes: string[];
       blockchainRef: string | null;
@@ -64,7 +63,6 @@ export type PublicBatchDetail = {
   code: string;
   quantityLiters: number;
   productionDate: string;
-  bottlingTime: string | null;
   registrationDate: string | null;
   status: string;
   grapes: string[];
@@ -93,4 +91,48 @@ export type PublicBatchDetail = {
     status: string;
     grapes: string[];
   };
+};
+
+export type CustomerOrderItem = {
+  photoPath?: string | null;
+  id: string;
+  wineId: string | null;
+  wineName: string;
+  wineryName: string | null;
+  vintageYear: number | null;
+  quantityBottles: number;
+  volumeMl: number | null;
+  unitPrice: number | null;
+  wine?: { id: string; name: string; slug: string } | null;
+};
+
+export type CustomerOrder = {
+  purchaseLocation?: string | null;
+  id: string;
+  source: 'VINICULA' | 'OUTRO_LOCAL';
+  purchaseDate: string;
+  notes: string | null;
+  items: CustomerOrderItem[];
+};
+
+export type InventoryMovement = {
+  orderId?: string | null;
+  purchaseLocation?: string | null;
+  id: string;
+  type: 'CONSUMO' | 'ENTRADA' | 'AJUSTE';
+  quantityBottles: number;
+  reason: string | null;
+  occurredAt: string;
+};
+
+export type InventoryItem = {
+  orderItems?: { order: { purchaseLocation: string | null } }[];
+  id: string;
+  name: string;
+  wineryName: string | null;
+  photoPath: string | null;
+  quantityBottles: number;
+  wineId: string | null;
+  wine?: { id: string; name: string; slug: string } | null;
+  movements: InventoryMovement[];
 };

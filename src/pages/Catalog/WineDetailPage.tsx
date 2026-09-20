@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../api/api';
 
 export default function WineDetailPage() {
   const { slug = '' } = useParams();
+  const [openQrCode, setOpenQrCode] = useState<string | null>(null);
   const {
     data: wine,
     isLoading,
@@ -98,8 +100,11 @@ export default function WineDetailPage() {
           <p className="mt-4 text-[#715f59]">Nenhuma safra publicada para este vinho.</p>
         ) : (
           <div className="mt-5 grid gap-5 md:grid-cols-2">
-            {wine.vintages.map((vintage) => (
-              <article key={vintage.id} className="rounded-2xl border border-[#dfd0bd] bg-white p-6">
+            {wine.vintages.map((vintage) => {
+              const selectedBatch = vintage.batches.find((batch) => batch.code === openQrCode);
+              return (
+              <div key={vintage.id} className={selectedBatch ? 'md:col-span-2 md:grid md:grid-cols-[minmax(0,1fr)_minmax(260px,0.75fr)] md:gap-5' : ''}>
+              <article className="rounded-2xl border border-[#dfd0bd] bg-white p-6">
                 <h3 className="font-playfair text-2xl text-[#851329]">Safra {vintage.year}</h3>
                 <p className="mt-2 text-sm text-[#715f59]">
                   {vintage.identifier} · {vintage.status}
@@ -126,7 +131,6 @@ export default function WineDetailPage() {
                       <span>
                         Produção: {new Date(`${batch.productionDate}T00:00:00`).toLocaleDateString('pt-BR')}
                       </span>
-                      <span>Envase: {batch.bottlingTime || 'Não informado'}</span>
                       <span>
                         Registro: {batch.registrationDate ? new Date(`${batch.registrationDate}T00:00:00`).toLocaleDateString('pt-BR') : 'Aguardando registro'}
                       </span>
@@ -135,19 +139,30 @@ export default function WineDetailPage() {
                       </span>
                     </div>
                     {batch.qrCodePath && (
-                      <a
-                        className="mt-3 inline-block font-semibold text-[#851329] hover:underline"
-                        href={batch.qrCodePath}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Abrir QR Code
-                      </a>
+                      <div className="mt-4">
+                        <button
+                          type="button"
+                          className="rounded-md border border-[#851329] px-3 py-1.5 font-semibold text-[#851329] transition hover:bg-[#851329] hover:text-white"
+                          onClick={() => setOpenQrCode((current) => (current === batch.code ? null : batch.code))}
+                          aria-expanded={openQrCode === batch.code}
+                        >
+                          {openQrCode === batch.code ? 'Fechar QR Code' : 'Abrir QR Code'}
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}
               </article>
-            ))}
+              {selectedBatch?.qrCodePath && (
+                <aside className="mt-5 flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-[#dfd0bd] bg-[#fffdf9] p-6 text-center md:mt-0">
+                  <h4 className="font-semibold text-[#5b0c1b]">QR Code do lote {selectedBatch.code}</h4>
+                  <img className="mt-4 h-56 w-56 object-contain" src={selectedBatch.qrCodePath} alt={`QR Code do lote ${selectedBatch.code}`} />
+                  <span className="mt-3 text-xs text-[#715f59]">Aponte a câmera para consultar este lote.</span>
+                </aside>
+              )}
+              </div>
+              );
+            })}
           </div>
         )}
       </section>

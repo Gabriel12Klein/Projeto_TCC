@@ -81,8 +81,8 @@ export default function FormField({ field, value, existingImage = '', onChange, 
       : field.type === 'file'
         ? <>
             <input className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" id={id} type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>onChange(field.name,e.target.files?.[0] ?? null)} disabled={field.disabled} aria-invalid={invalid} />
-            {existingImage && !value?.name && <img className="h-12 w-10 shrink-0 rounded-lg border border-[#e5d5c1] bg-white object-contain p-1" src={existingImage} alt="Imagem atual do vinho" />}
-            <span className="flex min-w-0 flex-1 items-center gap-3">
+            <span className="flex min-w-0 max-w-full items-center justify-center gap-3">
+              {existingImage && !value?.name && <img className="h-12 w-10 shrink-0 rounded-lg border border-[#e5d5c1] bg-white object-contain p-1" src={existingImage} alt="Imagem atual do vinho" />}
               {!existingImage || value?.name ? <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#f4e6d0] text-2xl text-[#8d5f2b]" aria-hidden="true">↑</span> : null}
               <span className="min-w-0">
                 <b className="block text-sm font-semibold text-[#6a1424]">{value?.name ? 'Nova imagem selecionada' : existingImage ? 'Imagem atual' : 'Escolher imagem'}</b>
@@ -111,7 +111,7 @@ export default function FormField({ field, value, existingImage = '', onChange, 
     : field.type === 'multi-select'
       ? 'h-auto min-h-[clamp(46px,4.8vh,51px)] items-center py-2'
     : field.type === 'file'
-      ? 'relative h-[clamp(76px,8vh,84px)] border-dashed bg-[#fffdf9] transition-colors hover:border-[#9d4b5b] hover:bg-[#fff9f0]'
+      ? 'relative h-[clamp(76px,8vh,84px)] items-center justify-center border-dashed bg-[#fffdf9] transition-colors hover:border-[#9d4b5b] hover:bg-[#fff9f0]'
       : 'min-h-[clamp(46px,4.8vh,51px)] items-center';
 
   return <label className="block min-w-0">

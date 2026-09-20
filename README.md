@@ -7,15 +7,14 @@ O sistema possui duas áreas principais:
 - **Área administrativa:** gerenciamento dos cadastros, relacionamentos, imagens, QR Codes e dados de rastreabilidade.
 - **Área do cliente:** catálogo público com os vinhos publicados e consulta de um lote por QR Code.
 
-> O projeto está configurado para utilizar **MySQL** como banco de dados por meio do **Prisma ORM**.
+> O projeto utiliza **PostgreSQL** em Docker, com administração pelo **pgAdmin**, por meio do **Prisma ORM**.
 
 ## 1. O que é necessário instalar
 
 Antes de executar o projeto, instale:
 
 1. **Node.js 22 ou superior**, que já inclui o npm.
-2. **MySQL Server 8**.
-3. **MySQL Workbench**, recomendado para criar o banco, visualizar as tabelas e montar o diagrama ER.
+2. **Docker Desktop**.
 4. **Git**, caso o projeto seja baixado pelo repositório.
 5. Um editor de código, como o **Visual Studio Code**.
 
@@ -35,25 +34,34 @@ git clone https://github.com/Gabriel12Klein/Projeto_TCC.git
 cd Projeto_TCC
 ```
 
-O nome da pasta pode variar conforme o nome escolhido no computador. O nome do pacote da aplicação é `vinum-v1.0`.
+O nome da pasta pode variar conforme o nome escolhido no computador. O nome do pacote da aplicação é `vnum-v2.0`.
 
-## 3. Criar o banco MySQL
+## 3. Iniciar o PostgreSQL e o pgAdmin
 
-Abra o MySQL Workbench, conecte-se à instância local e crie o banco de dados vazio:
+Na raiz do projeto, execute:
 
-```sql
-CREATE DATABASE vinum CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```bash
+docker compose up -d
 ```
 
 Na configuração padrão, a conexão utiliza:
 
 ```text
 Servidor: localhost
-Porta: 3306
+Porta: 5433
 Banco: vinum
-Usuário: root
-Senha: a senha configurada no MySQL local
+Usuário: vinum
+Senha: vinum_local_dev
 ```
+
+O pgAdmin fica disponível em <http://localhost:5051>.
+
+```text
+E-mail: admin@vinum.com
+Senha: Admin123!
+```
+
+No pgAdmin, adicione um servidor apontando para `host.docker.internal`, porta `5432`, banco `vinum`, usuário `vinum` e senha `vinum_local_dev`.
 
 O usuário e a senha não devem ser publicados no GitHub. Eles ficam somente no arquivo `.env`, que é ignorado pelo Git.
 
@@ -71,12 +79,12 @@ No Linux/macOS, use:
 cp .env.example .env
 ```
 
-Edite o `.env` e informe os dados reais do MySQL:
+Edite o `.env` com a conexão do PostgreSQL:
 
 ```env
 PORT=3001
 VITE_API_URL=/api
-DATABASE_URL="mysql://root:SUA_SENHA@localhost:3306/vinum"
+DATABASE_URL="postgresql://vinum:vinum_local_dev@localhost:5433/vinum?schema=public"
 JWT_SECRET="uma-chave-local-forte-e-secreta"
 PUBLIC_APP_URL="http://localhost:5173"
 ```
@@ -102,7 +110,7 @@ Na raiz do projeto, execute:
 ```bash
 npm install
 npm run prisma:generate
-npm run prisma:push
+npm run prisma:deploy
 npm run prisma:seed
 ```
 
@@ -110,8 +118,8 @@ Esses comandos fazem o seguinte:
 
 - `npm install`: instala as dependências do frontend, backend e ferramentas de desenvolvimento.
 - `prisma:generate`: gera o cliente TypeScript do Prisma.
-- `prisma:push`: cria ou atualiza as tabelas do MySQL conforme o `prisma/schema.prisma`.
-- `prisma:seed`: insere os dados iniciais necessários para testar o sistema.
+- `prisma:deploy`: aplica as migrações versionadas, incluindo chaves estrangeiras, CHECKs e triggers. `prisma:push` é um alias de compatibilidade para esse comando.
+- `prisma:seed`: garante a existência do administrador inicial sem restaurar dados antigos ou de demonstração. Preserva o acesso já configurado.
 
 ## 6. Executar o sistema
 
@@ -191,8 +199,11 @@ O cliente pode:
 - visualizar foto, tipo, uvas, volume, teor alcoólico e descrição completa;
 - consultar características, aromas, notas de degustação, harmonização e informações complementares;
 - escanear o QR Code de um lote e consultar a origem, a safra, as uvas utilizadas, as datas, a quantidade e o status.
+- registrar pedidos de vinhos da vinícola ou comprados em outro local;
+- acompanhar no estoque a quantidade de garrafas disponíveis;
+- registrar entradas, consumos e ajustes do estoque.
 
-O cliente não cadastra nem altera dados de produção.
+O cliente não cadastra nem altera dados de produção. Para pedidos de vinhos do catálogo, o item mantém a relação com o vinho cadastrado; para compras externas, o pedido guarda os dados informados pelo cliente.
 
 ## 9. Padrões de identificação
 
@@ -238,7 +249,7 @@ O ano da safra é preenchido automaticamente a partir dos dois dígitos do ident
 
 ## 10. Banco de dados e relacionamentos
 
-O esquema físico está em [`prisma/schema.prisma`](prisma/schema.prisma). As tabelas são criadas no MySQL pelo Prisma.
+O esquema físico está em [`prisma/schema.prisma`](prisma/schema.prisma). As tabelas são criadas no PostgreSQL pelo Prisma.
 
 Principais entidades:
 
@@ -283,13 +294,13 @@ npm run prisma:migrate -- --name descricao_da_alteracao
 npm run prisma:generate
 ```
 
-Para apenas sincronizar um banco local de desenvolvimento:
+Para aplicar migrações no banco existente sem apagar registros:
 
 ```bash
-npm run prisma:push
+npm run prisma:deploy
 ```
 
-Depois de alterar o banco, confira as tabelas pelo MySQL Workbench ou pelo Prisma Studio.
+Depois de alterar o banco, confira as tabelas pelo pgAdmin ou pelo Prisma Studio.
 
 ## 12. QR Code e blockchain
 
@@ -327,14 +338,15 @@ O comando `check` executa formatação, lint, verificação TypeScript, testes e
 
 ## 15. Solução de problemas
 
-### Erro de conexão com o MySQL
+### Erro de conexão com o PostgreSQL
 
 Confira se:
 
-- o serviço MySQL está iniciado;
+- o Docker Desktop está aberto;
+- os containers estão ativos com `docker compose ps`;
 - o banco `vinum` existe;
 - usuário, senha, porta e nome do banco estão corretos no `.env`;
-- a URL começa com `mysql://`.
+- a URL começa com `postgresql://`.
 
 ### O celular não abre o QR Code
 
@@ -346,7 +358,7 @@ Execute:
 
 ```bash
 npm run prisma:generate
-npm run prisma:push
+npm run prisma:deploy
 ```
 
 Depois reinicie o backend.

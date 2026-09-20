@@ -48,7 +48,6 @@ function toView(batch: Prisma.BatchGetPayload<{ include: typeof includeVintage }
     grapes: grapes.map(({ name }) => name).join(', '),
     quantity: String(batch.quantityLiters),
     productionDate: toInputDate(batch.productionDate),
-    bottlingTime: batch.bottlingTime ?? '',
     registrationDate: batch.registrationDate ? toInputDate(batch.registrationDate) : '',
     status: batch.status,
     blockchain: batch.blockchainRef ?? '',
@@ -63,38 +62,35 @@ async function resolveWineId(input: Record<string, unknown>, currentId?: string 
     return wine.id;
   }
   if (input.wineName) {
-    const wine = await prisma.wine.findFirst({ where: { name: String(input.wineName) } });
-    if (!wine) throw new AppError(400, 'O vinho relacionado não foi encontrado.');
-    return wine.id;
+    const wines = await prisma.wine.findMany({ where: { name: String(input.wineName) }, take: 2 });
+    if (wines.length !== 1) throw new AppError(400, 'Selecione o vinho pelo identificador; o nome não é único ou não existe.');
+    return wines[0].id;
   }
-  return currentId ?? null;
+  if (currentId) return currentId;
+  throw new AppError(400, 'Selecione o vinho produzido.');
 }
 
 async function resolveVintageId(input: Record<string, unknown>, currentId?: string) {
   if (input.vintageId) return String(input.vintageId);
   if (input.vintageName) {
     const year = Number(input.vintageName);
-    const vintage = await prisma.vintage.findFirst({
+    const vintages = await prisma.vintage.findMany({
       where: Number.isFinite(year) ? { year } : { identifier: String(input.vintageName) },
+      take: 2,
     });
-    if (!vintage) throw new AppError(400, 'A safra relacionada não foi encontrada.');
-    return vintage.id;
+    if (vintages.length !== 1) throw new AppError(400, 'Selecione a safra pelo identificador; o ano não é único ou não existe.');
+    return vintages[0].id;
   }
   if (currentId) return currentId;
   throw new AppError(400, 'Informe a safra relacionada.');
 }
 
-async function resolveGrapeIds(input: Record<string, unknown>, wineId?: string | null) {
-  if (wineId) {
-    const links = await prisma.wineGrape.findMany({ where: { wineId }, select: { grapeId: true } });
-    if (links.length) return links.map(({ grapeId }) => grapeId);
-  }
-  if (!Array.isArray(input.grapeIds)) throw new AppError(400, 'O vinho selecionado não possui uvas cadastradas.');
-  const grapeIds = input.grapeIds.map(String);
-  const grapes = await prisma.grape.findMany({ where: { id: { in: grapeIds } } });
-  if (grapes.length !== grapeIds.length)
-    throw new AppError(400, 'Uma das uvas selecionadas não foi encontrada.');
-  return grapeIds;
+async function resolveGrapeIds(vintageId: string, wineId: string) {
+  const vintage = await prisma.vintage.findUnique({ where: { id: vintageId }, include: { grapeLinks: true } });
+  if (!vintage) throw new AppError(400, 'A safra relacionada não foi encontrada.');
+  if (vintage.wineId !== wineId) throw new AppError(400, 'A safra selecionada não pertence ao vinho deste lote.');
+  if (!vintage.grapeLinks.length) throw new AppError(400, 'Cadastre as uvas da safra antes de criar o lote.');
+  return vintage.grapeLinks.map(({ grapeId }) => grapeId);
 }
 
 function localNetworkAddress() {
@@ -139,7 +135,7 @@ export const batchesService = {
     const productionDate = batchCodeToProductionDate(code);
     const wineId = await resolveWineId(input);
     const vintageId = await resolveVintageId(input);
-    const grapeIds = await resolveGrapeIds(input, wineId);
+    const grapeIds = await resolveGrapeIds(vintageId, wineId);
     const batch = await prisma.$transaction(async (transaction) => {
       const created = await transaction.batch.create({
         data: {
@@ -148,7 +144,6 @@ export const batchesService = {
           vintageId,
           quantityLiters: Number(input.quantity),
           productionDate: toDate(productionDate ?? String(input.productionDate)),
-          bottlingTime: input.bottlingTime ? String(input.bottlingTime) : null,
           registrationDate:
             String(input.status) === REGISTERED_BLOCKCHAIN_STATUS
               ? currentRegistrationDate()
@@ -172,13 +167,13 @@ export const batchesService = {
     const data: Prisma.BatchUncheckedUpdateInput = {};
     if (input.wineId !== undefined || input.wineName !== undefined)
       data.wineId = await resolveWineId(input, current.wineId);
-    const effectiveWineId = input.wineId !== undefined ? await resolveWineId(input, current.wineId) : current.wineId;
-    const grapeIds = await resolveGrapeIds(input, effectiveWineId);
+    const effectiveWineId = await resolveWineId(input, current.wineId);
+    const effectiveVintageId = await resolveVintageId(input, current.vintageId);
+    const grapeIds = await resolveGrapeIds(effectiveVintageId, effectiveWineId);
     if (input.code !== undefined) data.code = normalizeBatchCode(String(input.code));
     if (input.vintageId !== undefined || input.vintageName !== undefined)
       data.vintageId = await resolveVintageId(input, current.vintageId);
     if (input.quantity !== undefined) data.quantityLiters = Number(input.quantity);
-    if (input.bottlingTime !== undefined) data.bottlingTime = String(input.bottlingTime);
     if (input.productionDate !== undefined || input.code !== undefined) {
       const effectiveCode = input.code !== undefined ? normalizeBatchCode(String(input.code)) : current.code;
       const productionDate = batchCodeToProductionDate(effectiveCode);

@@ -31,7 +31,6 @@ const databaseFieldLabels: Record<string, string> = {
   volumeMl: 'Volume',
   alcoholPercentage: 'Teor alcoólico',
   productionDate: 'Data de produção',
-  bottlingTime: 'Hora do envase',
   registrationDate: 'Data de registro',
   status: 'Status',
   typeId: 'Tipo do vinho',

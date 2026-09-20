@@ -26,38 +26,8 @@ function data(input: ReferenceInput) {
   };
 }
 
-async function ensureReferenceSeeds(kind: ReferenceKind) {
-  if (kind === 'wineType') {
-    if (await prisma.wineType.count()) return;
-    await prisma.wineType.createMany({
-      data: [
-        { id: 'wine-type-tinto', name: 'Tinto', description: 'Vinhos de coloração escura e perfil encorpado.' },
-        { id: 'wine-type-branco', name: 'Branco', description: 'Vinhos leves, frescos e de coloração clara.' },
-        { id: 'wine-type-rose', name: 'Rosé', description: 'Vinhos delicados de coloração rosada.' },
-        { id: 'wine-type-espumante', name: 'Espumante', description: 'Vinhos com gás carbônico e borbulhas.' },
-        { id: 'wine-type-brut', name: 'Brut', description: 'Espumantes de perfil seco.' },
-      ],
-    });
-    return;
-  }
-  if (await prisma.grape.count()) return;
-  await prisma.grape.createMany({
-    data: [
-      { id: 'grape-cabernet-sauvignon', name: 'Cabernet Sauvignon' },
-      { id: 'grape-merlot', name: 'Merlot' },
-      { id: 'grape-malbec', name: 'Malbec' },
-      { id: 'grape-chardonnay', name: 'Chardonnay' },
-      { id: 'grape-pinot-noir', name: 'Pinot Noir' },
-      { id: 'grape-grenache', name: 'Grenache' },
-      { id: 'grape-sauvignon-blanc', name: 'Sauvignon Blanc' },
-      { id: 'grape-syrah', name: 'Syrah' },
-    ],
-  });
-}
-
 export const referenceService = {
   async list(kind: ReferenceKind, onlyActive = false) {
-    await ensureReferenceSeeds(kind);
     if (kind === 'wineType') {
       const items = await prisma.wineType.findMany({
         where: onlyActive ? { active: true } : undefined,

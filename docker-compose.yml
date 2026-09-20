@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vinum
+      POSTGRES_USER: vinum
+      POSTGRES_PASSWORD: vinum_local_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - vinum_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vinum -d vinum"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@vinum.com
+      PGADMIN_DEFAULT_PASSWORD: Admin123!
+    ports:
+      - "5051:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  vinum_postgres_data:
+    name: vinum-tcc-prototipo-local_vinum_postgres_data

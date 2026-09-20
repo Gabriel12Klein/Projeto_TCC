@@ -23,17 +23,18 @@ export default function LoteCadastrar({ config, onOpenWine, ...props }: any) {
   const formConfig = useMemo(() => ({
     ...config,
     wineGrapeMap,
+    vintageGrapeMap: Object.fromEntries(vintages.map((item) => [String(item.id), item.grapeIds ?? []])),
     fields: config.fields.map((field) => {
       if (field.name === 'grapeIds') {
         return {
           ...field,
           disabled: true,
           options: grapes.map((item) => ({ value: String(item.id), label: String(item.name) })),
-          note: 'Preenchida automaticamente com as uvas selecionadas na composição do vinho.',
+          note: 'Preenchida automaticamente com as uvas registradas na safra selecionada.',
         };
       }
       if (field.name === 'wineId') return { ...field, options: wines.map((item) => ({ value: String(item.id), label: `${String(item.name)} — ${String(item.type)}` })) };
-      if (field.name === 'vintageId') return { ...field, options: vintages.map((item) => ({ value: String(item.id), label: `${String(item.identifier)} — ${String(item.year)}` })) };
+      if (field.name === 'vintageId') return { ...field, options: vintages.map((item) => ({ value: String(item.id), wineId: String(item.wineId), label: `${String(item.identifier)} — ${String(item.year)}` })) };
       return field;
     }),
   }), [config, grapes, vintages, wineGrapeMap, wines]);

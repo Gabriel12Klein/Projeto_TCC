@@ -137,10 +137,6 @@ export default function BatchPublicPage() {
                 <dd className="mt-1 text-[#715f59]">{formatDate(batch.productionDate)}</dd>
               </div>
               <div>
-                <dt className="font-semibold text-[#5b0c1b]">Hora do envase</dt>
-                <dd className="mt-1 text-[#715f59]">{batch.bottlingTime || 'Não informado'}</dd>
-              </div>
-              <div>
                 <dt className="font-semibold text-[#5b0c1b]">Data de registro</dt>
                 <dd className="mt-1 text-[#715f59]">{formatDate(batch.registrationDate)}</dd>
               </div>
