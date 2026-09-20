@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { asyncRoute } from '../../common/http.js';
+import { AppError, asyncRoute } from '../../common/http.js';
 import { batchesService } from './batches.service.js';
 import { batchSchema, batchUpdateSchema } from './batches.schema.js';
 
@@ -16,8 +16,8 @@ router.post(
 );
 router.post(
   '/:id/qr-code',
-  asyncRoute(async (req, res) => {
-    res.status(201).json(await batchesService.generateQrCode(String(req.params.id), req.headers.origin));
+  asyncRoute(async (_req, _res) => {
+    throw new AppError(501, 'QR Code está reservado para trabalhos futuros.');
   }),
 );
 router.put(

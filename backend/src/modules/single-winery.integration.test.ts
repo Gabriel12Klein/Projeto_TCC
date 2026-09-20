@@ -58,3 +58,7 @@ it('cadastra e edita vinho com classificação sem duplicar e atualiza catálogo
     await prisma.wine.delete({ where: { id: created.body.id } });
   }
 });
+
+it('mantém geração de QR Code reservada para trabalhos futuros', async () => {
+  await request(app).post('/api/lotes/qualquer-id/qr-code').set('Authorization', 'Bearer ' + token).expect(501);
+});

@@ -90,6 +90,9 @@ export const vintagesService = {
     const current = await prisma.vintage.findUniqueOrThrow({ where: { id } });
     const data: Prisma.VintageUncheckedUpdateInput = {};
     const wineId = await resolveWineId(input, current.wineId);
+    const changedWine = wineId !== current.wineId;
+    if (changedWine && await prisma.batch.count({ where: { vintageId: id } }))
+      throw new AppError(409, 'Uma safra com lotes vinculados não pode trocar de vinho.');
     if (input.identifier !== undefined)
       data.identifier = normalizeVintageIdentifier(String(input.identifier));
     if (input.wineId !== undefined || input.wineName !== undefined)
@@ -110,7 +113,7 @@ export const vintagesService = {
     }
 
     const vintage = await prisma.$transaction(async (transaction) => {
-      const grapeIds = await resolveGrapeIds(transaction, wineId);
+      const grapeIds = changedWine ? await resolveGrapeIds(transaction, wineId) : undefined;
       await transaction.vintage.update({ where: { id }, data });
       if (grapeIds !== undefined) {
         await transaction.vintageGrape.deleteMany({ where: { vintageId: id } });

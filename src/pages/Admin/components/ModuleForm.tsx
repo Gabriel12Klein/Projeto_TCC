@@ -8,6 +8,7 @@ import blockchainIcon from '../../../assets/admin/lote/blockchain.png';
 import qrIcon from '../../../assets/admin/lote/qrcode.png';
 import dividerLarge from '../../../assets/admin/common/divider-large.png';
 import { api } from '../../../api/api';
+import { selectVintage } from '../modules/Lote/selection';
 
 const draftFiles = new Map();
 
@@ -158,11 +159,13 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     if (config.key === 'lotes') {
       const productionDate = batchCodeToProductionDate(nextForm.code);
       if (productionDate) nextForm.productionDate = productionDate;
-      if (nextForm.vintageId) nextForm.grapeIds = config.vintageGrapeMap?.[String(nextForm.vintageId)] ?? nextForm.grapeIds ?? [];
+      Object.assign(nextForm, selectVintage(String(nextForm.wineId ?? ''), config.fields.find((f) => f.name === 'vintageId')?.options ?? [], config.vintageGrapeMap ?? {}, String(nextForm.vintageId ?? '')));
       nextForm.registrationDate = initialData?.registrationDate ?? '';
     }
     if (config.key === 'safras') {
-      nextForm.grapeIds = config.wineGrapeMap?.[String(nextForm.wineId ?? '')] ?? [];
+      nextForm.grapeIds = initialData?.id && nextForm.wineId === initialData.wineId
+        ? initialData.grapeIds ?? []
+        : config.wineGrapeMap?.[String(nextForm.wineId ?? '')] ?? [];
       const year = vintageIdentifierToYear(nextForm.identifier);
       if (year) nextForm.year = year;
     }
@@ -191,8 +194,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
         next.productionDate = batchCodeToProductionDate(value);
       }
       if (config.key === 'lotes' && name === 'wineId') {
-        next.vintageId = '';
-        next.grapeIds = [];
+        Object.assign(next, selectVintage(String(value), config.fields.find((f) => f.name === 'vintageId')?.options ?? [], config.vintageGrapeMap ?? {}));
       }
       if (config.key === 'lotes' && name === 'vintageId') {
         next.grapeIds = config.vintageGrapeMap?.[String(value)] ?? [];
@@ -201,7 +203,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
         next.year = vintageIdentifierToYear(value);
       }
       if (config.key === 'safras' && name === 'wineId') {
-        next.grapeIds = config.wineGrapeMap?.[String(value)] ?? [];
+        next.grapeIds = initialData?.id && value === initialData.wineId ? initialData.grapeIds ?? [] : config.wineGrapeMap?.[String(value)] ?? [];
       }
       return next;
     });
@@ -268,20 +270,6 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     } catch(err) { showMessage(err.message); }
   }
 
-  async function generateQrCode() {
-    if (!initialData?.id) {
-      showMessage('Salve o lote antes de gerar o QR Code.');
-      return;
-    }
-    try {
-      const result = await api.generateBatchQr(initialData.id);
-      setForm((current) => ({ ...current, qrCode: result.path }));
-      showMessage(`QR Code gerado e vinculado ao lote. Endereço: ${result.targetUrl}`);
-    } catch (error) {
-      showMessage(error.message);
-    }
-  }
-
   return <form className="min-h-full flex flex-col" onSubmit={submit} noValidate>
     <div className="flex items-center gap-[clamp(12px,1vw,16px)] min-w-0">
       <span className="w-[clamp(58px,4.8vw,68px)] h-[clamp(58px,4.8vw,68px)] border border-[#e5c99d] rounded-full grid place-items-center shrink-0"><img className="w-[70%] h-[70%] object-contain" src={config.icon} alt="" /></span>
@@ -319,8 +307,8 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     </div>}
 
     {config.blockchainInfo && <div className="mt-[clamp(15px,1.5vw,20px)] grid grid-cols-[minmax(220px,.65fr)_minmax(0,1.35fr)] items-start gap-x-[clamp(22px,2.5vw,38px)] gap-y-[clamp(14px,1.25vw,18px)] max-md:grid-cols-1">
-      <button type="button" className={`${secondaryButton} w-full`} onClick={()=>showMessage('Blockchain ainda não foi implementada nesta versão.')}><img className="w-[25px] h-[25px] object-contain" src={linkIcon} alt=""/>Registrar na blockchain</button>
-      <button type="button" className={`${secondaryButton} w-full`} onClick={generateQrCode}><img className="w-[25px] h-[25px] object-contain" src={qrIcon} alt=""/>Gerar QR Code</button>
+      <button type="button" className={`${secondaryButton} w-full`} disabled title="Reservado para trabalhos futuros"><img className="w-[25px] h-[25px] object-contain" src={linkIcon} alt=""/>Registrar na blockchain</button>
+      <button type="button" className={`${secondaryButton} w-full`} disabled title="Reservado para trabalhos futuros"><img className="w-[25px] h-[25px] object-contain" src={qrIcon} alt=""/>QR Code — futuro</button>
       {config.fields.filter((field) => field.name === 'registrationDate').map((field) => <FormField key={field.name} field={field} value={form[field.name]} valid={fieldValidity[field.name]} invalid={false} unlocked={true} onChange={change} onRequestFocus={() => {}} />)}
       <div className="flex min-h-[150px] items-center justify-center rounded-[10px] border border-dashed border-[#d8b77f] bg-[#fffdf9] p-4" aria-live="polite">
         {form.qrCode ? <img className="h-32 w-32 object-contain" src={String(form.qrCode)} alt="QR Code do lote" /> : <span className="max-w-sm text-center text-[12px] leading-relaxed text-[#857d79]">O QR Code aparecerá aqui após ser gerado.</span>}

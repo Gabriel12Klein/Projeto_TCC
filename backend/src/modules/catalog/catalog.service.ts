@@ -222,7 +222,7 @@ export const catalogService = {
 
   async findBatchByCode(code: string) {
     const batch = await prisma.batch.findFirst({
-      where: { code },
+      where: { code, ...publicBatchWhere, wine: { status: 'PUBLISHED' } },
       include: {
         grapeLinks: { include: { grape: { select: { name: true } } } },
         wine: { select: publicWineSelect },

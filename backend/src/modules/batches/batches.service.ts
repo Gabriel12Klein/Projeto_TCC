@@ -2,25 +2,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { AppError } from '../../common/http.js';
 import { batchCodeToProductionDate, normalizeBatchCode, toDate, toInputDate } from '../../common/format.js';
 import { prisma } from '../../lib/prisma.js';
-import QRCode from 'qrcode';
-import { join } from 'node:path';
-import { ensureUploadDirectory } from '../../common/files.js';
-import { slugify } from '../../common/format.js';
-import { networkInterfaces } from 'node:os';
-
 const REGISTERED_BLOCKCHAIN_STATUS = 'Registrado na blockchain';
-
-function currentRegistrationDate() {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Sao_Paulo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const part = (type: Intl.DateTimeFormatPartTypes) =>
-    Number(parts.find((item) => item.type === type)?.value);
-  return new Date(Date.UTC(part('year'), part('month') - 1, part('day')));
-}
 
 const includeVintage = {
   wine: { select: { id: true, name: true, wineType: { select: { name: true } } } },
@@ -93,32 +75,6 @@ async function resolveGrapeIds(vintageId: string, wineId: string) {
   return vintage.grapeLinks.map(({ grapeId }) => grapeId);
 }
 
-function localNetworkAddress() {
-  for (const interfaces of Object.values(networkInterfaces())) {
-    for (const network of interfaces ?? []) {
-      if (network.family === 'IPv4' && !network.internal) return network.address;
-    }
-  }
-  return 'localhost';
-}
-
-function resolvePublicAppUrl(requestOrigin?: string) {
-  const configured = process.env.PUBLIC_APP_URL?.trim();
-  if (configured) return configured.replace(/\/$/, '');
-
-  if (requestOrigin) {
-    try {
-      const origin = new URL(requestOrigin);
-      if (!['localhost', '127.0.0.1', '::1'].includes(origin.hostname)) return origin.origin;
-    } catch {
-      /* usa o endereço local abaixo quando a origem não for uma URL válida */
-    }
-  }
-
-  const port = process.env.FRONTEND_PORT ?? '5173';
-  return `http://${localNetworkAddress()}:${port}`;
-}
-
 export const batchesService = {
   async list(query = '') {
     const batches = await prisma.batch.findMany({
@@ -131,6 +87,7 @@ export const batchesService = {
     return batches.map(toView);
   },
   async create(input: Record<string, unknown>) {
+    if (input.status === REGISTERED_BLOCKCHAIN_STATUS || input.blockchain || input.qrCode) throw new AppError(400, 'Blockchain e QR Code estão reservados para trabalhos futuros.');
     const code = normalizeBatchCode(String(input.code));
     const productionDate = batchCodeToProductionDate(code);
     const wineId = await resolveWineId(input);
@@ -144,10 +101,7 @@ export const batchesService = {
           vintageId,
           quantityLiters: Number(input.quantity),
           productionDate: toDate(productionDate ?? String(input.productionDate)),
-          registrationDate:
-            String(input.status) === REGISTERED_BLOCKCHAIN_STATUS
-              ? currentRegistrationDate()
-              : null,
+          registrationDate: null,
           status: String(input.status),
           blockchainRef: input.blockchain ? String(input.blockchain) : null,
           qrCodePath: input.qrCode ? String(input.qrCode) : null,
@@ -164,6 +118,7 @@ export const batchesService = {
   },
   async update(id: string, input: Record<string, unknown>) {
     const current = await prisma.batch.findUniqueOrThrow({ where: { id } });
+    if ((input.status === REGISTERED_BLOCKCHAIN_STATUS && current.status !== input.status) || (input.blockchain && input.blockchain !== current.blockchainRef) || (input.qrCode && input.qrCode !== current.qrCodePath)) throw new AppError(400, 'Blockchain e QR Code estão reservados para trabalhos futuros.');
     const data: Prisma.BatchUncheckedUpdateInput = {};
     if (input.wineId !== undefined || input.wineName !== undefined)
       data.wineId = await resolveWineId(input, current.wineId);
@@ -181,9 +136,6 @@ export const batchesService = {
     }
     if (input.status !== undefined) {
       data.status = String(input.status);
-      if (String(input.status) === REGISTERED_BLOCKCHAIN_STATUS && !current.registrationDate) {
-        data.registrationDate = currentRegistrationDate();
-      }
     }
     if (input.blockchain !== undefined)
       data.blockchainRef = input.blockchain ? String(input.blockchain) : null;
@@ -200,22 +152,5 @@ export const batchesService = {
   },
   async remove(id: string) {
     await prisma.batch.delete({ where: { id } });
-  },
-  async generateQrCode(id: string, requestOrigin?: string) {
-    const batch = await prisma.batch.findUniqueOrThrow({
-      where: { id },
-      include: { vintage: true },
-    });
-    const fileName = `${slugify(batch.code)}-${batch.id}.png`;
-    const publicPath = `/uploads/qrcodes/${fileName}`;
-    const appUrl = resolvePublicAppUrl(requestOrigin);
-    const targetUrl = `${appUrl}/consulta/lotes/${encodeURIComponent(batch.code)}`;
-    await QRCode.toFile(join(ensureUploadDirectory('qrcodes'), fileName), targetUrl, {
-      width: 640,
-      margin: 2,
-      color: { dark: '#4c151c', light: '#ffffff' },
-    });
-    await prisma.batch.update({ where: { id }, data: { qrCodePath: publicPath } });
-    return { path: publicPath, targetUrl };
   },
 };

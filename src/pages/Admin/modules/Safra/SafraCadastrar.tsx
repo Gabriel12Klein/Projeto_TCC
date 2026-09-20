@@ -15,7 +15,7 @@ export default function SafraCadastrar({ config, ...props }: any) {
     fields: config.fields.map((field) => field.name === 'wineId'
       ? { ...field, options: wines.map((wine) => ({ value: String(wine.id), label: String(wine.name) })) }
       : field.name === 'grapeIds'
-        ? { ...field, disabled: true, note: 'Preenchidas automaticamente com as uvas do vinho selecionado.', options: grapes.map((grape) => ({ value: String(grape.id), label: String(grape.name) })) }
+        ? { ...field, disabled: true, note: 'Na criação, são copiadas do vinho. Na edição, a composição histórica desta safra é preservada.', options: grapes.map((grape) => ({ value: String(grape.id), label: String(grape.name) })) }
         : field),
   }), [config, wines, grapes, wineGrapeMap]);
   return <ModuleForm {...props} config={formConfig} />;

@@ -25,6 +25,7 @@ export default function LoteCadastrar({ config, onOpenWine, ...props }: any) {
     wineGrapeMap,
     vintageGrapeMap: Object.fromEntries(vintages.map((item) => [String(item.id), item.grapeIds ?? []])),
     fields: config.fields.map((field) => {
+      if (field.name === 'status') return { ...field, options: field.options.filter((status) => status !== 'Registrado na blockchain' || props.initialData?.status === status) };
       if (field.name === 'grapeIds') {
         return {
           ...field,

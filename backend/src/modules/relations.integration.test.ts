@@ -11,6 +11,13 @@ let userId: string, wineryId: string, typeId: string, grapeId: string, secondGra
 const wineIds: string[] = [];
 const vintageIds: string[] = [];
 const batchIds: string[] = [];
+async function unusedVintageIdentifier() {
+  for (let tank = 0; tank < 100; tank++) {
+    const identifier = 'SF99-T' + String(tank).padStart(2, '0');
+    if (!(await prisma.vintage.findUnique({ where: { identifier } }))) return identifier;
+  }
+  throw new Error('Nenhum identificador livre para o teste.');
+}
 
 beforeAll(async () => {
   const role = await prisma.role.findUniqueOrThrow({ where: { name: 'CUSTOMER' } });
@@ -46,7 +53,7 @@ describe('Integridade real no PostgreSQL', () => {
 
   it('puxa as uvas do vinho ao criar e ao trocar o vinho, ignorando a seleção manual', async () => {
     const vintage = await vintagesService.create({
-      identifier: tag + '-auto', year: 2025, status: 'Concluída', wineId: wineIds[0],
+      identifier: await unusedVintageIdentifier(), year: 2099, status: 'Concluída', wineId: wineIds[0],
     });
     vintageIds.push(vintage.id);
     expect(vintage.grapeIds).toEqual([grapeId]);
@@ -94,6 +101,25 @@ describe('Integridade real no PostgreSQL', () => {
     expect(batchSchema.parse({ ...base, quantity: 1.5 }).quantity).toBe(1.5);
     expect(batchSchema.parse({ ...base, quantity: '1,5' }).quantity).toBe(1.5);
     expect(batchSchema.parse({ ...base, quantity: '1.250,5' }).quantity).toBe(1250.5);
+  });
+
+  it('preserva safra antiga e seus lotes quando a composição atual do vinho muda', async () => {
+    const oldVintage = await vintagesService.create({ identifier: await unusedVintageIdentifier(), wineId: wineIds[0], year: 2099, status: 'Concluída' });
+    vintageIds.push(oldVintage.id);
+    try {
+      await winesService.update(wineIds[0], { grapeIds: [secondGrapeId] }, userId, 'ADMIN');
+      const edited = await vintagesService.update(oldVintage.id, { observations: 'Edição sem mudar composição', grapeIds: [secondGrapeId] });
+      expect(edited.grapeIds).toEqual([grapeId]);
+      const next = await vintagesService.create({ identifier: await unusedVintageIdentifier(), wineId: wineIds[0], year: 2099, status: 'Concluída' });
+      vintageIds.push(next.id);
+      expect(next.grapeIds).toEqual([secondGrapeId]);
+      const batch = await batchesService.create({ code: 'L99200', wineId: wineIds[0], vintageId: oldVintage.id, quantity: 1.5, productionDate: '2099-07-19', status: 'Aguardando registro' });
+      batchIds.push(batch.id);
+      expect(batch.grapeIds).toEqual([grapeId]);
+      await expect(vintagesService.update(oldVintage.id, { wineId: wineIds[1] })).rejects.toThrow('lotes vinculados');
+    } finally {
+      await winesService.update(wineIds[0], { grapeIds: [grapeId] }, userId, 'ADMIN');
+    }
   });
 
   it('salva pedidos concorrentes em um estoque único, com movimentos vinculados', async () => {
