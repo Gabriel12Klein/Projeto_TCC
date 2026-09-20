@@ -70,7 +70,7 @@ function AccountForm({ data, onUserUpdate, onCancel }: { data: WineryAccount; on
   const qc = useQueryClient();
   const [form, setForm] = useState<WineryAccountInput>({
     wineryId: data.winery.id, name: data.winery.name, cnpj: maskCnpj(data.winery.cnpj), city: data.winery.city, state: data.winery.state,
-    contactEmail: data.winery.email || '', accountName: data.account.name, loginEmail: data.account.email, phone: data.account.phone || '',
+    contactEmail: data.winery.email || '', accountName: data.account.name, loginEmail: data.account.email, phone: data.winery.phone || '',
     currentPassword: '', newPassword: '', confirmPassword: '',
   });
   const [message, setMessage] = useState('');

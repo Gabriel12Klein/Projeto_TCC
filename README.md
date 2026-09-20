@@ -51,17 +51,17 @@ Servidor: localhost
 Porta: 5433
 Banco: vinum
 Usuário: vinum
-Senha: vinum_local_dev
+Senha: valor de POSTGRES_PASSWORD no .env
 ```
 
 O pgAdmin fica disponível em <http://localhost:5051>.
 
 ```text
 E-mail: admin@vinum.com
-Senha: Admin123!
+Senha: configurada no .env na primeira inicialização; acessos existentes não são alterados
 ```
 
-No pgAdmin, adicione um servidor apontando para `host.docker.internal`, porta `5432`, banco `vinum`, usuário `vinum` e senha `vinum_local_dev`.
+No pgAdmin, adicione um servidor apontando para `host.docker.internal`, porta publicada `5433`, banco `vinum`, usuário `vinum` e senha definida em `POSTGRES_PASSWORD`.
 
 O usuário e a senha não devem ser publicados no GitHub. Eles ficam somente no arquivo `.env`, que é ignorado pelo Git.
 
@@ -84,7 +84,7 @@ Edite o `.env` com a conexão do PostgreSQL:
 ```env
 PORT=3001
 VITE_API_URL=/api
-DATABASE_URL="postgresql://vinum:vinum_local_dev@localhost:5433/vinum?schema=public"
+DATABASE_URL="postgresql://vinum:SUA_SENHA_POSTGRES@localhost:5433/vinum?schema=public"
 JWT_SECRET="uma-chave-local-forte-e-secreta"
 PUBLIC_APP_URL="http://localhost:5173"
 ```
@@ -168,7 +168,7 @@ O seed cria o usuário administrativo local:
 
 ```text
 E-mail: admin@vinum.local
-Senha: Admin123!
+Senha: configurada no .env na primeira inicialização; acessos existentes não são alterados
 ```
 
 Novos cadastros públicos recebem o perfil `CUSTOMER` (cliente). Usuários com perfil `ADMIN` ou `EDITOR` podem acessar a área administrativa.

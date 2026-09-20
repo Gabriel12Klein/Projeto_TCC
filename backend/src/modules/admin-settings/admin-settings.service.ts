@@ -17,23 +17,25 @@ export const adminSettingsService = {
       currentWinery(),
       prisma.user.findUniqueOrThrow({ where: { id: userId }, include: { roleRef: true } }),
     ]);
+    if (user.wineryId !== winery.id || !['ADMIN', 'EDITOR'].includes(user.roleRef.name)) throw new AppError(403, 'Conta não vinculada à vinícola administradora.');
     return { winery, account: publicUser(user) };
   },
   async update(userId: string, token: string, input: AdminSettingsInput) {
     return prisma.$transaction(async tx => {
       const winery = await currentWinery(tx);
       if (winery.id !== input.wineryId) throw new AppError(409, 'O cadastro mudou. Atualize a página antes de salvar.');
-      const account = await tx.user.findUniqueOrThrow({ where: { id: userId } });
+      const account = await tx.user.findUniqueOrThrow({ where: { id: userId }, include: { roleRef: true } });
+      if (account.wineryId !== winery.id || account.roleRef.name !== 'ADMIN') throw new AppError(403, 'Conta não vinculada à vinícola administradora.');
       const changedCredentials = input.loginEmail !== account.email || Boolean(input.newPassword);
       if (changedCredentials && (!input.currentPassword || !(await verifyPassword(input.currentPassword, account)))) {
         throw new AppError(400, 'Informe a senha atual correta para alterar o e-mail de acesso ou a senha.');
       }
       if (await tx.user.findFirst({ where: { email: input.loginEmail, id: { not: userId } } })) throw new AppError(409, 'Esse e-mail de acesso já está em uso.');
       const updatedWinery = await tx.winery.update({ where: { id: winery.id }, data: {
-        name: input.name, cnpj: input.cnpj, city: input.city, state: input.state, email: input.contactEmail || null,
+        name: input.name, cnpj: input.cnpj, city: input.city, state: input.state, email: input.contactEmail || null, phone: input.phone || null,
       } });
       const user = await tx.user.update({ where: { id: userId }, data: {
-        name: input.accountName, email: input.loginEmail, phone: input.phone || null,
+        name: input.accountName, email: input.loginEmail,
         ...(input.newPassword ? { passwordHash: await bcrypt.hash(input.newPassword, 12), passwordSalt: null } : {}),
       }, include: { roleRef: true } });
       if (changedCredentials) await tx.session.deleteMany({ where: { userId, tokenHash: { not: createHash('sha256').update(token).digest('hex') } } });

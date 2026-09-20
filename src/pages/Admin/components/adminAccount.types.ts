@@ -1,7 +1,7 @@
 import type { User } from '../../../types';
 
 export type WineryAccount = {
-  winery: { id: string; name: string; cnpj: string; city: string; state: string; email: string | null };
+  winery: { id: string; name: string; cnpj: string; city: string; state: string; email: string | null; phone: string | null };
   account: User;
 };
 export type WineryAccountInput = {

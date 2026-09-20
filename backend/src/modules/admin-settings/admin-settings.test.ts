@@ -14,7 +14,7 @@ import { adminSettingsSchema } from './admin-settings.schema.js';
 import { ensureSeedAdmin } from '../auth/auth.service.js';
 
 const winery = { id: 'winery-test', name: 'Vinum', cnpj: '', city: '', state: '', email: null };
-const account = { id: 'admin-test', name: 'Responsável', email: 'owner@example.test', passwordHash: bcrypt.hashSync('SenhaAtual1', 4), passwordSalt: null, roleRef: { name: 'ADMIN' } };
+const account = { id: 'admin-test', wineryId: winery.id, name: 'Responsável', email: 'owner@example.test', passwordHash: bcrypt.hashSync('SenhaAtual1', 4), passwordSalt: null, roleRef: { name: 'ADMIN' } };
 const payload = () => adminSettingsSchema.parse({ wineryId: winery.id, name: 'Vinum atualizada', cnpj: 'AB.12C.345/6D78-E9', city: 'Bento Gonçalves', state: 'RS', contactEmail: 'contato@example.test', accountName: 'Responsável', loginEmail: account.email, phone: '', currentPassword: '', newPassword: '', confirmPassword: '' });
 beforeEach(() => {
   vi.resetAllMocks();

@@ -13,7 +13,8 @@ let adminToken = '';
 let clientToken = '';
 beforeAll(async () => {
   const role = await prisma.role.findUniqueOrThrow({ where: { name: 'ADMIN' } });
-  await prisma.user.create({ data: { name: 'Teste temporário do menu', email: adminEmail, passwordHash: await bcrypt.hash(password, 4), roleId: role.id } });
+  const winery = await prisma.winery.findFirstOrThrow();
+  await prisma.user.create({ data: { name: 'Teste temporário do menu', email: adminEmail, passwordHash: await bcrypt.hash(password, 4), roleId: role.id, wineryId: winery.id } });
   await request(app).post('/api/auth/register').send({ name: 'Cliente temporário', email: clientEmail, password }).expect(201);
   adminToken = (await request(app).post('/api/auth/login').send({ email: adminEmail, password }).expect(200)).body.token;
   clientToken = (await request(app).post('/api/auth/login').send({ email: clientEmail, password }).expect(200)).body.token;

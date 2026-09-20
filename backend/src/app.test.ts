@@ -3,9 +3,21 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { app } from './app.js';
 import { prisma } from './lib/prisma.js';
 import { ensureSeedAdmin } from './modules/auth/auth.service.js';
+import { randomUUID } from 'node:crypto';
+import bcrypt from 'bcryptjs';
 
-beforeAll(async () => ensureSeedAdmin());
-afterAll(async () => prisma.$disconnect());
+const adminEmail = 'api-' + randomUUID() + '@test.invalid';
+const adminPassword = randomUUID() + 'Aa1!';
+beforeAll(async () => {
+  await ensureSeedAdmin();
+  const role = await prisma.role.findUniqueOrThrow({ where: { name: 'ADMIN' } });
+  const winery = await prisma.winery.findFirstOrThrow();
+  await prisma.user.create({ data: { name: 'Teste API', email: adminEmail, passwordHash: await bcrypt.hash(adminPassword, 4), roleId: role.id, wineryId: winery.id } });
+});
+afterAll(async () => {
+  await prisma.user.deleteMany({ where: { email: adminEmail } });
+  await prisma.$disconnect();
+});
 
 describe('VINUM API', () => {
   it('expõe health e o catálogo sem autenticação', async () => {
@@ -27,7 +39,7 @@ describe('VINUM API', () => {
   it('permite que um administrador consulte os módulos protegidos', async () => {
     const login = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'admin@vinum.local', password: 'Admin123!' })
+      .send({ email: adminEmail, password: adminPassword })
       .expect(200);
 
     const response = await request(app)

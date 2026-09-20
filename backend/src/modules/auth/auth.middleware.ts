@@ -20,6 +20,10 @@ export function requireRoles(...roles: string[]): RequestHandler {
       next(new AppError(403, 'Você não possui permissão para acessar este recurso.'));
       return;
     }
+    if (['ADMIN', 'EDITOR'].includes(String(res.locals.user.role)) && !res.locals.user.wineryId) {
+      next(new AppError(403, 'O acesso administrativo exige vínculo com a vinícola VINUM.'));
+      return;
+    }
     next();
   };
 }

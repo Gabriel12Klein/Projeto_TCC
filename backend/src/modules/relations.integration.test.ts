@@ -15,7 +15,7 @@ const batchIds: string[] = [];
 beforeAll(async () => {
   const role = await prisma.role.findUniqueOrThrow({ where: { name: 'CUSTOMER' } });
   userId = (await prisma.user.create({ data: { name: tag, email: tag + '@test.invalid', passwordHash: 'not-a-login', roleId: role.id } })).id;
-  wineryId = (await prisma.winery.create({ data: { name: tag, cnpj: tag, city: 'Teste', state: 'RS' } })).id;
+  wineryId = (await prisma.winery.findFirstOrThrow()).id;
   typeId = (await prisma.wineType.create({ data: { name: tag } })).id;
   grapeId = (await prisma.grape.create({ data: { name: tag } })).id;
   secondGrapeId = (await prisma.grape.create({ data: { name: tag + '-second' } })).id;
@@ -33,7 +33,6 @@ afterAll(async () => {
   await prisma.vintage.deleteMany({ where: { id: { in: vintageIds } } });
   if (userId) await prisma.user.delete({ where: { id: userId } });
   await prisma.wine.deleteMany({ where: { id: { in: wineIds } } });
-  if (wineryId) await prisma.winery.delete({ where: { id: wineryId } });
   if (typeId) await prisma.wineType.delete({ where: { id: typeId } });
   if (grapeId) await prisma.grape.delete({ where: { id: grapeId } });
   if (secondGrapeId) await prisma.grape.delete({ where: { id: secondGrapeId } });

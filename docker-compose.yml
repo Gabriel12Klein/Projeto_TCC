@@ -5,9 +5,9 @@ services:
     environment:
       POSTGRES_DB: vinum
       POSTGRES_USER: vinum
-      POSTGRES_PASSWORD: vinum_local_dev
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD no .env}
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - vinum_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,9 +21,9 @@ services:
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@vinum.com
-      PGADMIN_DEFAULT_PASSWORD: Admin123!
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?Configure PGADMIN_DEFAULT_PASSWORD no .env}
     ports:
-      - "5051:80"
+      - "127.0.0.1:5051:80"
     depends_on:
       postgres:
         condition: service_healthy

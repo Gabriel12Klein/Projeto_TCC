@@ -25,6 +25,8 @@ model User {
   roleId        String
   roleRef       Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
   active        Boolean   @default(true)
+  wineryId      String?
+  winery        Winery? @relation(fields: [wineryId], references: [id], onDelete: Restrict)
 
   sessions      Session[]
   createdWines  Wine[]    @relation("WineCreator")
@@ -35,6 +37,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   @@index([roleId])
+  @@index([wineryId])
   @@index([email])
   @@map("usuario")
 }
@@ -74,10 +77,13 @@ model Winery {
   city          String
   state         String
   email         String?
+  phone         String?
+  singleton     Boolean @unique @default(true)
   walletAddress String?
   status        String   @default("Ativa")
 
   wines         Wine[]
+  users         User[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

@@ -5,8 +5,6 @@ import { AppError } from '../../common/http.js';
 import { prisma } from '../../lib/prisma.js';
 
 const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
-const ADMIN_EMAIL = 'admin@vinum.local';
-const ADMIN_PASSWORD = 'Admin123!';
 
 function tokenHash(token: string) {
   return createHash('sha256').update(token).digest('hex');
@@ -18,6 +16,7 @@ export function publicUser(user: User & { roleRef: { name: string } | null }) {
     name: user.name,
     email: user.email,
     role: user.roleRef?.name ?? 'CUSTOMER',
+    wineryId: user.wineryId,
     age: user.age,
     address: user.address,
     phone: user.phone,
@@ -49,30 +48,35 @@ export async function ensureSeedAdmin() {
   const [adminRole] = await Promise.all([
     prisma.role.upsert({
       where: { name: 'ADMIN' },
-      update: { description: 'Administrador e dono da vinícola.' },
+      update: {},
       create: { id: 'role-admin', name: 'ADMIN', description: 'Administrador e dono da vinícola.' },
     }),
     prisma.role.upsert({
       where: { name: 'CUSTOMER' },
-      update: { description: 'Cliente do sistema.' },
+      update: {},
       create: { id: 'role-customer', name: 'CUSTOMER', description: 'Cliente do sistema.' },
     }),
     prisma.role.upsert({
       where: { name: 'EDITOR' },
-      update: { description: 'Editor administrativo legado.' },
+      update: {},
       create: { id: 'role-editor', name: 'EDITOR', description: 'Editor administrativo legado.' },
     }),
   ]);
   // A troca do e-mail do administrador não pode recriar o acesso padrão.
   const current = await prisma.user.findFirst({ where: { roleId: adminRole.id } });
   if (current) return;
-  if (await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } })) return;
+  const email = (process.env.ADMIN_INITIAL_EMAIL || 'admin@vinum.local').trim().toLowerCase();
+  if (await prisma.user.findUnique({ where: { email } })) throw new AppError(409, 'O e-mail inicial já pertence a outra conta.');
+  const password = process.env.ADMIN_INITIAL_PASSWORD;
+  if (!password || password.length < 12) throw new Error('Configure ADMIN_INITIAL_PASSWORD com pelo menos 12 caracteres para a primeira inicialização.');
+  const winery = await prisma.winery.findFirstOrThrow();
   await prisma.user.create({
     data: {
       name: 'Administrador',
-      email: ADMIN_EMAIL,
-      passwordHash: await bcrypt.hash(ADMIN_PASSWORD, 12),
+      email,
+      passwordHash: await bcrypt.hash(password, 12),
       roleId: adminRole.id,
+      wineryId: winery.id,
     },
   });
 }

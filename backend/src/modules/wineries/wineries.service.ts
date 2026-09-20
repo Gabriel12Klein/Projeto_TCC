@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma.js';
+import { AppError } from '../../common/http.js';
 import type { Prisma, Winery } from '../../generated/prisma/client.js';
 
 function toView(winery: Winery) {
@@ -15,18 +16,6 @@ function toView(winery: Winery) {
   };
 }
 
-function toDatabase(input: Record<string, unknown>): Prisma.WineryUncheckedCreateInput {
-  return {
-    name: String(input.name),
-    cnpj: String(input.cnpj),
-    city: String(input.city),
-    state: String(input.state),
-    email: input.email ? String(input.email) : null,
-    walletAddress: input.wallet ? String(input.wallet) : null,
-    status: input.status ? String(input.status) : 'Ativa',
-  };
-}
-
 export const wineriesService = {
   async list(query = '') {
     const wineries = await prisma.winery.findMany({
@@ -39,8 +28,8 @@ export const wineriesService = {
     });
     return wineries.map(toView);
   },
-  async create(input: Record<string, unknown>) {
-    return toView(await prisma.winery.create({ data: toDatabase(input) }));
+  async create(_input: Record<string, unknown>) {
+    throw new AppError(409, 'O VINUM possui uma única vinícola. Atualize o cadastro existente em Meu cadastro.');
   },
   async update(id: string, input: Record<string, unknown>) {
     const data: Prisma.WineryUpdateInput = {};
@@ -53,7 +42,7 @@ export const wineriesService = {
     if (input.status !== undefined) data.status = String(input.status);
     return toView(await prisma.winery.update({ where: { id }, data }));
   },
-  async remove(id: string) {
-    await prisma.winery.delete({ where: { id } });
+  async remove(_id: string) {
+    throw new AppError(409, 'A vinícola administradora não pode ser excluída.');
   },
 };
