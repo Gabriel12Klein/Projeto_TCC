@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { passwordSchema } from '../../../../shared/password.js';
 import { ageFromBirthDate } from '../../../../shared/profile.js';
 
 const email = z
@@ -71,13 +72,7 @@ export const loginSchema = z.object({
 export const registerSchema = z.object({
   name: z.string().trim().min(3).max(120),
   email,
-  password: z
-    .string()
-    .min(8, 'A senha deve ter pelo menos 8 caracteres.')
-    .max(72)
-    .regex(/[a-z]/, 'Inclua uma letra minúscula.')
-    .regex(/[A-Z]/, 'Inclua uma letra maiúscula.')
-    .regex(/\d/, 'Inclua um número.'),
+  password: passwordSchema,
 });
 
 export const profileSchema = z.object({
@@ -97,13 +92,5 @@ export const profileSchema = z.object({
   state: profileState,
   country: z.string().trim().max(80).nullable(),
   phone: z.string().trim().max(30).nullable(),
-  newPassword: z
-    .string()
-    .min(8, 'A nova senha deve ter pelo menos 8 caracteres.')
-    .max(72)
-    .regex(/[a-z]/, 'Inclua uma letra minúscula.')
-    .regex(/[A-Z]/, 'Inclua uma letra maiúscula.')
-    .regex(/\d/, 'Inclua um número.')
-    .optional()
-    .or(z.literal('')),
+  newPassword: passwordSchema.optional().or(z.literal('')),
 });

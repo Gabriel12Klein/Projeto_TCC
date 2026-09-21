@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { passwordSchema } from '../../../shared/password';
 
 export const loginFormSchema = z.object({
   email: z.string().trim().email('Informe um e-mail válido.'),
@@ -7,13 +8,13 @@ export const loginFormSchema = z.object({
 
 export const registerFormSchema = z
   .object({
-    name: z.string().trim().min(3, 'Informe o nome completo.'),
+    name: z.string().trim().min(3, 'Informe o nome completo.').max(120, 'Use até 120 caracteres no nome.'),
     email: z.string().trim().email('Informe um e-mail válido.'),
     confirmEmail: z.string().trim().email('Confirme o e-mail.'),
-    password: z.string().min(8, 'Use pelo menos 8 caracteres.').regex(/[a-z]/).regex(/[A-Z]/).regex(/\d/),
+    password: passwordSchema,
     confirmPassword: z.string(),
   })
-  .refine((data) => data.email === data.confirmEmail, {
+  .refine((data) => data.email.toLowerCase() === data.confirmEmail.toLowerCase(), {
     message: 'Os e-mails informados não coincidem.',
     path: ['confirmEmail'],
   })

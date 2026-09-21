@@ -1,3 +1,5 @@
+import PasswordInput, { PasswordChecklist } from '../../../ui/PasswordInput';
+import { passwordSchema } from '../../../../shared/password';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../api/api';
@@ -84,13 +86,17 @@ function AccountForm({ data, onUserUpdate, onCancel }: { data: WineryAccount; on
     if (save.isPending || !writable) return;
     setMessage(''); setError(false);
     if (form.newPassword !== form.confirmPassword) { setError(true); setMessage('A confirmação da nova senha não confere.'); return; }
+    if (form.newPassword) {
+      const checked = passwordSchema.safeParse(form.newPassword);
+      if (!checked.success) { setError(true); setMessage(checked.error.issues[0].message); return; }
+    }
     try {
       const updated = await save.mutateAsync(form);
       onUserUpdate(updated.account);
       // Não remonta o formulário para que a confirmação de sucesso continue visível.
       qc.setQueryData(['admin-account', data.account.id], updated);
       setForm(prev => ({ ...prev, name: updated.winery.name, loginEmail: updated.account.email, currentPassword: '', newPassword: '', confirmPassword: '' }));
-      setMessage('Cadastro salvo com sucesso. Use o e-mail de acesso atualizado no próximo login.');
+      setMessage('Cadastro salvo com sucesso.');
     } catch (e) { setError(true); setMessage(e instanceof Error ? e.message : 'Não foi possível salvar o cadastro.'); }
   }
   return <form className="admin-account-form" onSubmit={submit}>
@@ -111,9 +117,9 @@ function AccountForm({ data, onUserUpdate, onCancel }: { data: WineryAccount; on
       <div className="admin-account-form__grid">
         <label>Nome do responsável *<input value={form.accountName} onChange={e => field('accountName', e.target.value)} required minLength={3} maxLength={120} autoComplete="name" /></label>
         <label>E-mail de acesso *<input type="email" value={form.loginEmail} onChange={e => field('loginEmail', e.target.value)} required autoComplete="username" /></label>
-        <label>Nova senha<input type="password" value={form.newPassword} onChange={e => field('newPassword', e.target.value)} minLength={8} maxLength={72} autoComplete="new-password" placeholder="Deixe vazio para manter a senha" /><small>Mínimo de 8 caracteres, com maiúscula, minúscula e número.</small></label>
-        <label>Confirmar nova senha<input type="password" value={form.confirmPassword} onChange={e => field('confirmPassword', e.target.value)} required={Boolean(form.newPassword)} maxLength={72} autoComplete="new-password" /></label>
-        {credentialsChanged && <label>Senha atual *<input type="password" value={form.currentPassword} onChange={e => field('currentPassword', e.target.value)} required autoComplete="current-password" /><small>Confirme para mudar o acesso. Outras sessões serão encerradas.</small></label>}
+        <label htmlFor="admin-new-password">Nova senha (opcional)<PasswordInput id="admin-new-password" visibilityLabel="nova senha" type="password" value={form.newPassword} onChange={e => field('newPassword', e.target.value)} minLength={8} maxLength={72} autoComplete="new-password" placeholder="Deixe vazio para manter a senha" /><PasswordChecklist value={form.newPassword || ''} /></label>
+        <label htmlFor="admin-confirm-password">Confirmar nova senha<PasswordInput id="admin-confirm-password" visibilityLabel="confirmação da nova senha" type="password" value={form.confirmPassword} onChange={e => field('confirmPassword', e.target.value)} required={Boolean(form.newPassword)} maxLength={72} autoComplete="new-password" /></label>
+        {credentialsChanged && <label htmlFor="admin-current-password">Senha atual *<PasswordInput id="admin-current-password" visibilityLabel="senha atual" type="password" value={form.currentPassword} onChange={e => field('currentPassword', e.target.value)} required autoComplete="current-password" /><small>Confirme para mudar o acesso. Outras sessões serão encerradas.</small></label>}
       </div>
     </fieldset>
     {message && <p className={`admin-account-feedback ${error ? 'is-error' : ''}`} role={error ? 'alert' : 'status'}>{message}</p>}

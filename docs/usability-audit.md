@@ -34,3 +34,25 @@ Resultados, mensagens, commits e limitações serão consolidados aqui após cad
 - Preservados códigos de sucesso, autorização, transações e constraints existentes.
 - TypeScript aprovado; 42 testes aprovados (11 arquivos), incluindo cinco testes
   novos de mensagens, rede, resposta inválida e expiração. Sem migration necessária.
+
+### Grupo 2 — Autenticação e senhas
+
+- Grupo 1 preservado no commit `31a60ca`.
+- Mostrar/ocultar independente em login, cadastro, perfil e cadastro administrativo;
+  senha oculta inicialmente, botão não submete e informa estado/nome acessível.
+- Regra compartilhada frontend/backend (8–72 caracteres, maiúscula, minúscula,
+  número) e checklist visível. Login mantém compatibilidade com senhas existentes;
+  deixar nova senha vazia continua mantendo a senha atual.
+- Login/cadastro: labels associados, erros inline, foco do react-hook-form no
+  primeiro campo inválido, autocomplete e envio com bloqueio síncrono de duplicação.
+- Cadastro não promete administração nem geração de QR ao cliente; sucesso fica
+  visível, limpa senhas e rascunho, sem redirecionamento automático nem novo envio.
+- Removido checkbox “Lembrar de mim” sem efeito; recuperação informa honestamente
+  indisponibilidade e contato com responsável, sem simular envio de e-mail.
+- Painéis podem crescer para acomodar erros e requisitos sem altura fixa.
+- Testes: 51 aprovados em 13 arquivos; typecheck, lint e build aprovados.
+  Corrigida atribuição redundante indicada pelo lint em `src/api/api.ts`.
+- Browser consultado nesta retomada: nenhum navegador conectado. Teste estático
+  verifica HTML acessível; clique, foco e layout visual ainda não foram validados.
+- Sem alteração de banco. Máscaras, validação inline completa dos perfis e demais
+  grupos da matriz continuam pendentes; esta seção não declara a auditoria concluída.

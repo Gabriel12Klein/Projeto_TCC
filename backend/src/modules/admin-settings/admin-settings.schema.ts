@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { passwordSchema } from '../../../../shared/password.js';
 
 export const adminSettingsSchema = z.object({
   wineryId: z.string().min(1),
@@ -11,7 +12,7 @@ export const adminSettingsSchema = z.object({
   loginEmail: z.string().trim().email('Informe um e-mail de acesso válido.').toLowerCase(),
   phone: z.string().trim().max(30),
   currentPassword: z.string().max(200).optional(),
-  newPassword: z.union([z.literal(''), z.string().min(8, 'A nova senha deve ter ao menos 8 caracteres.').max(72).regex(/[a-z]/, 'Inclua uma letra minúscula.').regex(/[A-Z]/, 'Inclua uma letra maiúscula.').regex(/\d/, 'Inclua um número.')]).optional(),
+  newPassword: z.union([z.literal(''), passwordSchema]).optional(),
   confirmPassword: z.string().max(72).optional(),
 }).superRefine((data, ctx) => {
   if (data.newPassword && data.newPassword !== data.confirmPassword) ctx.addIssue({ code: 'custom', path: ['confirmPassword'], message: 'A confirmação da nova senha não confere.' });

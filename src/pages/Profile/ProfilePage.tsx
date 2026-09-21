@@ -1,3 +1,5 @@
+import PasswordInput, { PasswordChecklist } from '../../ui/PasswordInput';
+import { passwordSchema } from '../../../shared/password';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/api';
 import type { User } from '../../types';
@@ -104,7 +106,7 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
     {
       label: 'Nova senha',
       ok: !form.newPassword || (
-        form.newPassword.length >= 8 && /[a-z]/.test(form.newPassword) && /[A-Z]/.test(form.newPassword) && /\d/.test(form.newPassword)
+        passwordSchema.safeParse(form.newPassword).success
       ),
     },
   ];
@@ -113,6 +115,10 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
     setSaving(true);
     setMessage('');
     try {
+      if (form.newPassword) {
+        const checked = passwordSchema.safeParse(form.newPassword);
+        if (!checked.success) { setMessageType('error'); setMessage(checked.error.issues[0].message); return; }
+      }
       const normalizedState = normalizeState(form.state);
       if (form.addressNumber && !/^\d+$/.test(form.addressNumber)) {
         setMessageType('error');
@@ -328,9 +334,12 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
         </section>
         <h2 className="font-playfair text-2xl font-semibold text-[#5b0c1b]">Alterar senha</h2>
         <p className="mt-2 text-sm text-[#715f59]">Deixe em branco para manter sua senha atual.</p>
-        <label className="mt-5 block max-w-xl font-semibold">
+        <label htmlFor="profile-new-password" className="mt-5 block max-w-xl font-semibold">
           Nova senha
-          <input
+          <PasswordInput
+            id="profile-new-password"
+            visibilityLabel="nova senha"
+            autoComplete="new-password"
             className={inputClass}
             type="password"
             minLength={8}
@@ -338,9 +347,10 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
             onChange={(event) => setField('newPassword', event.target.value)}
           />
         </label>
-        <div className="mt-8 flex gap-3">
-          {(form.email.trim().toLowerCase() !== user.email || form.newPassword) && <label>Senha atual
-            <input className={inputClass} type="password" autoComplete="current-password" value={form.currentPassword} onChange={(event) => setField('currentPassword', event.target.value)} required />
+        <PasswordChecklist value={form.newPassword} />
+        <div className="mt-8 flex flex-wrap gap-3">
+          {(form.email.trim().toLowerCase() !== user.email || form.newPassword) && <label htmlFor="profile-current-password">Senha atual
+            <PasswordInput id="profile-current-password" visibilityLabel="senha atual" className={inputClass} type="password" autoComplete="current-password" value={form.currentPassword} onChange={(event) => setField('currentPassword', event.target.value)} required />
           </label>}
           <button
             disabled={saving}

@@ -36,7 +36,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     response = await fetch(`${API_URL}${path}`, { ...options, headers });
     text = await response.text();
   } catch { throw new ApiError(networkMessage, 0); }
-  let data: any = null;
+  let data: any;
   try { data = text ? JSON.parse(text) : null; } catch {
     throw new ApiError('O serviço não respondeu como esperado. Aguarde um momento e tente novamente.', response.status);
   }

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import PasswordInput from '../../ui/PasswordInput';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api, saveSession } from '../../api/api';
@@ -28,18 +29,20 @@ const featureItems = [
   {
     icon: iconOriginToGlass,
     title: 'DA ORIGEM À TAÇA',
-    text: 'Consulte a trajetória do vinho através do QR Code.',
+    text: 'Consulte vinhos, safras e lotes publicados pela vinícola.',
   },
 ];
 
 export default function LoginPage({ onOpenRegister, onLoginSuccess }) {
-  const [remember, setRemember] = useState(false);
-  const [message, setMessage] = useState('');
+  const sending = useRef(false);
+  const [message, setMessage] = useState(() => new URLSearchParams(window.location.search).get('motivo') === 'sessao-expirada' ? 'Sua sessão expirou. Entre novamente para continuar.' : '');
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
     resolver: zodResolver(loginFormSchema),
   });
 
   async function submit(data: LoginForm) {
+    if (sending.current) return;
+    sending.current = true;
     setMessage('');
     try {
       const session = await api.login(data);
@@ -47,17 +50,17 @@ export default function LoginPage({ onOpenRegister, onLoginSuccess }) {
       onLoginSuccess?.(session.user);
     } catch (error) {
       setMessage(error.message);
-    }
+    } finally { sending.current = false; }
   }
 
   return (
     <main className="min-h-screen min-w-[320px] flex items-center justify-center bg-[#351416] p-[clamp(18px,3.2vw,60px)] max-[1050px]:p-6 max-[560px]:p-0">
       <section
-        className="relative w-[var(--stage-width)] aspect-[1398/898] overflow-hidden rounded-r-[48px] bg-cover bg-center bg-no-repeat shadow-[0_26px_64px_rgb(22_4_5_/_28%)] max-[1050px]:w-[min(100%,900px)] max-[1050px]:aspect-auto max-[1050px]:min-h-[900px] max-[1050px]:rounded-[30px] max-[1050px]:bg-[position:36%_center] max-[1050px]:after:content-[''] max-[1050px]:after:absolute max-[1050px]:after:inset-0 max-[1050px]:after:bg-[rgb(47_10_15_/_20%)] max-[1050px]:after:pointer-events-none max-[560px]:min-h-screen max-[560px]:rounded-none"
+        className="auth-stage relative w-[var(--stage-width)] aspect-[1398/898] overflow-hidden rounded-r-[48px] bg-cover bg-center bg-no-repeat shadow-[0_26px_64px_rgb(22_4_5_/_28%)] max-[1050px]:w-[min(100%,900px)] max-[1050px]:aspect-auto max-[1050px]:min-h-[900px] max-[1050px]:rounded-[30px] max-[1050px]:bg-[position:36%_center] max-[1050px]:after:content-[''] max-[1050px]:after:absolute max-[1050px]:after:inset-0 max-[1050px]:after:bg-[rgb(47_10_15_/_20%)] max-[1050px]:after:pointer-events-none max-[560px]:min-h-screen max-[560px]:rounded-none"
         style={{ backgroundImage: `url(${backgroundLogin})`, '--stage-width': 'min(92vw, calc((100vh - clamp(36px, 6.4vw, 120px)) * 1.5574), 1398px)' }}
         aria-label="Tela de acesso ao sistema VINUM"
       >
-        <section className="absolute z-[2] left-[4.2%] top-[9.5%] w-[33.2%] h-[83.5%] min-h-0 flex flex-col items-stretch bg-white px-[3.15%] pt-[4.2%] pb-[3.2%] rounded-[46px] shadow-[0_18px_45px_rgb(37_6_9_/_18%)] max-[1050px]:left-1/2 max-[1050px]:top-1/2 max-[1050px]:w-[min(88%,470px)] max-[1050px]:h-auto max-[1050px]:min-h-[700px] max-[1050px]:-translate-x-1/2 max-[1050px]:-translate-y-1/2 max-[1050px]:px-[42px] max-[1050px]:pt-[54px] max-[1050px]:pb-[38px] max-[1050px]:rounded-[38px] max-[560px]:w-[calc(100%_-_28px)] max-[560px]:min-h-0 max-[560px]:px-6 max-[560px]:pt-[42px] max-[560px]:pb-[30px] max-[560px]:rounded-[30px]">
+        <section className="auth-panel absolute z-[2] left-[4.2%] top-[9.5%] w-[33.2%] h-[83.5%] min-h-0 flex flex-col items-stretch bg-white px-[3.15%] pt-[4.2%] pb-[3.2%] rounded-[46px] shadow-[0_18px_45px_rgb(37_6_9_/_18%)] max-[1050px]:left-1/2 max-[1050px]:top-1/2 max-[1050px]:w-[min(88%,470px)] max-[1050px]:h-auto max-[1050px]:min-h-[700px] max-[1050px]:-translate-x-1/2 max-[1050px]:-translate-y-1/2 max-[1050px]:px-[42px] max-[1050px]:pt-[54px] max-[1050px]:pb-[38px] max-[1050px]:rounded-[38px] max-[560px]:w-[calc(100%_-_28px)] max-[560px]:min-h-0 max-[560px]:px-6 max-[560px]:pt-[42px] max-[560px]:pb-[30px] max-[560px]:rounded-[30px]">
           <img className="w-1/2 h-auto object-contain self-center mb-[4.1%] max-[560px]:w-[58%]" src={logoVinum} alt="VINUM — Da origem à taça" />
 
           <header className="text-center">
@@ -70,49 +73,43 @@ export default function LoginPage({ onOpenRegister, onLoginSuccess }) {
             <p className="mt-0 mb-[3.8%] text-[clamp(11px,1vw,15px)] text-[#171717] max-[1050px]:text-[15px]">Acesse sua conta para continuar.</p>
           </header>
 
-          <form className="flex min-h-0 flex-col" onSubmit={handleSubmit(submit)}>
-            <label className="block mb-[3.35%]">
+          <form className="flex min-h-0 flex-col" noValidate aria-busy={isSubmitting} onSubmit={handleSubmit(submit)}>
+            <label htmlFor="login-email" className="block mb-[3.35%]">
               <span className="block mb-[1.6%] text-[clamp(12px,1vw,16px)] text-[#161313] max-[1050px]:text-[15px]">E-mail:</span>
               <span className="h-[clamp(40px,4.35vw,46px)] flex items-center gap-[10px] bg-white px-[13px] border-2 border-[#c8c4c2] rounded-[6px] transition-[border-color,box-shadow] duration-150 focus-within:border-[#7d1d2d] focus-within:shadow-[0_0_0_3px_rgb(125_29_45_/_10%)]">
                 <img className="w-[25px] h-[25px] object-contain shrink-0" src={iconEmail} alt="" aria-hidden="true" />
-                <input className="w-full min-w-0 border-0 outline-0 bg-transparent text-[#261b1c] text-[clamp(12px,0.98vw,15px)] placeholder:text-[#c7c4c4] max-[1050px]:text-[15px]" type="email" placeholder="Digite seu E-mail" {...register('email')} />
+                <input className="w-full min-w-0 border-0 outline-0 bg-transparent text-[#261b1c] text-[clamp(12px,0.98vw,15px)] placeholder:text-[#c7c4c4] max-[1050px]:text-[15px]" type="email" placeholder="Digite seu E-mail" id="login-email" autoComplete="email" aria-required="true" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "login-email-error" : undefined} {...register('email')} />
               </span>
+            {errors.email && <span className="field-error" id="login-email-error">{errors.email.message}</span>}
             </label>
 
-            <label className="block mb-[3.35%]">
+            <label htmlFor="login-password" className="block mb-[3.35%]">
               <span className="block mb-[1.6%] text-[clamp(12px,1vw,16px)] text-[#161313] max-[1050px]:text-[15px]">Senha:</span>
               <span className="h-[clamp(40px,4.35vw,46px)] flex items-center gap-[10px] bg-white px-[13px] border-2 border-[#c8c4c2] rounded-[6px] transition-[border-color,box-shadow] duration-150 focus-within:border-[#7d1d2d] focus-within:shadow-[0_0_0_3px_rgb(125_29_45_/_10%)]">
                 <img className="w-[25px] h-[25px] object-contain shrink-0" src={iconPassword} alt="" aria-hidden="true" />
-                <input className="w-full min-w-0 border-0 outline-0 bg-transparent text-[#261b1c] text-[clamp(12px,0.98vw,15px)] placeholder:text-[#c7c4c4] max-[1050px]:text-[15px]" type="password" placeholder="Digite sua senha" {...register('password')} />
+                <PasswordInput className="w-full min-w-0 border-0 outline-0 bg-transparent text-[#261b1c] text-[clamp(12px,0.98vw,15px)] placeholder:text-[#c7c4c4] max-[1050px]:text-[15px]" type="password" placeholder="Digite sua senha" id="login-password" autoComplete="current-password" aria-required="true" aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "login-password-error" : undefined} {...register('password')} />
               </span>
+            {errors.password && <span className="field-error" id="login-password-error">{errors.password.message}</span>}
             </label>
 
             <div className="flex items-center justify-between gap-3 mt-[-1.1%] mb-[5.2%] max-[560px]:items-start">
-              <label className="inline-flex items-center gap-[6px] whitespace-normal text-[clamp(11px,0.95vw,14px)] max-[1050px]:text-[13px]">
-                <input
-                  className="w-[19px] h-[19px] m-0 accent-[#7c1e2d]"
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(event) => setRemember(event.target.checked)}
-                />
-                <span>Lembrar de mim</span>
-              </label>
+              <span className="text-xs text-[#51443e]">Acesso à sua conta VINUM</span>
 
               <button
                 className="p-0 border-0 bg-transparent text-[#a71722] underline underline-offset-2 cursor-pointer whitespace-nowrap italic font-bold text-[clamp(11px,0.95vw,14px)] max-[1050px]:text-[13px]"
                 type="button"
-                onClick={() => setMessage('Recuperação de senha será implementada posteriormente.')}
+                onClick={() => setMessage('A recuperação automática ainda não está disponível. Entre em contato com o responsável pelo VINUM para recuperar seu acesso.')}
               >
                 Esqueci minha senha
               </button>
             </div>
 
             <button disabled={isSubmitting} className="w-full min-h-[clamp(48px,5.2vw,54px)] px-[18px] py-[10px] flex items-center justify-center gap-5 border-0 rounded-[5px] bg-[#4c151c] text-[#d8b655] text-[clamp(16px,1.45vw,20px)] font-bold cursor-pointer transition-[transform,background-color] duration-150 hover:bg-[#5c1821] active:translate-y-px disabled:opacity-60" type="submit">
-              <span>Entrar</span>
+              <span>{isSubmitting ? 'Entrando…' : 'Entrar'}</span>
               <span className="text-[1.35em] font-normal leading-none" aria-hidden="true">→</span>
             </button>
 
-            {(message || errors.email?.message || errors.password?.message) && <p className="mt-2 mb-0 text-[#7b2028] text-[11px] leading-[1.3] text-center">{message || errors.email?.message || errors.password?.message}</p>}
+            {message && <p role="status" className="mt-2 mb-0 text-[#7b2028] text-sm leading-snug">{message}</p>}
           </form>
 
           <div className="flex items-center gap-3 mt-[5.2%] mb-[5.2%]" aria-hidden="true">
