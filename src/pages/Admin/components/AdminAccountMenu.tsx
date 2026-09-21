@@ -1,3 +1,4 @@
+import { confirmLeave } from '../../../ui/confirmLeave';
 import { formatPhone, phoneSchema, maskCnpj, cnpjSchema } from '../../../../shared/contact';
 import { useFormFeedback } from '../../../ui/useFormFeedback';
 import FieldError from '../../../ui/FieldError';
@@ -17,6 +18,8 @@ export { maskCnpj } from '../../../../shared/contact';
 
 export default function AdminAccountMenu({ user, onUserUpdate, onOpenModule }: Props) {
   const [open, setOpen] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [panel, setPanel] = useState<Panel | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -35,8 +38,8 @@ export default function AdminAccountMenu({ user, onUserUpdate, onOpenModule }: P
   useEffect(() => {
     if (panel && !dialog.current?.open) dialog.current?.showModal();
   }, [panel]);
-  function close() { dialog.current?.close(); setPanel(null); trigger.current?.focus(); }
-  function choose(next: Panel) { setOpen(false); setPanel(next); }
+  function close() { if (!confirmLeave(busy, dirty, message => window.confirm(message))) return false; dialog.current?.close(); setPanel(null); setDirty(false); trigger.current?.focus(); return true; }
+  function choose(next: Panel) { if (next === panel) { setOpen(false); return; } if (!confirmLeave(busy, dirty, message => window.confirm(message))) return; setDirty(false); setOpen(false); setPanel(next); }
   return <div className="admin-account" ref={menuRef}>
     <button ref={trigger} type="button" className="admin-account__trigger" aria-expanded={open} aria-controls={menuId} onClick={() => setOpen(!open)}>
       <img src={profileIcon} alt="" />
@@ -48,26 +51,27 @@ export default function AdminAccountMenu({ user, onUserUpdate, onOpenModule }: P
       <button type="button" onClick={() => choose('profile')}><strong>Meu cadastro</strong><span>Dados da vinícola e acesso</span></button>
       <button type="button" onClick={() => choose('summary')}><strong>Resumo dos registros</strong><span>Vinhos, lotes, safras e referências</span></button>
     </div>}
-    <dialog ref={dialog} className="admin-account-dialog" aria-labelledby={titleId} onCancel={close}>
+    <dialog ref={dialog} className="admin-account-dialog" aria-labelledby={titleId} onCancel={event => { event.preventDefault(); close(); }}>
       {panel && <>
-        <header className="admin-account-dialog__heading"><div><p>ÁREA ADMINISTRATIVA</p><h2 id={titleId}>{panel === 'profile' ? 'Meu cadastro' : 'Resumo dos registros'}</h2></div><button type="button" onClick={close} aria-label="Fechar janela">×</button></header>
+        <header className="admin-account-dialog__heading"><div><p>ÁREA ADMINISTRATIVA</p><h2 id={titleId}>{panel === 'profile' ? 'Meu cadastro' : 'Resumo dos registros'}</h2></div><button type="button" onClick={close} aria-label="Fechar janela" disabled={busy}>×</button></header>
+        {busy && <p role="status">Salvando cadastro. Aguarde para fechar esta janela.</p>}
         <nav className="admin-account-dialog__tabs" aria-label="Configurações da vinícola">
-          <button type="button" aria-current={panel === 'profile' ? 'page' : undefined} onClick={() => setPanel('profile')}>Meu cadastro</button>
-          <button type="button" aria-current={panel === 'summary' ? 'page' : undefined} onClick={() => setPanel('summary')}>Resumo dos registros</button>
+          <button type="button" aria-current={panel === 'profile' ? 'page' : undefined} disabled={busy} onClick={() => choose('profile')}>Meu cadastro</button>
+          <button type="button" aria-current={panel === 'summary' ? 'page' : undefined} disabled={busy} onClick={() => choose('summary')}>Resumo dos registros</button>
         </nav>
         <div className="admin-account-dialog__body">
           {panel === 'profile' ? <>
             {query.isPending && <p role="status">Carregando cadastro...</p>}
             {query.isError && <div role="alert"><p>{query.error.message}</p><button type="button" onClick={() => void query.refetch()}>Tentar novamente</button></div>}
-            {query.data && <AccountForm key={query.data.winery.id} data={query.data} onUserUpdate={onUserUpdate} onCancel={close} />}
-          </> : <RegistrationSummary onOpenModule={module => { close(); onOpenModule(module); }} />}
+            {query.data && <AccountForm key={query.data.winery.id} data={query.data} onUserUpdate={onUserUpdate} onCancel={close} onDirtyChange={setDirty} onBusyChange={setBusy} />}
+          </> : <RegistrationSummary onOpenModule={module => { if (close()) onOpenModule(module); }} />}
         </div>
       </>}
     </dialog>
   </div>;
 }
 
-function AccountForm({ data, onUserUpdate, onCancel }: { data: WineryAccount; onUserUpdate: (user: User) => void; onCancel: () => void }) {
+function AccountForm({ data, onUserUpdate, onCancel, onDirtyChange, onBusyChange }: { data: WineryAccount; onUserUpdate: (user: User) => void; onCancel: () => void; onDirtyChange: (dirty: boolean) => void; onBusyChange: (busy: boolean) => void }) {
   const qc = useQueryClient();
   const feedback = useFormFeedback('account');
   const sending = useRef(false);
@@ -81,7 +85,7 @@ function AccountForm({ data, onUserUpdate, onCancel }: { data: WineryAccount; on
   const writable = data.account.role === 'ADMIN';
   const save = useMutation({ mutationFn: api.admin.updateAccount });
   const credentialsChanged = form.loginEmail.trim().toLowerCase() !== data.account.email || Boolean(form.newPassword);
-  function field(key: keyof WineryAccountInput, value: string) { setForm(prev => ({ ...prev, [key]: value })); feedback.clear(key); setMessage(''); }
+  function field(key: keyof WineryAccountInput, value: string) { onDirtyChange(true); setForm(prev => ({ ...prev, [key]: value })); feedback.clear(key); setMessage(''); }
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (sending.current || !writable) return;
@@ -93,16 +97,17 @@ function AccountForm({ data, onUserUpdate, onCancel }: { data: WineryAccount; on
     if (form.newPassword !== form.confirmPassword) issues.confirmPassword = 'A confirmação da nova senha não confere.';
     feedback.show(issues);
     if (Object.keys(issues).length) { setError(true); setMessage('Confira os campos destacados. Seus dados foram mantidos.'); return; }
-    sending.current = true;
+    sending.current = true; onBusyChange(true);
     try {
       const updated = await save.mutateAsync(form);
       onUserUpdate(updated.account);
       // Não remonta o formulário para que a confirmação de sucesso continue visível.
       qc.setQueryData(['admin-account', data.account.id], updated);
       setForm(prev => ({ ...prev, name: updated.winery.name, loginEmail: updated.account.email, currentPassword: '', newPassword: '', confirmPassword: '' }));
+      onDirtyChange(false);
       setMessage('Cadastro salvo com sucesso.');
     } catch (e) { feedback.fromApi(e); setError(true); setMessage(e instanceof Error ? e.message : 'Não foi possível salvar o cadastro.'); }
-    finally { sending.current = false; }
+    finally { sending.current = false; onBusyChange(false); }
   }
   return <form className="admin-account-form" noValidate aria-busy={save.isPending} onSubmit={submit}>
     {!writable && <p className="admin-account-note">Somente o administrador pode editar este cadastro.</p>}

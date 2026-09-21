@@ -161,3 +161,17 @@ Resultados, mensagens, commits e limitações serão consolidados aqui após cad
 - 15 testes unitários aprovados nesta revisão, incluindo três casos novos; lint,
   typecheck e diff-check aprovados. Verificação de formato cobre os dados necessários
   às telas, não substitui validação de domínio e autorização no servidor.
+
+### Grupo 9 — Saída do cadastro administrativo
+
+- Revisão da API registrada em `fa4e9ec`.
+- Fechar, Escape e troca de aba pedem confirmação quando há edição não salva.
+  Cancelar a confirmação mantém a janela e os campos. Salvar limpa a indicação de
+  edição pendente. Selecionar a própria aba não descarta o estado de edição.
+- Durante salvamento, fechar/trocar aba é bloqueado com mensagem de status.
+- Dois testes unitários novos para decisão de saída; interação nativa de dialog
+  ainda depende de navegador conectado.
+- Revisão unitária global desta retomada: **38 testes em 13 arquivos aprovados**.
+  Inclui frontend e schemas/helpers de backend sem acesso ao banco. Lint, typecheck,
+  build e diff-check aprovados. Build mantém avisos de comentários da dependência
+  Zod e bundle acima de 500 kB; não são falhas de compilação.
