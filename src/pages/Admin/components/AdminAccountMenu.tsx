@@ -1,3 +1,6 @@
+import { formatPhone, phoneSchema, maskCnpj, cnpjSchema } from '../../../../shared/contact';
+import { useFormFeedback } from '../../../ui/useFormFeedback';
+import FieldError from '../../../ui/FieldError';
 import PasswordInput, { PasswordChecklist } from '../../../ui/PasswordInput';
 import { passwordSchema } from '../../../../shared/password';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
@@ -10,11 +13,7 @@ import './AdminAccountMenu.css';
 
 type Panel = 'profile' | 'summary';
 type Props = { user: User; onUserUpdate: (user: User) => void; onOpenModule: (module: ResourceKey) => void };
-export function maskCnpj(value: string) {
-  return value.replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 14)
-    .replace(/^(.{2})(.)/, '$1.$2').replace(/^(.{2}\..{3})(.)/, '$1.$2')
-    .replace(/^(.{2}\..{3}\..{3})(.)/, '$1/$2').replace(/^(.{2}\..{3}\..{3}\/.{4})(.)/, '$1-$2');
-}
+export { maskCnpj } from '../../../../shared/contact';
 
 export default function AdminAccountMenu({ user, onUserUpdate, onOpenModule }: Props) {
   const [open, setOpen] = useState(false);
@@ -70,9 +69,11 @@ export default function AdminAccountMenu({ user, onUserUpdate, onOpenModule }: P
 
 function AccountForm({ data, onUserUpdate, onCancel }: { data: WineryAccount; onUserUpdate: (user: User) => void; onCancel: () => void }) {
   const qc = useQueryClient();
+  const feedback = useFormFeedback('account');
+  const sending = useRef(false);
   const [form, setForm] = useState<WineryAccountInput>({
     wineryId: data.winery.id, name: data.winery.name, cnpj: maskCnpj(data.winery.cnpj), city: data.winery.city, state: data.winery.state,
-    contactEmail: data.winery.email || '', accountName: data.account.name, loginEmail: data.account.email, phone: data.winery.phone || '',
+    contactEmail: data.winery.email || '', accountName: data.account.name, loginEmail: data.account.email, phone: formatPhone(data.winery.phone || ''),
     currentPassword: '', newPassword: '', confirmPassword: '',
   });
   const [message, setMessage] = useState('');
@@ -80,16 +81,19 @@ function AccountForm({ data, onUserUpdate, onCancel }: { data: WineryAccount; on
   const writable = data.account.role === 'ADMIN';
   const save = useMutation({ mutationFn: api.admin.updateAccount });
   const credentialsChanged = form.loginEmail.trim().toLowerCase() !== data.account.email || Boolean(form.newPassword);
-  function field(key: keyof WineryAccountInput, value: string) { setForm(prev => ({ ...prev, [key]: value })); setMessage(''); }
+  function field(key: keyof WineryAccountInput, value: string) { setForm(prev => ({ ...prev, [key]: value })); feedback.clear(key); setMessage(''); }
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (save.isPending || !writable) return;
+    if (sending.current || !writable) return;
     setMessage(''); setError(false);
-    if (form.newPassword !== form.confirmPassword) { setError(true); setMessage('A confirmação da nova senha não confere.'); return; }
-    if (form.newPassword) {
-      const checked = passwordSchema.safeParse(form.newPassword);
-      if (!checked.success) { setError(true); setMessage(checked.error.issues[0].message); return; }
+    const issues = feedback.nativeErrors(event.currentTarget as HTMLFormElement);
+    for (const [key, result] of [['phone', phoneSchema.safeParse(form.phone)], ['cnpj', cnpjSchema.safeParse(form.cnpj)], ['newPassword', form.newPassword ? passwordSchema.safeParse(form.newPassword) : null]] as const) {
+      if (result && !result.success) issues[key] = result.error.issues[0].message;
     }
+    if (form.newPassword !== form.confirmPassword) issues.confirmPassword = 'A confirmação da nova senha não confere.';
+    feedback.show(issues);
+    if (Object.keys(issues).length) { setError(true); setMessage('Confira os campos destacados. Seus dados foram mantidos.'); return; }
+    sending.current = true;
     try {
       const updated = await save.mutateAsync(form);
       onUserUpdate(updated.account);
@@ -97,29 +101,30 @@ function AccountForm({ data, onUserUpdate, onCancel }: { data: WineryAccount; on
       qc.setQueryData(['admin-account', data.account.id], updated);
       setForm(prev => ({ ...prev, name: updated.winery.name, loginEmail: updated.account.email, currentPassword: '', newPassword: '', confirmPassword: '' }));
       setMessage('Cadastro salvo com sucesso.');
-    } catch (e) { setError(true); setMessage(e instanceof Error ? e.message : 'Não foi possível salvar o cadastro.'); }
+    } catch (e) { feedback.fromApi(e); setError(true); setMessage(e instanceof Error ? e.message : 'Não foi possível salvar o cadastro.'); }
+    finally { sending.current = false; }
   }
-  return <form className="admin-account-form" onSubmit={submit}>
+  return <form className="admin-account-form" noValidate aria-busy={save.isPending} onSubmit={submit}>
     {!writable && <p className="admin-account-note">Somente o administrador pode editar este cadastro.</p>}
     <fieldset disabled={save.isPending || !writable}>
       <legend>Dados da vinícola</legend><p className="admin-account-note">Informações da vinícola exibidas no sistema. Campos com * são obrigatórios.</p>
       <div className="admin-account-form__grid">
-        <label>Nome da vinícola *<input value={form.name} onChange={e => field('name', e.target.value)} required minLength={2} maxLength={120} autoComplete="organization" /></label>
-        <label>CNPJ <small>(opcional)</small><input value={form.cnpj} onChange={e => field('cnpj', maskCnpj(e.target.value))} placeholder="00.000.000/0000-00" maxLength={18} pattern="[A-Z0-9]{2}\.[A-Z0-9]{3}\.[A-Z0-9]{3}/[A-Z0-9]{4}-[A-Z0-9]{2}" title="14 letras ou números, no formato XX.XXX.XXX/XXXX-XX" /><small>Letras e números, com máscara automática.</small></label>
-        <label>E-mail de contato<input type="email" value={form.contactEmail} onChange={e => field('contactEmail', e.target.value)} autoComplete="email" /></label>
-        <label>Telefone<input type="tel" value={form.phone} onChange={e => field('phone', e.target.value)} maxLength={30} autoComplete="tel" /></label>
-        <label>Cidade<input value={form.city} onChange={e => field('city', e.target.value)} maxLength={100} autoComplete="address-level2" /></label>
-        <label>Estado (UF)<select value={form.state} onChange={e => field('state', e.target.value)} autoComplete="address-level1"><option value="">Selecione</option>{'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').map(uf => <option key={uf}>{uf}</option>)}</select></label>
+        <label htmlFor="account-name">Nome da vinícola *<input {...feedback.field('name')} value={form.name} onChange={e => field('name', e.target.value)} required minLength={2} maxLength={120} autoComplete="organization" /><FieldError id="account-name-error" message={feedback.errors.name} /></label>
+        <label htmlFor="account-cnpj">CNPJ <small>(opcional)</small><input {...feedback.field('cnpj')} value={form.cnpj} onChange={e => field('cnpj', maskCnpj(e.target.value))} placeholder="00.000.000/0000-00" pattern="[A-Z0-9]{2}\.[A-Z0-9]{3}\.[A-Z0-9]{3}/[A-Z0-9]{4}-[A-Z0-9]{2}" title="14 letras ou números, no formato XX.XXX.XXX/XXXX-XX" /><small>Letras e números, com máscara automática.</small><FieldError id="account-cnpj-error" message={feedback.errors.cnpj} /></label>
+        <label htmlFor="account-contactEmail">E-mail de contato<input type="email" {...feedback.field('contactEmail')} value={form.contactEmail} onChange={e => field('contactEmail', e.target.value)} autoComplete="email" /><FieldError id="account-contactEmail-error" message={feedback.errors.contactEmail} /></label>
+        <label htmlFor="account-phone">Telefone (opcional)<input type="tel" placeholder="(55) 99935-4038" {...feedback.field('phone')} value={form.phone} onChange={e => field('phone', formatPhone(e.target.value))} maxLength={30} autoComplete="tel" /><FieldError id="account-phone-error" message={feedback.errors.phone} /></label>
+        <label htmlFor="account-city">Cidade<input {...feedback.field('city')} value={form.city} onChange={e => field('city', e.target.value)} maxLength={100} autoComplete="address-level2" /><FieldError id="account-city-error" message={feedback.errors.city} /></label>
+        <label htmlFor="account-state">Estado (UF)<select {...feedback.field('state')} value={form.state} onChange={e => field('state', e.target.value)} autoComplete="address-level1"><option value="">Selecione</option>{'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').map(uf => <option key={uf}>{uf}</option>)}</select><FieldError id="account-state-error" message={feedback.errors.state} /></label>
       </div>
     </fieldset>
     <fieldset disabled={save.isPending || !writable}>
       <legend>Acesso do administrador</legend><p className="admin-account-note">O e-mail de acesso pode ser diferente do contato da vinícola.</p>
       <div className="admin-account-form__grid">
-        <label>Nome do responsável *<input value={form.accountName} onChange={e => field('accountName', e.target.value)} required minLength={3} maxLength={120} autoComplete="name" /></label>
-        <label>E-mail de acesso *<input type="email" value={form.loginEmail} onChange={e => field('loginEmail', e.target.value)} required autoComplete="username" /></label>
-        <label htmlFor="admin-new-password">Nova senha (opcional)<PasswordInput id="admin-new-password" visibilityLabel="nova senha" type="password" value={form.newPassword} onChange={e => field('newPassword', e.target.value)} minLength={8} maxLength={72} autoComplete="new-password" placeholder="Deixe vazio para manter a senha" /><PasswordChecklist value={form.newPassword || ''} /></label>
-        <label htmlFor="admin-confirm-password">Confirmar nova senha<PasswordInput id="admin-confirm-password" visibilityLabel="confirmação da nova senha" type="password" value={form.confirmPassword} onChange={e => field('confirmPassword', e.target.value)} required={Boolean(form.newPassword)} maxLength={72} autoComplete="new-password" /></label>
-        {credentialsChanged && <label htmlFor="admin-current-password">Senha atual *<PasswordInput id="admin-current-password" visibilityLabel="senha atual" type="password" value={form.currentPassword} onChange={e => field('currentPassword', e.target.value)} required autoComplete="current-password" /><small>Confirme para mudar o acesso. Outras sessões serão encerradas.</small></label>}
+        <label htmlFor="account-accountName">Nome do responsável *<input {...feedback.field('accountName')} value={form.accountName} onChange={e => field('accountName', e.target.value)} required minLength={3} maxLength={120} autoComplete="name" /><FieldError id="account-accountName-error" message={feedback.errors.accountName} /></label>
+        <label htmlFor="account-loginEmail">E-mail de acesso *<input type="email" {...feedback.field('loginEmail')} value={form.loginEmail} onChange={e => field('loginEmail', e.target.value)} required autoComplete="username" /><FieldError id="account-loginEmail-error" message={feedback.errors.loginEmail} /></label>
+        <label htmlFor="account-newPassword">Nova senha (opcional)<PasswordInput visibilityLabel="nova senha" type="password" {...feedback.field('newPassword')} value={form.newPassword} onChange={e => field('newPassword', e.target.value)} minLength={8} maxLength={72} autoComplete="new-password" placeholder="Deixe vazio para manter a senha" /><PasswordChecklist value={form.newPassword || ''} /><FieldError id="account-newPassword-error" message={feedback.errors.newPassword} /></label>
+        <label htmlFor="account-confirmPassword">Confirmar nova senha<PasswordInput visibilityLabel="confirmação da nova senha" type="password" {...feedback.field('confirmPassword')} value={form.confirmPassword} onChange={e => field('confirmPassword', e.target.value)} required={Boolean(form.newPassword)} maxLength={72} autoComplete="new-password" /><FieldError id="account-confirmPassword-error" message={feedback.errors.confirmPassword} /></label>
+        {credentialsChanged && <label htmlFor="account-currentPassword">Senha atual *<PasswordInput visibilityLabel="senha atual" type="password" {...feedback.field('currentPassword')} value={form.currentPassword} onChange={e => field('currentPassword', e.target.value)} required autoComplete="current-password" /><small>Confirme para mudar o acesso. Outras sessões serão encerradas.</small><FieldError id="account-currentPassword-error" message={feedback.errors.currentPassword} /></label>}
       </div>
     </fieldset>
     {message && <p className={`admin-account-feedback ${error ? 'is-error' : ''}`} role={error ? 'alert' : 'status'}>{message}</p>}

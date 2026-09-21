@@ -1,3 +1,6 @@
+import { formatPhone, phoneSchema } from '../../../shared/contact';
+import { useFormFeedback } from '../../ui/useFormFeedback';
+import FieldError from '../../ui/FieldError';
 import PasswordInput, { PasswordChecklist } from '../../ui/PasswordInput';
 import { passwordSchema } from '../../../shared/password';
 import { useEffect, useRef, useState } from 'react';
@@ -5,13 +8,7 @@ import { api } from '../../api/api';
 import type { User } from '../../types';
 import { ageFromBirthDate } from '../../../shared/profile';
 
-function formatPhone(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 11);
-  if (digits.length <= 2) return digits ? `(${digits}` : '';
-  if (digits.length <= 3) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2, 3)} ${digits.slice(3)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 3)} ${digits.slice(3, 7)}-${digits.slice(7)}`;
-}
+
 
 const stateCodes = new Set([
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
@@ -78,6 +75,8 @@ function clearProfileDraft(user: User) {
 
 export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: (user: User) => void }) {
   const [editing, setEditing] = useState(false);
+  const feedback = useFormFeedback('profile');
+  const sending = useRef(false);
   const [form, setForm] = useState(() => ({ ...profileFormFromUser(user), ...(readProfileDraft(user) ?? {}) }));
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
@@ -95,14 +94,16 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
       /* limites do armazenamento não impedem o uso normal do formulário */
     }
   }, [form, user.id]);
-  const setField = (field: keyof typeof form, value: string) =>
+  const setField = (field: keyof typeof form, value: string) => {
+    feedback.clear(String(field));
     setForm((current) => ({ ...current, [field]: value }));
+  };
   const profileChecklist = [
     { label: 'Nome completo', ok: form.name.trim().length >= 3 },
     { label: 'E-mail', ok: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) },
     { label: 'Número da casa', ok: !form.addressNumber || /^\d+$/.test(form.addressNumber) },
     { label: 'Estado', ok: !form.state || Boolean(normalizeState(form.state)) },
-    { label: 'Telefone', ok: !form.phone || form.phone.replace(/\D/g, '').length >= 10 },
+    { label: 'Telefone', ok: !form.phone || phoneSchema.safeParse(form.phone).success },
     {
       label: 'Nova senha',
       ok: !form.newPassword || (
@@ -112,6 +113,16 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
   ];
   async function save(event: React.FormEvent) {
     event.preventDefault();
+    if (sending.current) return;
+    const issues = feedback.nativeErrors(event.currentTarget as HTMLFormElement);
+    const phone = phoneSchema.safeParse(form.phone);
+    if (!phone.success) issues.phone = phone.error.issues[0].message;
+    if (form.newPassword) { const password = passwordSchema.safeParse(form.newPassword); if (!password.success) issues.newPassword = password.error.issues[0].message; }
+    if (form.state && !normalizeState(form.state)) issues.state = 'Informe uma UF ou nome de estado válido.';
+    if (form.birthDate && ageFromBirthDate(form.birthDate) === null) issues.birthDate = 'Informe uma data de nascimento válida, não futura.';
+    feedback.show(issues);
+    if (Object.keys(issues).length) { setMessageType('error'); setMessage('Confira os campos destacados. Seus dados foram mantidos.'); return; }
+    sending.current = true;
     setSaving(true);
     setMessage('');
     try {
@@ -167,9 +178,11 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
       setMessageType('success');
       setMessage('Informações atualizadas com sucesso.');
     } catch (error) {
+      feedback.fromApi(error);
       setMessageType('error');
       setMessage(error instanceof Error ? error.message : 'Não foi possível atualizar as informações.');
     } finally {
+      sending.current = false;
       setSaving(false);
     }
   }
@@ -199,7 +212,7 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
                   : 'Não informado'
               }
             />
-            <Info label="Telefone" value={user.phone || 'Não informado'} />
+            <Info label="Telefone" value={formatPhone(user.phone || '') || 'Não informado'} />
             <Info label="Endereço" value={displayAddress || 'Não informado'} />
           </div>
           <button
@@ -224,23 +237,26 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
       <div className="mb-8">
         <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#9a6a2d]">Minha conta</p>
         <h1 className="mt-2 font-playfair text-4xl font-semibold text-[#5b0c1b]">Editar informações</h1>
-        <p className="mt-3 text-[#715f59]">Atualize seus dados pessoais.</p>
+        <p className="mt-3 text-[#715f59]">Nome e e-mail são obrigatórios. Os demais dados são opcionais; a idade é calculada pela data de nascimento.</p>
       </div>
-      <form onSubmit={save} className="rounded-3xl border border-[#dfd0bd] bg-white p-6 shadow-sm md:p-9">
+      <form noValidate aria-busy={saving} onSubmit={save} className="rounded-3xl border border-[#dfd0bd] bg-white p-6 shadow-sm md:p-9">
         <div className="grid gap-6 md:grid-cols-2">
-          <label className="font-semibold">
+          <label className="font-semibold" htmlFor="profile-name">
             Nome completo
             <input
               className={inputClass}
-              value={form.name}
+              minLength={3}
+              maxLength={120}
+              autoComplete="name"
+              {...feedback.field('name')} value={form.name}
               onChange={(event) => setField('name', event.target.value)}
               required
             />
-          </label>
-          <label className="font-semibold">
+          <FieldError id="profile-name-error" message={feedback.errors.name} /></label>
+          <label className="font-semibold" htmlFor="profile-email">
             E-mail
-            <input className={inputClass} type="email" value={form.email} onChange={(event) => setField('email', event.target.value)} required />
-          </label>
+            <input className={inputClass} type="email" {...feedback.field('email')} value={form.email} onChange={(event) => setField('email', event.target.value)} required />
+          <FieldError id="profile-email-error" message={feedback.errors.email} /></label>
           <label className="font-semibold">
             Idade
             <input
@@ -252,55 +268,58 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
               readOnly
             />
           </label>
-          <label className="font-semibold">
+          <label className="font-semibold" htmlFor="profile-birthDate">
             Data de nascimento
             <input
               className={inputClass}
               type="date"
-              value={form.birthDate}
+              {...feedback.field('birthDate')} value={form.birthDate}
               onChange={(event) => setField('birthDate', event.target.value)}
             />
-          </label>
-          <label className="font-semibold">
+          <FieldError id="profile-birthDate-error" message={feedback.errors.birthDate} /></label>
+          <label className="font-semibold" htmlFor="profile-phone">
             Telefone
             <input
               className={inputClass}
-              value={form.phone}
+              type="tel"
+              autoComplete="tel"
+              placeholder="(55) 99935-4038"
+              {...feedback.field('phone')} value={form.phone}
               onChange={(event) => setField('phone', formatPhone(event.target.value))}
             />
-          </label>
-          <label className="font-semibold">
+          <FieldError id="profile-phone-error" message={feedback.errors.phone} /></label>
+          <label className="font-semibold" htmlFor="profile-street">
             Rua
             <input
               className={inputClass}
-              value={form.street}
+              {...feedback.field('street')} value={form.street}
               onChange={(event) => setField('street', event.target.value)}
             />
-          </label>
-          <label className="font-semibold">
+          <FieldError id="profile-street-error" message={feedback.errors.street} /></label>
+          <label className="font-semibold" htmlFor="profile-addressNumber">
             Número
             <input
               className={inputClass}
-              value={form.addressNumber}
+              {...feedback.field('addressNumber')} value={form.addressNumber}
               inputMode="numeric"
               pattern="[0-9]*"
               maxLength={20}
               onChange={(event) => setField('addressNumber', event.target.value.replace(/\D/g, ''))}
             />
-          </label>
-          <label className="font-semibold">
+          <FieldError id="profile-addressNumber-error" message={feedback.errors.addressNumber} /></label>
+          <label className="font-semibold" htmlFor="profile-city">
             Cidade
             <input
               className={inputClass}
-              value={form.city}
+              {...feedback.field('city')} value={form.city}
               onChange={(event) => setField('city', event.target.value)}
             />
-          </label>
-          <label className="font-semibold">
+          <FieldError id="profile-city-error" message={feedback.errors.city} /></label>
+          <label className="font-semibold" htmlFor="profile-state">
             Estado
             <input
               className={inputClass}
-              value={form.state}
+              {...feedback.field('state')} value={form.state}
               onChange={(event) => setField('state', event.target.value)}
               onBlur={() => {
                 const normalized = normalizeState(form.state);
@@ -309,15 +328,15 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
               placeholder="Ex.: RS ou Rio Grande do Sul"
               maxLength={60}
             />
-          </label>
-          <label className="font-semibold">
+          <FieldError id="profile-state-error" message={feedback.errors.state} /></label>
+          <label className="font-semibold" htmlFor="profile-country">
             País
             <input
               className={inputClass}
-              value={form.country}
+              {...feedback.field('country')} value={form.country}
               onChange={(event) => setField('country', event.target.value)}
             />
-          </label>
+          <FieldError id="profile-country-error" message={feedback.errors.country} /></label>
         </div>
         <div className="my-8 h-px bg-[#eee3d5]" />
         <section className="mb-8 rounded-2xl border border-[#eadcca] bg-[#fffaf3] p-5" aria-label="Checklist do perfil">
@@ -334,24 +353,23 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
         </section>
         <h2 className="font-playfair text-2xl font-semibold text-[#5b0c1b]">Alterar senha</h2>
         <p className="mt-2 text-sm text-[#715f59]">Deixe em branco para manter sua senha atual.</p>
-        <label htmlFor="profile-new-password" className="mt-5 block max-w-xl font-semibold">
+        <label className="mt-5 block max-w-xl font-semibold" htmlFor="profile-newPassword">
           Nova senha
           <PasswordInput
-            id="profile-new-password"
             visibilityLabel="nova senha"
             autoComplete="new-password"
             className={inputClass}
             type="password"
             minLength={8}
-            value={form.newPassword}
+            {...feedback.field('newPassword')} value={form.newPassword}
             onChange={(event) => setField('newPassword', event.target.value)}
           />
-        </label>
+        <FieldError id="profile-newPassword-error" message={feedback.errors.newPassword} /></label>
         <PasswordChecklist value={form.newPassword} />
         <div className="mt-8 flex flex-wrap gap-3">
-          {(form.email.trim().toLowerCase() !== user.email || form.newPassword) && <label htmlFor="profile-current-password">Senha atual
-            <PasswordInput id="profile-current-password" visibilityLabel="senha atual" className={inputClass} type="password" autoComplete="current-password" value={form.currentPassword} onChange={(event) => setField('currentPassword', event.target.value)} required />
-          </label>}
+          {(form.email.trim().toLowerCase() !== user.email || form.newPassword) && <label htmlFor="profile-currentPassword">Senha atual
+            <PasswordInput visibilityLabel="senha atual" className={inputClass} type="password" autoComplete="current-password" {...feedback.field('currentPassword')} value={form.currentPassword} onChange={(event) => setField('currentPassword', event.target.value)} required />
+          <FieldError id="profile-currentPassword-error" message={feedback.errors.currentPassword} /></label>}
           <button
             disabled={saving}
             className="rounded-xl bg-[#5b0c1b] px-7 py-3 font-semibold text-[#f4d58e] disabled:opacity-60"
@@ -363,8 +381,12 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
             className="rounded-xl border border-[#cdbbaf] px-7 py-3 font-semibold text-[#5b0c1b]"
             type="button"
             onClick={() => {
+              if (saving) return;
+              if (!window.confirm('Descartar as alterações não salvas do perfil?')) return;
               clearProfileDraft(user);
-              window.location.assign('/catalogo/registros');
+              setForm(profileFormFromUser(user));
+              setEditing(false);
+              setMessage('');
             }}
           >
             Cancelar

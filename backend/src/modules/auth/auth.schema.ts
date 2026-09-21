@@ -1,3 +1,4 @@
+import { phoneSchema } from '../../../../shared/contact.js';
 import { z } from 'zod';
 import { passwordSchema } from '../../../../shared/password.js';
 import { ageFromBirthDate } from '../../../../shared/profile.js';
@@ -91,6 +92,6 @@ export const profileSchema = z.object({
   city: z.string().trim().max(100).nullable(),
   state: profileState,
   country: z.string().trim().max(80).nullable(),
-  phone: z.string().trim().max(30).nullable(),
+  phone: phoneSchema.nullable(),
   newPassword: passwordSchema.optional().or(z.literal('')),
 });

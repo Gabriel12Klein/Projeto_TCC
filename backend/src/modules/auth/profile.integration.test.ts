@@ -41,5 +41,5 @@ it('protege troca de e-mail, unicidade e invalida outras sessões', async () => 
   await request(app).post('/api/auth/logout').set('Authorization', 'Bearer ' + token).expect(200);
   await request(app).post('/api/auth/login').send({ email: originalEmail, password }).expect(401);
   const login = await request(app).post('/api/auth/login').send({ email: changedEmail, password }).expect(200);
-  expect(login.body.user).toMatchObject({ id, street: data.street, phone: data.phone });
+  expect(login.body.user).toMatchObject({ id, street: data.street, phone: '51999999999' });
 });

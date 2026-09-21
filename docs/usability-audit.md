@@ -70,3 +70,20 @@ Resultados, mensagens, commits e limitações serão consolidados aqui após cad
   tentativa bloqueada durante requisição. Dois testes novos, 53 testes aprovados
   em 14 arquivos, typecheck e lint aprovados. Sem alteração de API/banco.
 - Interação visual/teclado real permanece pendente por falta de navegador conectado.
+
+### Grupo 4 — Contato e perfis
+
+- Grupo 3 registrado em `6375ad8`.
+- Telefone compartilhado para cliente/administrador: fixo e celular com DDD,
+  máscara consistente, entrada incompleta editável, excesso de dígitos não truncado.
+- API valida telefone e persiste somente dígitos nos novos salvamentos. Leitura
+  aceita registros antigos formatados. Teste de integração confirma persistência
+  após novo login, mantendo proteção de e-mail e invalidação de sessões.
+- CNPJ mantém política alfanumérica anterior, aceita colagem com/sem máscara e
+  rejeita excesso/caracteres inválidos. Nenhuma nova regra de dígito verificador.
+- Perfis exibem erros inline com associação acessível e foco no primeiro erro;
+  falhas da API preservam os campos. Bloqueio síncrono evita envio concorrente.
+- Cancelar perfil confirma descarte e volta à visualização do próprio perfil,
+  sem navegar para rota administrativa. Requisitos de senha permanecem visíveis.
+- 56 testes aprovados em 15 arquivos; typecheck/lint aprovados. Backend alterado
+  apenas para validação e normalização de contato; nenhuma migration ou exclusão.
