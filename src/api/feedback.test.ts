@@ -30,4 +30,15 @@ it('preserva erros de campo e distingue login inválido de sessão expirada', as
 it('não expõe conteúdo técnico devolvido por uma camada intermediária', () => {
   expect(responseMessage(500, 'Prisma stack trace segredo')).not.toMatch(/Prisma|segredo/);
   expect(responseMessage(409, 'SQLSTATE constraint violada')).not.toContain('SQLSTATE');
+  expect(responseMessage(400, 'Invalid input: expected string')).not.toContain('expected');
+  expect(responseMessage(403, 'Forbidden')).toContain('permissão');
+});
+it('rejeita sucesso estruturalmente inválido e trata 401 mesmo sem JSON', async () => {
+  const events = setup('token-de-teste');
+  const listener = vi.fn(); events.addEventListener('vinum:session-expired', listener);
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 200 })));
+  await expect(api.catalog.list()).rejects.toThrow('dados incompletos');
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('<html>Unauthorized</html>', { status: 401 })));
+  await expect(api.me()).rejects.toThrow();
+  expect(listener).toHaveBeenCalledOnce();
 });

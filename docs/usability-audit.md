@@ -147,3 +147,17 @@ Resultados, mensagens, commits e limitações serão consolidados aqui após cad
 - Typecheck, lint e diff-check aprovados. Clique real, teclado, responsividade e
   integração ponta a ponta continuam sujeitos à validação em navegador conectado.
 - Nenhum dado apagado, migration alterada ou volume recriado.
+
+### Grupo 8 — Revisão de respostas inválidas da API
+
+- Pedidos/adega finalizados em `a312da9`.
+- JSON de sucesso com estrutura incompatível é rejeitado antes de chegar às listas
+  e telas dependentes. Mensagem orienta nova tentativa e conferência da lista se
+  havia salvamento, sem alegar que a operação não chegou ao servidor.
+- Resposta 401 autenticada sinaliza sessão expirada mesmo com HTML; login inválido
+  continua independente. Issues inválidas não causam erro ao montar feedback.
+- Mensagens técnicas/inglesas comuns de intermediários não são repassadas diretamente.
+- Contratos conferidos nas rotas/serviços atuais. Sem alteração de backend/banco.
+- 15 testes unitários aprovados nesta revisão, incluindo três casos novos; lint,
+  typecheck e diff-check aprovados. Verificação de formato cobre os dados necessários
+  às telas, não substitui validação de domínio e autorização no servidor.

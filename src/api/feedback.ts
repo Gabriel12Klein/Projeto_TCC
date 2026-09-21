@@ -5,7 +5,7 @@ export class ApiError extends Error {
 export const networkMessage = 'Não foi possível conectar ao VINUM. Verifique sua conexão e tente novamente; os campos preenchidos foram mantidos.';
 export function responseMessage(status: number, supplied?: unknown) {
   if (status >= 500) return 'O serviço está temporariamente indisponível. Aguarde um momento e tente novamente.';
-  if (typeof supplied === 'string' && supplied && !/SQLSTATE|ECONN|Prisma|constraint|stack trace|<html|<!doctype|\b(undefined|null)\b/i.test(supplied)) return supplied;
+  if (typeof supplied === 'string' && supplied && !/SQLSTATE|ECONN|Prisma|constraint|stack trace|<html|<!doctype|\b(undefined|null)\b|Internal Server Error|Bad Request|Unauthorized|Forbidden|Not Found|Invalid input|Expected .*received|\bat \S+ \(.+:\d+:\d+\)|\b(SELECT .+ FROM|INSERT INTO|UPDATE .+ SET|DELETE FROM)\b/i.test(supplied)) return supplied;
   if (status === 401) return 'Sua sessão expirou. Entre novamente para continuar.';
   if (status === 403) return 'Você não possui permissão para realizar esta ação.';
   if (status === 404) return 'Este registro não foi encontrado. Ele pode ter sido removido ou estar indisponível.';
