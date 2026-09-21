@@ -1,10 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import './BottlePhotoPicker.css';
 
-export default function BottlePhotoPicker({ value, onChange, required = true }: {
+export default function BottlePhotoPicker({ value, onChange, required = true, buttonId, externalError }: {
   value: File | null;
   onChange: (file: File | null) => void;
   required?: boolean;
+  buttonId?: string;
+  externalError?: string;
 }) {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -54,7 +56,7 @@ export default function BottlePhotoPicker({ value, onChange, required = true }: 
           <strong>{value ? 'Foto selecionada' : 'Dê uma identidade ao seu rótulo'}</strong>
           <p>{value ? value.name : 'Escolha uma foto ou arraste a imagem até aqui.'}</p>
           <div className="bottle-photo-picker__actions">
-            <button type="button" onClick={() => inputRef.current?.click()}>{value ? 'Trocar foto' : 'Adicionar foto'}</button>
+            <button id={buttonId} type="button" aria-invalid={Boolean(error || externalError)} aria-describedby={`${id}-help${error || externalError ? ` ${id}-error` : ''}`} onClick={() => inputRef.current?.click()}>{value ? 'Trocar foto' : 'Adicionar foto'}</button>
             {value && <button type="button" className="bottle-photo-picker__remove" onClick={() => { onChange(null); setError(''); }}>Remover</button>}
           </div>
           <small id={`${id}-help`}>JPG, PNG ou WebP · até 5 MB</small>
@@ -69,7 +71,7 @@ export default function BottlePhotoPicker({ value, onChange, required = true }: 
           onChange={(event) => { select(event.target.files?.[0]); event.target.value = ''; }}
         />
       </div>
-      {error && <p className="bottle-photo-picker__error" role="alert">{error}</p>}
+      {(error || externalError) && <p id={`${id}-error`} className="bottle-photo-picker__error" role="alert">{error || externalError}</p>}
     </div>
   );
 }

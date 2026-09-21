@@ -6,6 +6,7 @@ import { api } from '../../api/api';
 import type { InventoryItem } from '../../types';
 import wineIcon from '../../assets/admin/sidebar/vinho.png';
 import './InventoryWineCard.css';
+import QueryFeedback from '../../ui/QueryFeedback';
 
 export default function InventoryWineCard({ item, onMove, pending }: {
   item: InventoryItem;
@@ -15,7 +16,7 @@ export default function InventoryWineCard({ item, onMove, pending }: {
   const [expanded, setExpanded] = useState(false);
   const id = useId();
   const slug = item.wine?.slug;
-  const { data: wine, isLoading, isError, refetch } = useQuery({
+  const { data: wine, isLoading, error, isFetching, refetch } = useQuery({
     queryKey: ['catalog-wine', slug],
     queryFn: () => api.catalog.detail(slug!),
     enabled: expanded && Boolean(slug),
@@ -54,8 +55,7 @@ export default function InventoryWineCard({ item, onMove, pending }: {
       {expanded && <div id={id} className="inventory-wine-card__details">
         <h3>Detalhes do vinho</h3>
         {slug ? <>
-          {isLoading && <p role="status">Carregando informações da vinícola...</p>}
-          {isError && <div role="alert"><p>Os detalhes deste vinho estão indisponíveis no momento.</p><button type="button" onClick={() => void refetch()}>Tentar novamente</button></div>}
+          <QueryFeedback loading={isLoading} error={error} fetching={isFetching} notFoundText="Este vinho não está disponível no catálogo público. Seu registro na adega foi mantido." loadingText="Carregando informações da vinícola…" retry={() => void refetch()} />
           {wine && <>
             <dl className="inventory-wine-card__fields">
               {[
@@ -82,6 +82,14 @@ export default function InventoryWineCard({ item, onMove, pending }: {
             <div><dt>Quantidade disponível</dt><dd>{item.quantityBottles} garrafa(s)</dd></div>
           </dl>
         </>}
+        <section className="inventory-wine-card__text">
+          <h4>Movimentações registradas</h4>
+          {item.movements?.length ? <ul className="space-y-2">{item.movements.map(movement => <li key={movement.id} className="border-b border-[#e8dccc] pb-2 text-sm">
+            <strong>{{ ENTRADA: 'Entrada', CONSUMO: 'Consumo', AJUSTE: 'Ajuste' }[movement.type]}</strong>: {movement.quantityBottles} garrafa(s) · {new Date(movement.occurredAt).toLocaleString('pt-BR')}
+            {movement.purchaseLocation && <span className="block">Local: {movement.purchaseLocation}</span>}
+            {movement.reason && <span className="block">{movement.reason}</span>}
+          </li>)}</ul> : <p>Nenhuma movimentação disponível para este rótulo.</p>}
+        </section>
       </div>}
     </article>
   );

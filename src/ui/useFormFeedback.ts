@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ApiError } from '../api/feedback';
 
-export function useFormFeedback(prefix: string) {
+export function useFormFeedback(prefix: string, aliases: Record<string, string> = {}) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   function show(next: Record<string, string>, focus = true) {
     setErrors(next);
@@ -11,7 +11,10 @@ export function useFormFeedback(prefix: string) {
     }
   }
   function fromApi(error: unknown) {
-    if (error instanceof ApiError) show(Object.fromEntries(error.issues.filter(issue => typeof issue.path[0] === 'string').map(issue => [String(issue.path[0]), issue.message])));
+    if (error instanceof ApiError) show(Object.fromEntries(error.issues.filter(issue => typeof issue.path[0] === 'string').map(issue => {
+      const key = String(issue.path.filter(part => typeof part === 'string').at(-1));
+      return [aliases[key] || key, issue.message];
+    })));
   }
   function field(name: string) {
     return { id: `${prefix}-${name}`, name, 'aria-invalid': Boolean(errors[name]), 'aria-describedby': errors[name] ? `${prefix}-${name}-error` : undefined };

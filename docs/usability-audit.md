@@ -120,3 +120,30 @@ Resultados, mensagens, commits e limitações serão consolidados aqui após cad
 - Consulta tem carregamento, falha com retry, vazio real e vazio por filtro.
 - 60 testes aprovados em 17 arquivos; typecheck/lint aprovados. Sem alteração
   de permissões, política de exclusão ou banco. Modal real ainda requer teste visual.
+
+### Grupo 7 — Pedidos e estoque/adega
+
+- Grupo administrativo preservado em `d1476a3`; retomada conferiu status, diff e log.
+- Pedidos e adega distinguem carregamento/erro/vazio; total não indica zero antes
+  da resposta. Erros oferecem nova tentativa sem limpar os formulários.
+- Labels persistentes, quantidade inteira positiva, foto obrigatória quando
+  aplicável, erros inline e foco no primeiro campo; caminhos aninhados da API
+  são associados aos campos do pedido. Imagem atual do pedido permanece visível.
+- Salvamento, exclusão e movimentação bloqueiam chamadas concorrentes; sucesso e
+  falha têm feedback. Campos são limpos somente após sucesso. Pedido fechado pode
+  ser retomado; trocar por outro formulário pede confirmação.
+- Vinhos já vinculados continuam identificáveis ao editar pedido mesmo se saírem
+  do catálogo. Exclusão mantém a regra existente: garrafas e movimentos preservados.
+- Adega mostra as movimentações já retornadas pela API. Imagens privadas mantêm
+  autenticação por cabeçalho e URLs temporárias, com estados de carregamento/falha.
+- O diff maior de ClientSectionPage inclui formatação de JSX antes concentrado
+  em linhas enormes; não houve redesign ou mudança de banco/backend nesta etapa.
+- A última suíte completa anterior passou com 67 testes, antes dos ajustes finais.
+  A repetição elevada foi recusada por limite de uso na revisão automática.
+- Na retomada, teste unitário restrito falhou ao iniciar esbuild (`spawn EPERM`).
+  Após inspeção, foi autorizada execução elevada **somente de testes unitários sem
+  banco**: 14 testes passaram (formValidation, ClientSectionPage, QueryFeedback,
+  feedback); também passaram os dois testes de saveWithImage em execução separada.
+- Typecheck, lint e diff-check aprovados. Clique real, teclado, responsividade e
+  integração ponta a ponta continuam sujeitos à validação em navegador conectado.
+- Nenhum dado apagado, migration alterada ou volume recriado.
