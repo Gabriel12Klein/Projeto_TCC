@@ -12,6 +12,7 @@ import HomePage from './pages/Home/HomePage';
 import ProfilePage from './pages/Profile/ProfilePage';
 import BatchPublicPage from './pages/Catalog/BatchPublicPage';
 import ClientSectionPage from './pages/Client/ClientSectionPage';
+import { ApiError } from './api/feedback';
 
 function Loading() {
   return (
@@ -34,6 +35,16 @@ export default function App() {
   const navigate = useNavigate();
   const [checkingSession, setCheckingSession] = useState(Boolean(getToken()));
   const [user, setUser] = useState<User | null>(getStoredUser());
+  const [sessionProblem, setSessionProblem] = useState('');
+
+  useEffect(() => {
+    const expired = () => {
+      clearSession(); queryClient.clear(); setUser(null); setCheckingSession(false);
+      navigate('/login?motivo=sessao-expirada', { replace: true });
+    };
+    window.addEventListener('vinum:session-expired', expired);
+    return () => window.removeEventListener('vinum:session-expired', expired);
+  }, [navigate, queryClient]);
 
   useEffect(() => {
     if (!getToken()) {
@@ -43,12 +54,14 @@ export default function App() {
     api
       .me()
       .then((currentUser) => {
+        const token = getToken();
+        if (token) saveSession({ token, user: currentUser });
         setUser(currentUser);
       })
-      .catch(() => {
-        queryClient.clear();
-        clearSession();
-        setUser(null);
+      .catch((error) => {
+        if (error instanceof ApiError && error.status === 401) {
+          queryClient.clear(); clearSession(); setUser(null);
+        } else setSessionProblem('Não foi possível verificar sua sessão. Sua conta não foi desconectada; tente novamente quando o serviço estiver disponível.');
       })
       .finally(() => setCheckingSession(false));
   }, [queryClient]);
@@ -70,6 +83,9 @@ export default function App() {
     setUser(loggedUser);
     navigate(loggedUser.role === 'ADMIN' || loggedUser.role === 'EDITOR' ? '/admin' : '/');
   }
+
+  if (checkingSession) return <Loading />;
+  if (sessionProblem) return <main className="mx-auto max-w-xl p-8"><h1 className="text-2xl">Não foi possível continuar</h1><p role="alert" className="my-4">{sessionProblem}</p><button type="button" className="rounded-lg bg-[#5b0c1b] px-5 py-3 text-white" onClick={() => window.location.reload()}>Tentar novamente</button></main>;
 
   return (
     <Routes>

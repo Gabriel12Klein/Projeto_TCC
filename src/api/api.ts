@@ -1,5 +1,6 @@
 import type { AuthSession, CatalogWine, CatalogWineDetail, CustomerOrder, EntityRecord, InventoryItem, PublicBatchDetail, ResourceKey, User } from '../types';
 import type { AdminSummary, WineryAccount, WineryAccountInput } from '../pages/Admin/components/adminAccount.types';
+import { ApiError, networkMessage, responseMessage, type FieldIssue } from './feedback';
 
 const TOKEN_KEY = 'vinum_token';
 const USER_KEY = 'vinum_user';
@@ -29,17 +30,20 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
   const token = getToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers });
-  const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
+  let response: Response;
+  let text: string;
+  try {
+    response = await fetch(`${API_URL}${path}`, { ...options, headers });
+    text = await response.text();
+  } catch { throw new ApiError(networkMessage, 0); }
+  let data: any = null;
+  try { data = text ? JSON.parse(text) : null; } catch {
+    throw new ApiError('O serviço não respondeu como esperado. Aguarde um momento e tente novamente.', response.status);
+  }
   if (!response.ok) {
-    const issueMessage = Array.isArray(data?.issues)
-      ? data.issues
-          .map((issue: { message?: string }) => issue.message)
-          .filter(Boolean)
-          .join(' ')
-      : '';
-    throw new Error(issueMessage || data?.message || 'Erro ao comunicar com o servidor.');
+    const issues: FieldIssue[] = Array.isArray(data?.issues) ? data.issues.map((issue: FieldIssue) => ({ path: Array.isArray(issue.path) ? issue.path : [], message: responseMessage(response.status, issue.message) })) : [];
+    if (response.status === 401 && token && path !== '/auth/login') window.dispatchEvent(new Event('vinum:session-expired'));
+    throw new ApiError(issues.map(issue => issue.message).join(' ') || responseMessage(response.status, data?.message), response.status, issues);
   }
   return data;
 }

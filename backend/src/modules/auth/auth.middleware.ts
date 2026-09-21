@@ -8,7 +8,7 @@ function bearerToken(authorization?: string) {
 
 export const requireAuth: RequestHandler = asyncRoute(async (req, res, next) => {
   const token = bearerToken(req.headers.authorization);
-  if (!token) throw new AppError(401, 'Sessão não autenticada.');
+  if (!token) throw new AppError(401, 'Entre na sua conta para continuar.');
   res.locals.user = await authService.authenticate(token);
   res.locals.token = token;
   next();
