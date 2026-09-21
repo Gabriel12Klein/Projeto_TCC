@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import PrivateImage from './PrivateImage';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/api';
@@ -30,7 +31,7 @@ export default function InventoryWineCard({ item, onMove, pending }: {
       <div className="inventory-wine-card__header">
         <button type="button" className="inventory-wine-card__toggle" aria-expanded={expanded} aria-controls={id} onClick={() => setExpanded(!expanded)}>
           <span className="inventory-wine-card__photo">
-            <img src={image || wineIcon} alt="" className={image ? '' : 'inventory-wine-card__fallback'} />
+            <PrivateImage src={image || wineIcon} alt="" className={image ? '' : 'inventory-wine-card__fallback'} />
           </span>
           <span className="inventory-wine-card__summary">
             <span className="inventory-wine-card__name">{item.name}</span>

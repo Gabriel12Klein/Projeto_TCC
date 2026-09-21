@@ -1,25 +1,24 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
-import { extname } from 'node:path';
 import { unlink } from 'node:fs/promises';
 import multer from 'multer';
 import { ensureUploadDirectory } from '../../common/files.js';
 import { AppError } from '../../common/http.js';
 import { asyncRoute } from '../../common/http.js';
-import { requireAuth } from '../auth/auth.middleware.js';
+import { requireAuth, requireRoles } from '../auth/auth.middleware.js';
 import { inventoryCreateSchema, movementSchema, orderSchema } from './customer.schema.js';
 import { customerService } from './customer.service.js';
 
 const router = Router();
 const upload = multer({
-  storage: multer.diskStorage({ destination: ensureUploadDirectory('inventory'), filename: (_req, file, callback) => callback(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`) }),
+  storage: multer.diskStorage({ destination: ensureUploadDirectory('inventory'), filename: (_req, file, callback) => callback(null, `${randomUUID()}.${file.mimetype === 'image/jpeg' ? 'jpg' : file.mimetype === 'image/webp' ? 'webp' : 'png'}`) }),
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, callback) => {
     if (!new Set(['image/jpeg', 'image/png', 'image/webp']).has(file.mimetype)) return callback(new AppError(400, 'Envie uma imagem JPG, PNG ou WebP.'));
     callback(null, true);
   },
 });
-router.use(requireAuth);
+router.use(requireAuth, requireRoles('CUSTOMER'));
 
 router.get('/pedidos', asyncRoute(async (_req, res) => {
   res.json(await customerService.listOrders(String(res.locals.user.id)));

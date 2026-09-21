@@ -13,9 +13,14 @@ const orderItemSchema = z.object({
 export const orderSchema = z.object({
   source: z.enum(['VINICULA', 'OUTRO_LOCAL']).default('VINICULA'),
   purchaseDate: z.coerce.date(),
-  purchaseLocation: z.string().trim().max(200).optional(),
+  purchaseLocation: z.string().trim().min(1, 'Informe o local da compra.').max(200),
   notes: z.string().trim().optional(),
   items: z.array(orderItemSchema).min(1),
+}).superRefine((input, ctx) => {
+  input.items.forEach((item, index) => {
+    if (input.source === 'VINICULA' && !item.wineId) ctx.addIssue({ code: 'custom', path: ['items', index, 'wineId'], message: 'Selecione um vinho do catálogo da VINUM.' });
+    if (input.source === 'OUTRO_LOCAL' && !item.wineId && !item.wineName) ctx.addIssue({ code: 'custom', path: ['items', index, 'wineName'], message: 'Informe o nome do rótulo externo.' });
+  });
 });
 
 export const movementSchema = z.object({

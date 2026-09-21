@@ -1,6 +1,6 @@
 import { AppError } from '../../common/http.js';
 import { prisma } from '../../lib/prisma.js';
-import type { InventoryCreateInput, MovementInput, OrderInput } from './customer.schema.js';
+import { orderSchema, type InventoryCreateInput, type MovementInput, type OrderInput } from './customer.schema.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 
 // Serialize stock changes per owner, including first insertion of a label.
@@ -24,6 +24,8 @@ export const customerService = {
   },
 
   async createOrder(userId: string, input: OrderInput, photoPath?: string) {
+    input = orderSchema.parse(input);
+    if (input.items.some(item => !item.wineId) && !photoPath) throw new AppError(400, 'Envie a foto do rótulo externo.');
     return prisma.$transaction(async (transaction) => {
       await lockInventory(transaction, userId);
       const order = await transaction.customerOrder.create({
@@ -38,7 +40,7 @@ export const customerService = {
 
       for (const item of input.items) {
         const wine = item.wineId
-          ? await transaction.wine.findUnique({ where: { id: item.wineId }, select: { id: true, name: true, winery: true, image: { select: { path: true } } } })
+          ? await transaction.wine.findFirst({ where: { id: item.wineId, status: 'PUBLISHED' }, select: { id: true, name: true, winery: true, image: { select: { path: true } } } })
           : null;
         if (item.wineId && !wine) throw new AppError(400, 'O vinho selecionado não foi encontrado no catálogo.');
 
@@ -99,6 +101,7 @@ export const customerService = {
   },
 
   async updateOrderItem(userId: string, orderId: string, itemId: string, input: OrderInput, photoPath?: string) {
+    input = orderSchema.parse(input);
     if (input.items.length !== 1) throw new AppError(400, 'Edite um rótulo por vez.');
     return prisma.$transaction(async (transaction) => {
       await lockInventory(transaction, userId);
@@ -114,6 +117,7 @@ export const customerService = {
         where: { id: item.wineId }, include: { winery: true, image: true },
       }) : null;
       if (item.wineId && !wine) throw new AppError(400, 'O vinho selecionado não foi encontrado.');
+      if (wine && wine.id !== old.wineId && wine.status !== 'PUBLISHED') throw new AppError(400, 'Selecione um vinho publicado no catálogo.');
       const name = wine?.name ?? item.wineName;
       if (!name) throw new AppError(400, 'Informe o nome do rótulo.');
       const sameWine = (wine?.id ?? null) === old.wineId && (Boolean(wine) || name === old.wineName);
@@ -121,6 +125,7 @@ export const customerService = {
       const nextPrevious = previous.quantityBottles - removedQuantity;
       if (nextPrevious < 0) throw new AppError(409, 'A alteração retiraria garrafas já consumidas. Confira o saldo antes de reduzir ou trocar o rótulo.');
       const image = photoPath ?? (sameWine ? old.photoPath : wine?.image?.path) ?? null;
+      if (!wine && !image) throw new AppError(400, 'Envie a foto do rótulo externo.');
       const wineryName = item.wineryName ?? wine?.winery?.name ?? (sameWine ? old.wineryName : null);
       await transaction.inventoryItem.update({ where: { id: previous.id }, data: {
         quantityBottles: nextPrevious, active: nextPrevious > 0,
