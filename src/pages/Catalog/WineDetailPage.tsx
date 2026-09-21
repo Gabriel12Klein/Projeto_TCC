@@ -1,3 +1,4 @@
+import QueryFeedback from '../../ui/QueryFeedback';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
@@ -10,6 +11,8 @@ export default function WineDetailPage() {
     data: wine,
     isLoading,
     error,
+    refetch,
+    isFetching,
   } = useQuery({
     queryKey: ['catalog-wine', slug],
     queryFn: () => api.catalog.detail(slug),
@@ -17,11 +20,11 @@ export default function WineDetailPage() {
   });
 
   if (isLoading)
-    return <main className="mx-auto min-h-[60vh] max-w-7xl px-5 py-16">Carregando vinho...</main>;
+    return <main role="status" className="mx-auto min-h-[60vh] max-w-7xl px-5 py-16">Carregando vinho...</main>;
   if (error || !wine)
     return (
       <main className="mx-auto min-h-[60vh] max-w-7xl px-5 py-16">
-        <p>Vinho não encontrado.</p>
+        <QueryFeedback error={error} fetching={isFetching} empty={!error} emptyText="Vinho não encontrado." notFoundText="Este vinho não foi encontrado ou não está publicado." retry={() => void refetch()} />
         <Link className="mt-4 inline-block text-[#851329]" to="/catalogo">
           ← Voltar ao catálogo
         </Link>

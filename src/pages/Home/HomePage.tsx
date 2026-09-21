@@ -1,16 +1,46 @@
-import { useState } from 'react';
+import QueryFeedback from '../../ui/QueryFeedback';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { api, clearSession, getStoredUser } from '../../api/api';
+import { api, getStoredUser } from '../../api/api';
 import logo from '../Login/assets/logo-vinum.png';
 import background from '../Login/assets/background-login.png';
 import profileIcon from '../../assets/admin/common/profile.png';
 
-export default function HomePage() {
+export default function HomePage({ onLogout }: { onLogout: () => Promise<void> }) {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+  const exiting = useRef(false);
+  const [leaving, setLeaving] = useState(false);
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    const outside = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setProfileMenuOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setProfileMenuOpen(false);
+        trigger.current?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [profileMenuOpen]);
   const user = getStoredUser();
   const firstName = user?.name.trim().split(/\s+/)[0] ?? '';
-  const { data: wines = [], isLoading } = useQuery({
+  const {
+    data: wines = [],
+    isLoading,
+    error,
+    isFetching,
+    refetch,
+  } = useQuery({
     queryKey: ['public-home-wines'],
     queryFn: () => api.catalog.list(),
   });
@@ -22,30 +52,45 @@ export default function HomePage() {
             <img className="h-14 w-auto brightness-0 invert" src={logo} alt="VINUM" />
           </Link>
           {user?.role === 'CUSTOMER' ? (
-            <div className="relative">
+            <div className="relative" ref={menuRef}>
               <button
                 type="button"
                 className="inline-flex items-center gap-2 rounded-full border border-[#e0bc72] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
                 aria-expanded={profileMenuOpen}
-                aria-haspopup="menu"
+                ref={trigger}
+                aria-controls={menuId}
                 aria-label={`Abrir menu de ${firstName}`}
                 onClick={() => setProfileMenuOpen((open) => !open)}
               >
-                <img className="h-8 w-8 rounded-full object-contain" src={profileIcon} alt="" aria-hidden="true" />
+                <img
+                  className="h-8 w-8 rounded-full object-contain"
+                  src={profileIcon}
+                  alt=""
+                  aria-hidden="true"
+                />
                 <span>{firstName}</span>
-                <svg className="h-4 w-4 shrink-0 self-center" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg
+                  className="h-4 w-4 shrink-0 self-center"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
                   <path d="m6 9 6 6 6-6" />
                 </svg>
               </button>
               {profileMenuOpen ? (
                 <div
                   className="absolute right-0 mt-2 w-48 rounded-2xl border border-[#e0bc72] bg-[#fffaf4] p-2 text-left shadow-xl"
-                  role="menu"
+                  id={menuId}
                 >
                   <Link
                     className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#5b0c1b] transition hover:bg-[#f3e4d2]"
                     to="/perfil"
-                    role="menuitem"
+
                     onClick={() => setProfileMenuOpen(false)}
                   >
                     Meu perfil
@@ -53,7 +98,7 @@ export default function HomePage() {
                   <Link
                     className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#5b0c1b] transition hover:bg-[#f3e4d2]"
                     to="/estoque"
-                    role="menuitem"
+
                     onClick={() => setProfileMenuOpen(false)}
                   >
                     Meu estoque
@@ -61,7 +106,7 @@ export default function HomePage() {
                   <Link
                     className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#5b0c1b] transition hover:bg-[#f3e4d2]"
                     to="/pedidos"
-                    role="menuitem"
+
                     onClick={() => setProfileMenuOpen(false)}
                   >
                     Meus pedidos
@@ -69,14 +114,21 @@ export default function HomePage() {
                   <button
                     type="button"
                     className="block w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-[#5b0c1b] transition hover:bg-[#f3e4d2]"
-                    role="menuitem"
-                    onClick={() => {
-                      clearSession();
-                      setProfileMenuOpen(false);
-                      window.location.assign('/');
+
+                    disabled={leaving}
+                    onClick={async () => {
+                      if (exiting.current) return;
+                      exiting.current = true;
+                      setLeaving(true);
+                      try {
+                        await onLogout();
+                      } finally {
+                        exiting.current = false;
+                        setLeaving(false);
+                      }
                     }}
                   >
-                    Sair
+                    {leaving ? 'Saindo…' : 'Sair'}
                   </button>
                 </div>
               ) : null}
@@ -142,12 +194,15 @@ export default function HomePage() {
               Explore nossos rótulos e encontre o vinho ideal para cada momento.
             </p>
           </div>
-          {isLoading ? (
-            <p className="py-12 text-center text-[#715f59]">Carregando nossos rótulos...</p>
-          ) : null}
-          {!isLoading && wines.length === 0 ? (
-            <p className="py-12 text-center text-[#715f59]">Em breve, novos rótulos estarão disponíveis.</p>
-          ) : null}
+          <QueryFeedback
+            loading={isLoading}
+            error={error}
+            fetching={isFetching}
+            empty={wines.length === 0}
+            loadingText="Carregando nossos rótulos…"
+            emptyText="Em breve, novos rótulos estarão disponíveis."
+            retry={() => void refetch()}
+          />
           <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
             {wines.slice(0, 6).map((wine) => (
               <article
@@ -156,7 +211,11 @@ export default function HomePage() {
               >
                 <div className="grid h-72 w-full shrink-0 place-items-center overflow-hidden bg-[radial-gradient(circle,#f2dfc1,#dbc19a)] p-6">
                   {wine.imagePath ? (
-                    <img className="block h-auto max-h-[230px] w-auto max-w-[170px] object-contain mix-blend-multiply" src={wine.imagePath} alt={wine.name} />
+                    <img
+                      className="block h-auto max-h-[230px] w-auto max-w-[170px] object-contain mix-blend-multiply"
+                      src={wine.imagePath}
+                      alt={wine.name}
+                    />
                   ) : (
                     <span className="font-playfair text-7xl text-[#851329]/35">V</span>
                   )}

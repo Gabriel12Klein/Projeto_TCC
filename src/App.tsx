@@ -89,7 +89,7 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<HomePage onLogout={() => logout('/')} />} />
       <Route path="/consulta/lotes/:code" element={<BatchPublicPage />} />
       <Route path="/catalogo/vinhos/:slug" element={<WineDetailPage />} />
       <Route

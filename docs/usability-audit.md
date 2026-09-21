@@ -56,3 +56,17 @@ Resultados, mensagens, commits e limitações serão consolidados aqui após cad
   verifica HTML acessível; clique, foco e layout visual ainda não foram validados.
 - Sem alteração de banco. Máscaras, validação inline completa dos perfis e demais
   grupos da matriz continuam pendentes; esta seção não declara a auditoria concluída.
+
+### Grupo 3 — Consulta pública e menu
+
+- Grupo 2 registrado em `9e2a62a`.
+- Home distingue carregamento, erro com nova tentativa e catálogo vazio. Vinho e
+  lote distinguem 404 de falha de conexão; dados produtivos e QR existentes preservados.
+- Menu do cliente fecha com Escape (restaura foco) e clique externo. Links comuns
+  usam navegação por Tab, sem declarar um menu ARIA incompleto.
+- Sair na Home utiliza o mesmo logout do restante do aplicativo, revogando a sessão
+  no servidor quando disponível, com estado “Saindo…” e bloqueio de repetição.
+- Componente QueryFeedback reutilizável: prioridade de carregamento/erro sobre vazio,
+  tentativa bloqueada durante requisição. Dois testes novos, 53 testes aprovados
+  em 14 arquivos, typecheck e lint aprovados. Sem alteração de API/banco.
+- Interação visual/teclado real permanece pendente por falta de navegador conectado.

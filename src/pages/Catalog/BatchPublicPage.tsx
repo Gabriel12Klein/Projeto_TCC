@@ -1,3 +1,4 @@
+import QueryFeedback from '../../ui/QueryFeedback';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../api/api';
@@ -12,6 +13,8 @@ export default function BatchPublicPage() {
     data: batch,
     isLoading,
     error,
+    refetch,
+    isFetching,
   } = useQuery({
     queryKey: ['public-batch', code],
     queryFn: () => api.catalog.batch(code),
@@ -20,15 +23,14 @@ export default function BatchPublicPage() {
 
   if (isLoading)
     return (
-      <main className="grid min-h-screen place-items-center bg-[#f7f2eb] text-[#5b0c1b]">
+      <main role="status" className="grid min-h-screen place-items-center bg-[#f7f2eb] text-[#5b0c1b]">
         Carregando informações do lote...
       </main>
     );
   if (error || !batch) {
     return (
       <main className="mx-auto min-h-screen max-w-2xl bg-[#f7f2eb] px-5 py-16 text-center text-[#5b0c1b]">
-        <p className="font-playfair text-3xl">Lote não encontrado</p>
-        <p className="mt-3 text-[#715f59]">O QR Code pode estar inválido ou o lote não está cadastrado.</p>
+        <QueryFeedback error={error} fetching={isFetching} empty={!error} emptyText="Lote não encontrado." notFoundText="Este lote não foi encontrado ou não está publicado. Confira o código informado." retry={() => void refetch()} />
         <Link className="mt-6 inline-block font-semibold text-[#851329]" to="/">
           Voltar para a página inicial
         </Link>
