@@ -52,6 +52,7 @@ export default function AdminPage({ user, onLogout, onUserUpdate }: { user: User
   const [refreshKey, setRefreshKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [formMessage, setFormMessage] = useState('');
+  const [formBusy, setFormBusy] = useState(false);
 
   const config = moduleConfigs[module];
   const Current = components[module][tab];
@@ -64,29 +65,24 @@ export default function AdminPage({ user, onLogout, onUserUpdate }: { user: User
     sessionStorage.setItem(ADMIN_TAB_KEY, tab);
   }, [tab]);
 
-  useEffect(() => {
-    setFormMessage('');
-  }, [module, tab]);
-
   function selectModule(key: AdminModuleKey) {
+    if (formBusy) { setFormMessage('Aguarde o salvamento terminar antes de mudar de tela.'); return; }
+    setFormMessage('');
     setModule(key);
     setTab('form');
     setEditing(null);
   }
 
-  async function save(payload: Record<string, unknown>) {
-    let saved;
-    if (editing?.id) {
-      saved = await api.update(module, editing.id, payload);
-    } else {
-      saved = await api.create(module, payload);
-    }
-
+  async function save(payload: Record<string, unknown>, previousId?: string | number) {
+    const id = previousId ?? editing?.id;
+    return id ? api.update(module, String(id), payload) : api.create(module, payload);
+  }
+  async function saved() {
     setEditing(null);
     setRefreshKey((value) => value + 1);
     await queryClient.invalidateQueries();
     setTab('records');
-    return saved;
+    setFormMessage('Cadastro salvo com sucesso.');
   }
 
   function edit(item: EntityRecord) {
@@ -95,11 +91,14 @@ export default function AdminPage({ user, onLogout, onUserUpdate }: { user: User
   }
 
   function changeTab(next) {
+    if (formBusy) { setFormMessage('Aguarde o salvamento terminar antes de mudar de tela.'); return; }
+    setFormMessage('');
     setTab(next);
     if (next === 'form' && tab !== 'form') setEditing(null);
   }
 
   function handleLogout() {
+    if (formBusy) { setFormMessage('Aguarde o salvamento terminar antes de sair.'); return; }
     sessionStorage.removeItem(ADMIN_MODULE_KEY);
     sessionStorage.removeItem(ADMIN_TAB_KEY);
     onLogout?.();
@@ -134,6 +133,8 @@ export default function AdminPage({ user, onLogout, onUserUpdate }: { user: User
               draftScope={`admin:${module}`}
               refreshKey={refreshKey}
               onSave={save}
+              onSaved={saved}
+              onBusyChange={setFormBusy}
               onMessage={setFormMessage}
               onCancel={() => {
                 setEditing(null);

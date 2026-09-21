@@ -1,21 +1,27 @@
+import QueryFeedback from '../../../../ui/QueryFeedback';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../../api/api';
 import ModuleForm from '../../components/ModuleForm';
 
+const emptyOptions = [];
+
 export default function LoteCadastrar({ config, onOpenWine, ...props }: any) {
-  const { data: grapes = [] } = useQuery({
+  const grapesQuery = useQuery({
     queryKey: ['grapes', 'active'],
     queryFn: () => api.list('uvas'),
   });
-  const { data: vintages = [] } = useQuery({
+  const vintagesQuery = useQuery({
     queryKey: ['vintages', 'all'],
     queryFn: () => api.list('safras'),
   });
-  const { data: wines = [] } = useQuery({
+  const winesQuery = useQuery({
     queryKey: ['wines', 'all'],
     queryFn: () => api.list('vinhos'),
   });
+  const grapes = grapesQuery.data ?? emptyOptions;
+  const vintages = vintagesQuery.data ?? emptyOptions;
+  const wines = winesQuery.data ?? emptyOptions;
   const wineGrapeMap = useMemo(
     () => Object.fromEntries(wines.map((item) => [String(item.id), Array.isArray(item.grapeIds) ? item.grapeIds.map(String) : []])),
     [wines],
@@ -40,6 +46,9 @@ export default function LoteCadastrar({ config, onOpenWine, ...props }: any) {
     }),
   }), [config, grapes, vintages, wineGrapeMap, wines]);
 
+  const queries = [grapesQuery, vintagesQuery, winesQuery];
+  const failed = queries.find(query => query.isError);
+  if (queries.some(query => query.isPending) || failed) return <QueryFeedback loading={queries.some(query => query.isPending)} error={failed?.error} fetching={queries.some(query => query.isFetching)} loadingText="Carregando opções do cadastro…" retry={() => { queries.forEach(query => void query.refetch()); }} />;
   return <>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[9px] border border-[#e4bd84] bg-[#fffaf4] px-4 py-3 text-[13px] text-[#5f5651]" role="note">
       <span>O lote precisa estar vinculado a um vinho cadastrado.</span>

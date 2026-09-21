@@ -87,3 +87,21 @@ Resultados, mensagens, commits e limitações serão consolidados aqui após cad
   sem navegar para rota administrativa. Requisitos de senha permanecem visíveis.
 - 56 testes aprovados em 15 arquivos; typecheck/lint aprovados. Backend alterado
   apenas para validação e normalização de contato; nenhuma migration ou exclusão.
+
+### Grupo 5 — Salvamento produtivo e recuperação de foto
+
+- Grupo 4 registrado em `495c11d`.
+- Formulários produtivos bloqueiam envio concorrente e mostram “Salvando…”.
+  Não mudam para registros antes de concluir foto. Upload com falha mantém o ID
+  salvo no rascunho; retry atualiza esse vinho em vez de duplicá-lo. Após recarregar,
+  foto pendente precisa ser selecionada novamente; arquivo não vai para sessionStorage.
+- Opções de vinho, uva, classificação e safra diferenciam carregamento/erro com
+  retry. Autopreenchimento e snapshots históricos existentes foram preservados.
+- Foco não obriga preenchimento sequencial. Submit foca primeiro erro editável;
+  campos opcionais preenchidos também são validados. Erros da API associados.
+- Validação de tipo/tamanho da foto antes de salvar; limpar pede confirmação.
+  Campos têm associação de label, erro e ajuda; grid adapta para uma coluna estreita.
+- 58 testes aprovados em 16 arquivos; lint/typecheck aprovados. Dois testes novos
+  simulam falha de upload, ordem de retenção de ID e repetição sem nova criação.
+- Teste visual e interrupção real de rede permanecem pendentes. Perda da resposta
+  da criação antes de obter o ID não equivale a idempotência garantida no servidor.

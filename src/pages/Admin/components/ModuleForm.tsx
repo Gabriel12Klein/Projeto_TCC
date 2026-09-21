@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { saveWithImage } from './saveWithImage';
+import { ApiError } from '../../../api/feedback';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import FormField from './FormField';
 import saveIcon from '../../../assets/admin/common/save.png';
 import clearIcon from '../../../assets/admin/common/clear.png';
@@ -60,6 +62,7 @@ function draftPayload(form) {
 }
 
 function isValidField(field, value, form) {
+  if (field.type === 'file') return !value || (value instanceof File && ['image/png', 'image/jpeg', 'image/webp'].includes(value.type) && value.size <= 5 * 1024 * 1024);
   if (field.type === 'multi-select') return !field.required || (Array.isArray(value) && value.length > 0);
   const text = normalizedText(value);
 
@@ -134,7 +137,7 @@ function isValidField(field, value, form) {
 
 function invalidFieldMessage(field) {
   if (field.type === 'multi-select') return `Selecione pelo menos uma opção em ${field.label}.`;
-  if (field.validation === 'positiveNumber') return `O campo ${field.label} deve conter apenas números.`;
+  if (field.validation === 'positiveNumber') return `O campo ${field.label} deve conter um número maior que zero.`;
   if (field.validation === 'alcohol') return `O campo ${field.label} deve conter um número entre 0 e 100.`;
   if (field.validation === 'year') return `O campo ${field.label} deve conter um ano válido.`;
   if (field.validation === 'date' || field.validation === 'registrationDate') return `Informe uma data válida em ${field.label}.`;
@@ -145,13 +148,17 @@ function invalidFieldMessage(field) {
   return `Preencha corretamente o campo “${field.label}”.`;
 }
 
-export default function ModuleForm({ config, initialData, onSave, onCancel, onMessage, onSaved, confirmOnCancel = true, draftScope = config.key }) {
+export default function ModuleForm({ config, initialData, onSave, onCancel, onMessage, onSaved, confirmOnCancel = true, draftScope = config.key, onBusyChange = (_busy: boolean) => {} }) {
+  const sending = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [form,setForm] = useState<Record<string, any>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitted, setSubmitted] = useState(false);
   const [hydratedDraftKey, setHydratedDraftKey] = useState('');
   const draftKey = `vinum_form_draft:${draftScope}:${initialData?.id ? String(initialData.id) : 'new'}`;
   useEffect(()=>{
+    if (hydratedDraftKey === draftKey) return;
     const draft = readDraft(draftKey);
     const nextForm: Record<string, any> = {...(initialData || {}), ...(draft || {})};
     const draftFile = draftFiles.get(`${draftKey}:imageFile`);
@@ -184,6 +191,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
   },[draftKey,form,hydratedDraftKey]);
   const showMessage = (text='') => onMessage?.(text);
   const change=(name,value)=>{
+    setServerErrors(prev => { const next = { ...prev }; delete next[name]; return next; });
     if (name === 'imageFile') {
       if (typeof File !== 'undefined' && value instanceof File) draftFiles.set(`${draftKey}:${name}`, value);
       else draftFiles.delete(`${draftKey}:${name}`);
@@ -221,6 +229,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
   }
 
   function clearForm() {
+    if (!window.confirm(form.__savedId ? 'O vinho já foi salvo. Limpar o formulário não exclui o cadastro; o envio da foto ficará pendente. Continuar?' : 'Limpar todos os campos e descartar este rascunho?')) return;
     clearDraft(draftKey);
     setForm({});
     setTouched({});
@@ -232,23 +241,16 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
   ), [config.fields, form]);
 
   function firstInvalidRequired(limit = config.fields.length) {
-    return config.fields.slice(0, limit).find(field => field.required && !fieldValidity[field.name]);
+    return config.fields.slice(0, limit).find(field => !field.disabled && !fieldValidity[field.name]);
   }
 
   function focusField(field) {
     requestAnimationFrame(() => document.getElementById(`field-${field.name}`)?.focus());
   }
 
-  function handleFieldFocus(field, fieldIndex) {
-    const blockedBy = firstInvalidRequired(fieldIndex);
-    if (!blockedBy) return true;
-    showMessage(`${invalidFieldMessage(blockedBy)} Antes de continuar, corrija este campo.`);
-    focusField(blockedBy);
-    return false;
-  }
-
   async function submit(e){
     e.preventDefault();
+    if (sending.current) return;
     setSubmitted(true);
     showMessage('');
     const invalid = firstInvalidRequired();
@@ -257,20 +259,40 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
       focusField(invalid);
       return;
     }
+    const { imageFile, __savedId, __uploadPending, ...payload } = form;
+    if (__uploadPending && !(imageFile instanceof File)) {
+      showMessage('O vinho já foi salvo. Selecione novamente a foto pendente para concluir o envio.');
+      setServerErrors({ imageFile: 'Selecione a foto novamente.' }); focusField({ name: 'imageFile' }); return;
+    }
+    sending.current = true; setBusy(true); onBusyChange(true); setServerErrors({});
     try {
-      const { imageFile, ...payload } = form;
-      const saved = await onSave(payload);
-      if (config.key === 'vinhos' && imageFile instanceof File && saved?.id) {
-        await api.uploadWineImage(saved.id, imageFile);
-      }
+      const saved = await saveWithImage({
+        save: onSave, payload, previousId: __savedId,
+        file: config.key === 'vinhos' && imageFile instanceof File ? imageFile : undefined,
+        upload: (id, file) => api.uploadWineImage(String(id), file),
+        remember: id => {
+          const draft = { ...form, __savedId: id, __uploadPending: true };
+          setForm(draft);
+          try { sessionStorage.setItem(draftKey, JSON.stringify(draftPayload(draft))); } catch { /* keep in-memory retry */ }
+        },
+      });
       setForm({});
       clearDraft(draftKey);
       showMessage('Cadastro salvo com sucesso.');
-      onSaved?.(saved);
-    } catch(err) { showMessage(err.message); }
+      await onSaved?.(saved);
+    } catch(err) {
+      showMessage(err.message);
+      if (err instanceof ApiError) {
+        const fields = Object.fromEntries(err.issues.map(issue => [String(issue.path[0]), issue.message]));
+        setServerErrors(fields);
+        const first = config.fields.find(field => fields[field.name] && !field.disabled);
+        if (first) focusField(first);
+      }
+    } finally { sending.current = false; setBusy(false); onBusyChange(false); }
   }
 
-  return <form className="min-h-full flex flex-col" onSubmit={submit} noValidate>
+  return <form className="min-h-full flex flex-col" onSubmit={submit} noValidate aria-busy={busy}>
+    <fieldset disabled={busy} className="contents">
     <div className="flex items-center gap-[clamp(12px,1vw,16px)] min-w-0">
       <span className="w-[clamp(58px,4.8vw,68px)] h-[clamp(58px,4.8vw,68px)] border border-[#e5c99d] rounded-full grid place-items-center shrink-0"><img className="w-[70%] h-[70%] object-contain" src={config.icon} alt="" /></span>
       <div><h2 className="mt-0 mb-[5px] font-playfair text-[#6a1424] text-[clamp(21px,1.7vw,25px)] font-semibold">{config.formTitle}</h2><p className="m-0 text-[#746e6b] text-[clamp(12px,0.95vw,14px)] leading-[1.35]">{config.formSubtitle}</p></div>
@@ -283,25 +305,25 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
       {config.sectionSubtitle && <p className="mt-1 mb-0 text-[12px] text-[#857d79]">{config.sectionSubtitle}</p>}
     </div>}
 
-    <div className="grid grid-cols-2 gap-y-[clamp(14px,1.25vw,18px)] gap-x-[clamp(22px,2.5vw,38px)] max-[1450px]:gap-y-[14px] max-[1450px]:gap-x-6">
-      {(config.blockchainInfo ? config.fields.filter((field) => field.name !== 'registrationDate') : config.fields).map((f, fieldIndex)=>{
+    <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-y-[clamp(14px,1.25vw,18px)] gap-x-[clamp(22px,2.5vw,38px)] max-[1450px]:gap-y-[14px] max-[1450px]:gap-x-6">
+      {(config.blockchainInfo ? config.fields.filter((field) => field.name !== 'registrationDate') : config.fields).map((f)=>{
         if (config.key === 'lotes' && f.name === 'vintageId') {
           f = { ...f, options: f.options.filter((option) => option.wineId === String(form.wineId ?? '')) };
         }
         const wrapper = f.full
-          ? `min-w-0 col-span-2 ${f.action ? 'grid grid-cols-[minmax(0,1fr)_auto] gap-[14px] items-end' : ''}`
+          ? `min-w-0 col-span-2 max-sm:col-span-1 ${f.action ? 'grid grid-cols-[minmax(0,1fr)_auto] gap-[14px] items-end' : ''}`
           : 'min-w-0';
-        const unlocked = !firstInvalidRequired(fieldIndex);
-        const invalid = (touched[f.name] || submitted) && !fieldValidity[f.name];
+        const unlocked = true;
+        const invalid = Boolean(serverErrors[f.name]) || ((touched[f.name] || submitted) && !fieldValidity[f.name]);
         return <div key={f.name} className={wrapper}>
-          <div className={f.action ? 'col-start-1 col-end-2' : ''}><FormField field={f} value={form[f.name]} existingImage={f.type === 'file' ? String(initialData?.imageName ?? '') : ''} onChange={change} valid={fieldValidity[f.name]} invalid={invalid} error={invalid ? invalidFieldMessage(f) : ''} unlocked={unlocked} onRequestFocus={()=>handleFieldFocus(f, fieldIndex)}/></div>
+          <div className={f.action ? 'col-start-1 col-end-2' : ''}><FormField field={f} value={form[f.name]} existingImage={f.type === 'file' ? String(initialData?.imageName ?? '') : ''} onChange={change} valid={fieldValidity[f.name]} invalid={invalid} error={serverErrors[f.name] || (invalid ? invalidFieldMessage(f) : '')} unlocked={unlocked} onRequestFocus={()=>{}}/></div>
           {f.action && <button type="button" disabled={f.disabled} className={`col-start-2 col-end-3 row-start-1 self-end mb-6 h-[clamp(44px,4.6vh,48px)] px-[clamp(15px,1.4vw,22px)] border-[1.5px] rounded-[6px] font-bold flex items-center gap-[9px] whitespace-nowrap transition-[transform,box-shadow,background-color,border-color,color] duration-150 ${f.disabled ? 'border-[#cfc7c4] bg-[#f4f1ef] text-[#9e9692] opacity-60 cursor-not-allowed' : 'border-[#8e1e35] bg-white text-[#7a1a2d] hover:bg-[#fff8f6] hover:border-[#8f2940] hover:text-[#75172a] hover:shadow-[0_5px_13px_rgba(91,12,27,.10)] hover:-translate-y-px active:translate-y-0 active:scale-[.98] focus-visible:outline-[3px] focus-visible:outline-[rgba(194,137,57,.42)] focus-visible:outline-offset-2'}`}><img className="w-[22px] h-[22px] object-contain" src={linkIcon} alt="" />{f.action}</button>}
         </div>;
       })}
     </div>
 
     {config.blockchainInfo && <div className="mt-2 flex flex-wrap gap-[clamp(10px,1vw,14px)] border-b border-[#ece6e1] pb-[clamp(15px,1.5vw,20px)]">
-      <button className="min-w-[clamp(200px,18vw,230px)] min-h-12 h-[clamp(48px,5vh,54px)] rounded-[7px] px-[clamp(16px,1.5vw,24px)] flex items-center justify-center gap-[10px] text-[clamp(13px,1vw,15px)] cursor-pointer border-0 bg-[linear-gradient(100deg,#8f0826,#5d0c1c)] text-white transition-[transform,box-shadow,filter] duration-150 hover:brightness-[1.08] hover:shadow-[0_7px_16px_rgba(105,10,31,.22)] hover:-translate-y-px active:translate-y-0 active:scale-[.98] focus-visible:outline-[3px] focus-visible:outline-[rgba(194,137,57,.42)] focus-visible:outline-offset-2" type="submit"><img className="w-[25px] h-[25px] object-contain" src={saveIcon} alt=""/>{initialData?.id?'Salvar alterações':'Salvar cadastro'}</button>
+      <button className="min-w-[clamp(200px,18vw,230px)] min-h-12 h-[clamp(48px,5vh,54px)] rounded-[7px] px-[clamp(16px,1.5vw,24px)] flex items-center justify-center gap-[10px] text-[clamp(13px,1vw,15px)] cursor-pointer border-0 bg-[linear-gradient(100deg,#8f0826,#5d0c1c)] text-white transition-[transform,box-shadow,filter] duration-150 hover:brightness-[1.08] hover:shadow-[0_7px_16px_rgba(105,10,31,.22)] hover:-translate-y-px active:translate-y-0 active:scale-[.98] focus-visible:outline-[3px] focus-visible:outline-[rgba(194,137,57,.42)] focus-visible:outline-offset-2" type="submit"><img className="w-[25px] h-[25px] object-contain" src={saveIcon} alt=""/>{busy ? 'Salvando…' : initialData?.id || form.__savedId ? 'Salvar alterações' : 'Salvar cadastro'}</button>
       <button type="button" className={secondaryButton} onClick={clearForm}><img className="w-[25px] h-[25px] object-contain" src={clearIcon} alt=""/>Limpar</button>
       <button type="button" className={secondaryButton} onClick={cancelForm}><img className="w-[25px] h-[25px] object-contain" src={cancelIcon} alt=""/>Cancelar</button>
     </div>}
@@ -321,9 +343,10 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     </div>}
 
     {!config.blockchainInfo && <div className="flex flex-wrap gap-[clamp(10px,1vw,14px)] mt-[clamp(18px,2vw,26px)] pt-[clamp(15px,1.5vw,20px)] border-t border-[#ece6e1] max-[1450px]:mt-[18px] max-[1450px]:pt-[15px]">
-      <button className="min-w-[clamp(200px,18vw,230px)] min-h-12 h-[clamp(48px,5vh,54px)] rounded-[7px] px-[clamp(16px,1.5vw,24px)] flex items-center justify-center gap-[10px] text-[clamp(13px,1vw,15px)] cursor-pointer border-0 bg-[linear-gradient(100deg,#8f0826,#5d0c1c)] text-white transition-[transform,box-shadow,filter] duration-150 hover:brightness-[1.08] hover:shadow-[0_7px_16px_rgba(105,10,31,.22)] hover:-translate-y-px active:translate-y-0 active:scale-[.98] focus-visible:outline-[3px] focus-visible:outline-[rgba(194,137,57,.42)] focus-visible:outline-offset-2" type="submit"><img className="w-[25px] h-[25px] object-contain" src={saveIcon} alt=""/>{initialData?.id?'Salvar alterações':'Salvar cadastro'}</button>
+      <button className="min-w-[clamp(200px,18vw,230px)] min-h-12 h-[clamp(48px,5vh,54px)] rounded-[7px] px-[clamp(16px,1.5vw,24px)] flex items-center justify-center gap-[10px] text-[clamp(13px,1vw,15px)] cursor-pointer border-0 bg-[linear-gradient(100deg,#8f0826,#5d0c1c)] text-white transition-[transform,box-shadow,filter] duration-150 hover:brightness-[1.08] hover:shadow-[0_7px_16px_rgba(105,10,31,.22)] hover:-translate-y-px active:translate-y-0 active:scale-[.98] focus-visible:outline-[3px] focus-visible:outline-[rgba(194,137,57,.42)] focus-visible:outline-offset-2" type="submit"><img className="w-[25px] h-[25px] object-contain" src={saveIcon} alt=""/>{busy ? 'Salvando…' : initialData?.id || form.__savedId ? 'Salvar alterações' : 'Salvar cadastro'}</button>
       <button type="button" className={secondaryButton} onClick={clearForm}><img className="w-[25px] h-[25px] object-contain" src={clearIcon} alt=""/>Limpar</button>
       <button type="button" className={secondaryButton} onClick={cancelForm}><img className="w-[25px] h-[25px] object-contain" src={cancelIcon} alt=""/>Cancelar</button>
     </div>}
+    </fieldset>
   </form>;
 }

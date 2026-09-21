@@ -57,7 +57,7 @@ export default function FormField({ field, value, existingImage = '', onChange, 
   const controlClass = 'w-full min-w-0 border-0 outline-0 bg-transparent font-[inherit] text-[clamp(12px,0.95vw,14px)] text-[#332a2a] placeholder:text-[#aaa4a2]';
 
   const content = field.type === 'select'
-    ? <select className={`${controlClass} h-[43px]`} id={id} value={value ?? ''} onChange={e=>onChange(field.name,e.target.value)} required={field.required} disabled={field.disabled} aria-invalid={invalid} {...focusProps}><option value="">Selecione</option>{field.options?.map(o=><option key={optionValue(o)} value={optionValue(o)}>{optionLabel(o)}</option>)}</select>
+    ? <select className={`${controlClass} h-[43px]`} id={id} value={value ?? ''} onChange={e=>onChange(field.name,e.target.value)} required={field.required} disabled={field.disabled} aria-invalid={invalid} aria-describedby={[invalid && `${id}-error`, field.note && `${id}-help`].filter(Boolean).join(' ') || undefined} {...focusProps}><option value="">Selecione</option>{field.options?.map(o=><option key={optionValue(o)} value={optionValue(o)}>{optionLabel(o)}</option>)}</select>
     : field.type === 'textarea'
       ? <textarea className={`${controlClass} h-[calc(100%-16px)] resize-none`} id={id} value={value ?? ''} maxLength={field.maxLength} placeholder={field.placeholder} onChange={handleChange} required={field.required} disabled={field.disabled} aria-invalid={invalid} {...focusProps}/>
       : field.type === 'multi-select'
@@ -74,7 +74,7 @@ export default function FormField({ field, value, existingImage = '', onChange, 
             {Array.isArray(value) && value.map(selectedValue => {
               const selectedOption = field.options?.find(option => optionValue(option) === selectedValue);
               return <button type="button" key={selectedValue} disabled={field.disabled} className={`rounded-full border border-[#c9a66e] bg-[#fff4df] px-2.5 py-1 text-xs text-[#6a1424] ${field.disabled ? 'cursor-default opacity-80' : ''}`} onClick={event => { event.preventDefault(); event.stopPropagation(); onChange(field.name, value.filter(item => item !== selectedValue)); }} aria-label={`Remover ${selectedOption ? optionLabel(selectedOption) : selectedValue}`}>
-                {selectedOption ? optionLabel(selectedOption) : selectedValue} ×
+                {selectedOption ? optionLabel(selectedOption) : 'Uva indisponível'}{!field.disabled && ' ×'}
               </button>;
             })}
           </div>
@@ -114,7 +114,7 @@ export default function FormField({ field, value, existingImage = '', onChange, 
       ? 'relative h-[clamp(76px,8vh,84px)] items-center justify-center border-dashed bg-[#fffdf9] transition-colors hover:border-[#9d4b5b] hover:bg-[#fff9f0]'
       : 'min-h-[clamp(46px,4.8vh,51px)] items-center';
 
-  return <label className="block min-w-0">
+  return <label htmlFor={id} className="block min-w-0">
     <span className="block text-[clamp(12px,0.95vw,14px)] font-semibold mb-[7px] text-[#302627]">{field.label}{field.required && <b className="text-[#af1530] ml-[3px]" aria-label="obrigatório">*</b>}</span>
     <div className={`border-[1.6px] rounded-[7px] flex px-[clamp(11px,1vw,14px)] gap-[10px] ${field.disabled ? 'border-[#ddd8d5] bg-[#f4f1ef] opacity-60 cursor-not-allowed' : invalid ? 'border-[#c9343d] bg-[#fff7f7] shadow-[0_0_0_3px_rgba(201,52,61,.12)] focus-within:border-[#a91f2c]' : 'border-[#d6d0cc] bg-white focus-within:border-[#9d4b5b] focus-within:shadow-[0_0_0_3px_rgba(125,29,45,.08)]'} ${inputShellClass}`}>
       {field.icon && <img className="w-6 h-6 object-contain opacity-[.78] shrink-0" src={field.icon} alt="" />}
@@ -122,7 +122,7 @@ export default function FormField({ field, value, existingImage = '', onChange, 
       {field.suffix && <em className="not-italic min-w-[42px] text-center text-[#5d5552] text-[13px]">{field.suffix}</em>}
       {field.required && field.type !== 'select' && valid && <span className="w-[22px] h-[22px] rounded-full bg-[#e7f3e2] text-[#2d772d] grid place-items-center shrink-0 text-[15px] font-bold leading-none" aria-label="Campo preenchido corretamente" title="Campo preenchido corretamente">✓</span>}
     </div>
-    {invalid && error && <small className="mt-1.5 block text-[11.5px] leading-[1.35] text-[#b4232d]" role="alert">{error}</small>}
-    {field.note && <small className="block text-[#857d79] text-[11.5px] mt-1.5 leading-[1.35]">{field.note}</small>}
+    {invalid && error && <small id={`${id}-error`} className="mt-1.5 block text-[11.5px] leading-[1.35] text-[#b4232d]" role="alert">{error}</small>}
+    {field.note && <small id={`${id}-help`} className="block text-[#857d79] text-[11.5px] mt-1.5 leading-[1.35]">{field.note}</small>}
   </label>;
 }

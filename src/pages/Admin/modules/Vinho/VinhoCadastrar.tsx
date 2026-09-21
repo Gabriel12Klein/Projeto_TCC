@@ -1,19 +1,25 @@
+import QueryFeedback from '../../../../ui/QueryFeedback';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../../api/api';
 import ModuleForm from '../../components/ModuleForm';
 
+const emptyOptions = [];
+
 export default function VinhoCadastrar({ config, ...props }: any) {
-  const { data: classifications = [] } = useQuery({ queryKey: ['classifications'], queryFn: () => api.list('classificacoes') });
-  const { data: wineTypes = [] } = useQuery({
+  const classificationsQuery = useQuery({ queryKey: ['classifications'], queryFn: () => api.list('classificacoes') });
+  const wineTypesQuery = useQuery({
     queryKey: ['wine-types', 'active'],
     queryFn: () => api.list('tipos-vinho'),
   });
-  const { data: grapes = [] } = useQuery({
+  const grapesQuery = useQuery({
     queryKey: ['grapes', 'active'],
     queryFn: () => api.list('uvas'),
   });
 
+  const classifications = classificationsQuery.data ?? emptyOptions;
+  const wineTypes = wineTypesQuery.data ?? emptyOptions;
+  const grapes = grapesQuery.data ?? emptyOptions;
   const formConfig = useMemo(() => ({
     ...config,
     fields: config.fields.map((field) => {
@@ -38,5 +44,8 @@ export default function VinhoCadastrar({ config, ...props }: any) {
     }),
   }), [config, grapes, wineTypes, classifications, props.initialData?.classificationId]);
 
+  const queries = [classificationsQuery, wineTypesQuery, grapesQuery];
+  const failed = queries.find(query => query.isError);
+  if (queries.some(query => query.isPending) || failed) return <QueryFeedback loading={queries.some(query => query.isPending)} error={failed?.error} fetching={queries.some(query => query.isFetching)} loadingText="Carregando opções do cadastro…" retry={() => { queries.forEach(query => void query.refetch()); }} />;
   return <ModuleForm {...props} config={formConfig} />;
 }
