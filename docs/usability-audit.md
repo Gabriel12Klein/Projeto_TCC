@@ -105,3 +105,18 @@ Resultados, mensagens, commits e limitações serão consolidados aqui após cad
   simulam falha de upload, ordem de retenção de ID e repetição sem nova criação.
 - Teste visual e interrupção real de rede permanecem pendentes. Perda da resposta
   da criação antes de obter o ID não equivale a idempotência garantida no servidor.
+
+### Grupo 6 — Registros administrativos
+
+- Grupo 5 registrado em `6d39bae`.
+- Visualizar substitui alert/JSON por diálogo com nomes relacionados, unidades,
+  datas legíveis e observações completas; nenhuma chave/ID interno é apresentado.
+- Situação, ordenação crescente/decrescente e limpar filtros funcionam. Busca
+  ignora acentos e usa campos de apresentação, não serialização de IDs internos.
+- Paginação limita página atual após alterações e mantém janela de páginas próxima
+  da seleção. Controles anterior/próxima têm nome acessível.
+- Exclusão identifica o registro, informa irreversibilidade/vínculos protegidos,
+  bloqueia repetição, distingue sucesso/erro e atualiza consultas/resumo.
+- Consulta tem carregamento, falha com retry, vazio real e vazio por filtro.
+- 60 testes aprovados em 17 arquivos; typecheck/lint aprovados. Sem alteração
+  de permissões, política de exclusão ou banco. Modal real ainda requer teste visual.
