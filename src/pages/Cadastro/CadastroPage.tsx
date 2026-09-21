@@ -99,7 +99,7 @@ export default function CadastroPage({ onOpenLogin }) {
         style={{ backgroundImage: `url(${backgroundRegister})`, '--stage-width': 'min(92vw, calc((100vh - clamp(36px, 6.4vw, 120px)) * 1.525), 1414px)' }}
         aria-label="Tela de cadastro do sistema VINUM"
       >
-        <section className="auth-panel absolute z-[2] left-[4.2%] top-[5.4%] w-[35.4%] h-[87.6%] flex flex-col items-stretch bg-white px-[3.2%] pt-[1.8%] pb-[2.3%] rounded-[42px] shadow-[0_18px_45px_rgb(37_6_9_/_18%)] max-[1120px]:left-1/2 max-[1120px]:top-1/2 max-[1120px]:w-[min(90%,530px)] max-[1120px]:h-auto max-[1120px]:-translate-x-1/2 max-[1120px]:-translate-y-1/2 max-[1120px]:px-[30px] max-[1120px]:pt-[34px] max-[1120px]:pb-[28px] max-[1120px]:rounded-[36px] max-[560px]:w-[calc(100%_-_28px)] max-[560px]:px-5 max-[560px]:pt-7 max-[560px]:pb-6 max-[560px]:rounded-[28px]">
+        <section className="auth-panel registration-panel absolute z-[2] left-[4.2%] top-[5.4%] w-[35.4%] h-[87.6%] flex flex-col items-stretch bg-white px-[3.2%] pt-[1.8%] pb-[2.3%] rounded-[42px] shadow-[0_18px_45px_rgb(37_6_9_/_18%)] max-[1120px]:left-1/2 max-[1120px]:top-1/2 max-[1120px]:w-[min(90%,530px)] max-[1120px]:h-auto max-[1120px]:-translate-x-1/2 max-[1120px]:-translate-y-1/2 max-[1120px]:px-[30px] max-[1120px]:pt-[34px] max-[1120px]:pb-[28px] max-[1120px]:rounded-[36px] max-[560px]:w-[calc(100%_-_28px)] max-[560px]:px-5 max-[560px]:pt-7 max-[560px]:pb-6 max-[560px]:rounded-[28px]">
           <header className="text-center mb-[2.8%]">
             <div className="flex items-center justify-center gap-[7px] mx-auto mt-0 mb-[1.9%] text-[#d6a740]" aria-hidden="true">
               <span className="w-[72px] h-px bg-[#d6a740]" />

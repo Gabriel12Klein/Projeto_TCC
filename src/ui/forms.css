@@ -8,7 +8,21 @@
 /* Auth panels must grow when inline errors/checklists add content. */
 .auth-stage { padding-block: 3rem; }
 .auth-stage .auth-panel { position: relative; top: auto; height: auto; max-height: none; transform: none; }
+/* Keep the complete registration form reachable inside the clipped stage. */
+.auth-stage .registration-panel {
+  max-height: calc(100dvh - clamp(36px, 6.4vw, 120px) - 6rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #7d1d2d #f5eee6;
+}
+.registration-panel > * { flex-shrink: 0; }
 @media (max-width: 1120px) {
   .auth-stage { min-height: auto !important; padding: 1.5rem 0; }
   .auth-stage .auth-panel { position: relative; left: auto; top: auto; transform: none; margin: auto; }
+  .auth-stage .registration-panel { max-height: calc(100dvh - 6rem); }
+}
+@media (max-width: 560px) {
+  .auth-stage .registration-panel { max-height: calc(100dvh - 3rem); }
 }
