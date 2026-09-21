@@ -22,6 +22,7 @@ try {
       wineries: await prisma.winery.count(), wines: await prisma.wine.count(),
       vintages: await prisma.vintage.count(), batches: await prisma.batch.count(),
       grapes: await prisma.grape.count(), wineTypes: await prisma.wineType.count(),
+      classifications: await prisma.classification.count(),
       users: await prisma.user.count(), orders: await prisma.customerOrder.count(),
       orderItems: await prisma.customerOrderItem.count(), inventory: inventory.length,
       movements: await prisma.inventoryMovement.count(),

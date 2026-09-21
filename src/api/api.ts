@@ -84,8 +84,6 @@ export const api = {
       body,
     });
   },
-  generateBatchQr: (batchId: string) =>
-    request<{ path: string; targetUrl: string }>(`/lotes/${batchId}/qr-code`, { method: 'POST' }),
   catalog: {
     list: (filters: { q?: string; type?: string } = {}) => {
       const params = new URLSearchParams();

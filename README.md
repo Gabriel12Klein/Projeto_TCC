@@ -1,392 +1,115 @@
-# VINUM — Sistema de rastreabilidade e catálogo de vinhos
+# VINUM — catálogo e gestão de uma vinícola
 
-Aplicação desenvolvida como projeto de TCC para uma vinícola. O VINUM permite cadastrar e administrar vinícolas, vinhos, tipos de vinho, uvas, safras e lotes, além de disponibilizar um catálogo público para consulta dos produtos.
+Aplicação acadêmica da única vinícola administradora VINUM. O catálogo publicado é público; cada cliente possui perfil, pedidos e adega privados. PostgreSQL é a fonte dos dados de negócio.
 
-O sistema possui duas áreas principais:
+## Preparação
 
-- **Área administrativa:** gerenciamento dos cadastros, relacionamentos, imagens, QR Codes e dados de rastreabilidade.
-- **Área do cliente:** catálogo público com os vinhos publicados e consulta de um lote por QR Code.
+Requisitos: Node.js 22+, npm e Docker Desktop. Na primeira instalação, copie `.env.example` para `.env` e substitua todos os exemplos de senha. Nunca sobrescreva um `.env` já configurado.
 
-> O projeto utiliza **PostgreSQL** em Docker, com administração pelo **pgAdmin**, por meio do **Prisma ORM**.
-
-## 1. O que é necessário instalar
-
-Antes de executar o projeto, instale:
-
-1. **Node.js 22 ou superior**, que já inclui o npm.
-2. **Docker Desktop**.
-4. **Git**, caso o projeto seja baixado pelo repositório.
-5. Um editor de código, como o **Visual Studio Code**.
-
-Confira as versões instaladas:
-
-```bash
-node --version
-npm --version
-```
-
-## 2. Baixar o projeto
-
-Clone o repositório e entre na pasta:
-
-```bash
-git clone https://github.com/Gabriel12Klein/Projeto_TCC.git
-cd Projeto_TCC
-```
-
-O nome da pasta pode variar conforme o nome escolhido no computador. O nome do pacote da aplicação é `vnum-v2.0`.
-
-## 3. Iniciar o PostgreSQL e o pgAdmin
-
-Na raiz do projeto, execute:
-
-```bash
-docker compose up -d
-```
-
-Na configuração padrão, a conexão utiliza:
-
-```text
-Servidor: localhost
-Porta: 5433
-Banco: vinum
-Usuário: vinum
-Senha: valor de POSTGRES_PASSWORD no .env
-```
-
-O pgAdmin fica disponível em <http://localhost:5051>.
-
-```text
-E-mail: admin@vinum.com
-Senha: configurada no .env na primeira inicialização; acessos existentes não são alterados
-```
-
-No pgAdmin, adicione um servidor apontando para `host.docker.internal`, porta publicada `5433`, banco `vinum`, usuário `vinum` e senha definida em `POSTGRES_PASSWORD`.
-
-O usuário e a senha não devem ser publicados no GitHub. Eles ficam somente no arquivo `.env`, que é ignorado pelo Git.
-
-## 4. Configurar as variáveis de ambiente
-
-Na raiz do projeto, copie o arquivo de exemplo:
-
-```bash
-copy .env.example .env
-```
-
-No Linux/macOS, use:
-
-```bash
-cp .env.example .env
-```
-
-Edite o `.env` com a conexão do PostgreSQL:
-
-```env
-PORT=3001
-VITE_API_URL=/api
-DATABASE_URL="postgresql://vinum:SUA_SENHA_POSTGRES@localhost:5433/vinum?schema=public"
-JWT_SECRET="uma-chave-local-forte-e-secreta"
-PUBLIC_APP_URL="http://localhost:5173"
-```
-
-Se o sistema for acessado pelo celular na mesma rede Wi-Fi, substitua `localhost` pelo IPv4 do computador:
-
-```env
-PUBLIC_APP_URL="http://192.168.0.85:5173"
-```
-
-Também será necessário iniciar o Vite com acesso à rede local, se o QR Code for testado no celular:
-
-```bash
-npm run dev -- --host 0.0.0.0
-```
-
-O firewall do Windows pode solicitar permissão para o Node.js. Para acessar pelo celular, o computador e o celular precisam estar na mesma rede.
-
-## 5. Instalar e preparar a aplicação
-
-Na raiz do projeto, execute:
+- `DATABASE_URL`: PostgreSQL em localhost:5433, banco e usuário `vinum`; senha igual a `POSTGRES_PASSWORD` (codificada como URL quando necessário).
+- `POSTGRES_PASSWORD` e `PGADMIN_DEFAULT_PASSWORD`: apenas para inicialização dos respectivos serviços; mudar essas variáveis não troca senhas em bancos já existentes.
+- `ADMIN_INITIAL_EMAIL` e `ADMIN_INITIAL_PASSWORD`: criação inicial do administrador. A senha deve ter pelo menos 12 caracteres. Contas existentes não são redefinidas pelo seed.
+- `PORT=3001`, `VITE_API_URL=/api`.
 
 ```bash
 npm install
+docker compose up -d
 npm run prisma:generate
 npm run prisma:deploy
 npm run prisma:seed
 ```
 
-Esses comandos fazem o seguinte:
+No PowerShell com scripts bloqueados, use `npm.cmd` em vez de `npm`.
+A instalação vazia dispensa somente a migração histórica de demonstração incompatível, sem alterar seu arquivo. Dados de demonstração não são restaurados.
 
-- `npm install`: instala as dependências do frontend, backend e ferramentas de desenvolvimento.
-- `prisma:generate`: gera o cliente TypeScript do Prisma.
-- `prisma:deploy`: aplica as migrações versionadas, incluindo chaves estrangeiras, CHECKs e triggers. `prisma:push` é um alias de compatibilidade para esse comando.
-- `prisma:seed`: garante a existência do administrador inicial sem restaurar dados antigos ou de demonstração. Preserva o acesso já configurado.
+## Execução
 
-## 6. Executar o sistema
-
-Use dois terminais na raiz do projeto.
-
-No primeiro terminal, inicie a API:
+Em dois terminais:
 
 ```bash
 npm run backend
-```
-
-No segundo terminal, inicie o frontend:
-
-```bash
 npm run dev
 ```
 
-Endereços locais:
+- Aplicação: http://localhost:5173
+- API/saúde: http://localhost:3001/api/health
+- Documentação da API: http://localhost:3001/api/docs
+- pgAdmin: http://localhost:5051 (e-mail inicial `admin@vinum.com`).
+- No pgAdmin em Docker, conecte ao host `postgres`, porta `5432`, banco/usuário `vinum`.
+- Na máquina host, a porta do PostgreSQL é `5433`.
+- Para encerrar o desenvolvimento, use Ctrl+C no terminal de cada serviço. Não encerre indiscriminadamente todos os processos Node.
 
-- Aplicação web: <http://localhost:5173>
-- API: <http://localhost:3001/api>
-- Health check: <http://localhost:3001/api/health>
-- Documentação da API: <http://localhost:3001/api/docs>
-- Prisma Studio: `npm run prisma:studio`
+O Compose usa o volume existente `vinum-tcc-prototipo-local_vinum_postgres_data`.
+Nunca use `docker compose down -v`, reset ou exclusão de volumes para atualizar o sistema.
+As portas no arquivo Compose estão limitadas a localhost; containers antigos precisam ser recriados para aplicar alterações de publicação de portas. Um simples restart preserva sua configuração anterior.
 
+## Domínio administrativo
 
-### 6.1 Iniciar e encerrar os processos
+Somente ADMIN/EDITOR vinculados à VINUM podem administrar produtos. O cadastro público sempre cria CUSTOMER. Uma segunda vinícola é recusada pela API e pelo banco.
 
-Para encerrar os processos Node:
+- Meu cadastro atualiza a mesma vinícola e a conta administrativa. Telefone da vinícola é independente do telefone pessoal. Alterar credenciais exige a senha atual; senha nova vazia mantém o hash existente.
+- Resumo consulta COUNT e agrupamentos das tabelas reais, sem tabela de totais.
+- Tipo e classificação são referências separadas, carregadas da API.
+- Vinho contém uma ou mais uvas por `vinho_uva`. Novos vinhos exigem classificação; cadastros legados sem classificação continuam preservados até edição.
+- Safra pertence ao vinho e copia suas uvas em uma transação. Alterar posteriormente o vinho ou editar observações da safra não muda essa composição histórica.
+- Lote pertence a uma safra e ao mesmo vinho, garantido pela FK composta. A seleção é automática apenas quando existe uma safra; com várias, exige escolha.
+- O catálogo apresenta somente vinhos publicados. Consultas públicas de lotes exigem lote e vinho publicados.
+- Blockchain e geração de QR Code ficam reservadas. A API de geração responde 501; imagens e referências históricas não são apagadas.
 
-```powershell
-Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
-```
+Os identificadores existentes continuam `SF26-T01` (safra/ano/tanque) e `L26254` (lote/ano/dia do ano).
 
-Para iniciar o backend e o frontend:
+## Domínio do cliente
 
-```bash
-node start.js
-```
+- Perfil persistido na própria tabela `usuario`; idade calculada pela data de nascimento.
+- E-mail é único; alteração de e-mail/senha exige a senha atual e invalida outras sessões.
+- Pedido VINUM referencia o vinho do catálogo; rótulo externo tem nome, foto e origem privados, sem cadastrar outra empresa.
+- Pedido, estoque e movimento de entrada são gravados juntos. Movimentações concorrentes são serializadas por cliente.
+- ENTRADA soma, CONSUMO subtrai e AJUSTE define o saldo absoluto. Saldo negativo é recusado.
+- Editar pedido reconcilia a diferença com movimentos; reduções incompatíveis com o saldo são recusadas.
+- Excluir pedido remove seu histórico, mas mantém garrafas e movimentos, conforme confirmação da interface.
+- Fotos de clientes exigem autenticação e propriedade, inclusive quando alguém conhece a URL. O frontend usa download autenticado, sem token na URL.
+- ADMIN não acessa os módulos privados de clientes; nenhum cliente pode alterar dados de outro.
 
-Para desenvolvimento, os dois terminais separados são mais fáceis de acompanhar quando ocorre algum erro.
+## Persistência e evolução
 
-## 7. Acesso e perfis
+O modelo está em `prisma/schema.prisma`. As migrations também contêm CHECKs e triggers que não são integralmente representados pelo Prisma.
 
-O seed cria o usuário administrativo local:
+Principais relações: usuário→papel; administrador→VINUM; VINUM→vinho; tipo/classificação→vinho; vinho↔uva; vinho→safra↔uva; safra→lote; cliente→pedido→item; cliente→estoque→movimento. O item de pedido e o estoque podem referenciar vinho oficial ou guardar um rótulo externo privado.
 
-```text
-E-mail: admin@vinum.local
-Senha: configurada no .env na primeira inicialização; acessos existentes não são alterados
-```
-
-Novos cadastros públicos recebem o perfil `CUSTOMER` (cliente). Usuários com perfil `ADMIN` ou `EDITOR` podem acessar a área administrativa.
-
-Em ambiente real, altere a senha padrão e não use credenciais de demonstração.
-
-## 8. Como o sistema funciona
-
-### Fluxo administrativo
-
-1. O administrador cadastra a vinícola.
-2. Cadastra os tipos de vinho disponíveis.
-3. Cadastra as uvas, que podem participar de diferentes composições.
-4. Cadastra o vinho produzido, incluindo nome, tipo, volume, teor alcoólico, foto e descrição.
-5. Preenche as informações complementares exibidas ao cliente: características, aromas, notas de degustação, harmonização e outras informações.
-6. Cadastra a safra, relacionando-a ao vinho, ao ano, à procedência, às observações, ao status e a uma ou mais uvas.
-7. Cadastra o lote, relacionando-o ao vinho e à safra, informando código, quantidade, data de produção, hora de envase, data de registro, status e uvas utilizadas.
-8. Publica o vinho no catálogo.
-9. Gera o QR Code do lote. O QR Code direciona para a consulta pública do lote.
-
-### Fluxo do cliente
-
-O cliente pode:
-
-- navegar pelo catálogo de vinhos publicados;
-- filtrar e pesquisar produtos;
-- abrir a página detalhada de um vinho;
-- visualizar foto, tipo, uvas, volume, teor alcoólico e descrição completa;
-- consultar características, aromas, notas de degustação, harmonização e informações complementares;
-- escanear o QR Code de um lote e consultar a origem, a safra, as uvas utilizadas, as datas, a quantidade e o status.
-- registrar pedidos de vinhos da vinícola ou comprados em outro local;
-- acompanhar no estoque a quantidade de garrafas disponíveis;
-- registrar entradas, consumos e ajustes do estoque.
-
-O cliente não cadastra nem altera dados de produção. Para pedidos de vinhos do catálogo, o item mantém a relação com o vinho cadastrado; para compras externas, o pedido guarda os dados informados pelo cliente.
-
-## 9. Padrões de identificação
-
-### Código do lote
-
-O padrão adotado é:
-
-```text
-L + AA + DDD
-```
-
-Exemplo:
-
-```text
-L24100
-```
-
-- `L`: identifica um lote.
-- `24`: ano do envase, neste caso 2024.
-- `100`: dia do ano. Em 2024, o 100º dia corresponde a 9 de abril.
-
-Ao informar um código válido, a data de produção é preenchida automaticamente. O sistema considera anos bissextos, permitindo os dias 001 a 365 ou 001 a 366 quando aplicável.
-
-### Identificador da safra
-
-O padrão adotado é:
-
-```text
-SF + AA + TDD
-```
-
-Exemplo:
-
-```text
-SF22-T04
-```
-
-- `SF`: identifica uma safra.
-- `22`: ano da colheita, neste caso 2022.
-- `T04`: código do tanque, lote de barricas ou local de origem utilizado no rastreamento.
-
-O ano da safra é preenchido automaticamente a partir dos dois dígitos do identificador.
-
-## 10. Banco de dados e relacionamentos
-
-O esquema físico está em [`prisma/schema.prisma`](prisma/schema.prisma). As tabelas são criadas no PostgreSQL pelo Prisma.
-
-Principais entidades:
-
-- `usuario`: contas, dados de perfil e permissões.
-- `role`: perfis de acesso.
-- `sessao`: sessões autenticadas.
-- `vinicola`: dados da vinícola.
-- `vinho`: cadastro e informações públicas do vinho.
-- `tipo_vinho`: tipos de vinho.
-- `uva`: tipos de uva.
-- `vinho_uva`: relação entre vinhos e uvas.
-- `imagem_vinho`: imagens associadas aos vinhos.
-- `safra`: ano, procedência, observações e status da safra.
-- `status_safra`: opções de situação da safra.
-- `safra_uva`: relação entre safras e uvas.
-- `lote`: produção, envase, datas, QR Code e referência de blockchain.
-- `status_lote`: opções de situação do lote.
-- `lote_uva`: relação entre lotes e uvas.
-
-Relacionamentos centrais:
-
-```text
-Vinícola 1:N Vinho
-Vinho 1:N Safra
-Vinho 1:N Lote
-Safra 1:N Lote
-Vinho N:N Uva       (vinho_uva)
-Safra N:N Uva       (safra_uva)
-Lote N:N Uva        (lote_uva)
-Vinho 1:N Imagem    (imagem_vinho)
-Usuário 1:N Sessão
-```
-
-O lote é o registro que conecta a produção à consulta do cliente. Ele aponta para uma safra e para um vinho. A safra guarda a origem da matéria-prima; o vinho representa o produto; e o lote representa a produção/engarrafamento específico que será rastreado pelo QR Code.
-
-## 11. Alterações no banco de dados
-
-Quando for necessário criar tabela ou adicionar coluna, atualize o schema e registre uma migration:
-
-```bash
-npm run prisma:migrate -- --name descricao_da_alteracao
-npm run prisma:generate
-```
-
-Para aplicar migrações no banco existente sem apagar registros:
+Para evoluir o banco, revise o schema e crie uma **nova** migration SQL incremental em `prisma/migrations/<timestamp>_<descricao>/migration.sql`, depois execute:
 
 ```bash
 npm run prisma:deploy
+npm run prisma:generate
 ```
 
-Depois de alterar o banco, confira as tabelas pelo pgAdmin ou pelo Prisma Studio.
+Não edite migrations já aplicadas. Não use `db push` ou aceite resets.
+O antigo atalho `prisma:migrate` executa `migrate dev`: não é o fluxo recomendado neste histórico, pois a migração antiga de demonstração depende de dados ausentes no shadow database. Use o fluxo incremental acima.
 
-## 12. QR Code e blockchain
+Imagens ficam em `backend/uploads`; PostgreSQL guarda referências. Backup completo inclui banco **e** uploads. Sessões são tokens aleatórios com hash no PostgreSQL, não JWT. O armazenamento do navegador é cache de sessão/formulário, nunca a fonte definitiva dos dados.
 
-O sistema gera QR Codes localmente e salva o caminho do arquivo na coluna `qrCodePath` da tabela `lote`. O QR Code leva para uma rota pública de consulta:
-
-```text
-/consulta/lotes/:codigo-do-lote
-```
-
-O projeto possui os campos `blockchainRef` e a interface preparada para registrar uma referência futura. A integração com uma blockchain externa ainda não está implementada; atualmente a funcionalidade é uma preparação visual e estrutural para uma etapa posterior.
-
-## 13. Upload de imagens
-
-As imagens dos vinhos são enviadas pela API e armazenadas localmente em:
-
-```text
-backend/uploads/
-```
-
-Essa pasta possui apenas um `.gitkeep` no repositório. Imagens enviadas e QR Codes gerados não devem ser versionados.
-
-## 14. Testes e qualidade
-
-Comandos disponíveis:
+## Validação
 
 ```bash
-npm run lint
 npm run typecheck
+npm run lint
 npm test
 npm run build
-npm run check
+npx tsx backend/scripts/audit-relations.ts
 ```
 
-O comando `check` executa formatação, lint, verificação TypeScript, testes e build.
-
-## 15. Solução de problemas
-
-### Erro de conexão com o PostgreSQL
-
-Confira se:
-
-- o Docker Desktop está aberto;
-- os containers estão ativos com `docker compose ps`;
-- o banco `vinum` existe;
-- usuário, senha, porta e nome do banco estão corretos no `.env`;
-- a URL começa com `postgresql://`.
-
-### O celular não abre o QR Code
-
-`localhost` aponta para o próprio celular, não para o computador. Use o IPv4 do computador em `PUBLIC_APP_URL`, inicie o Vite com `--host 0.0.0.0` e mantenha os dispositivos na mesma rede.
-
-### Dados não aparecem depois de uma alteração no schema
-
-Execute:
+Para reproduzir a validação integral (há breve indisponibilidade durante restart):
 
 ```bash
-npm run prisma:generate
-npm run prisma:deploy
+npx tsx backend/scripts/verify-specification.ts --restart
 ```
 
-Depois reinicie o backend.
+Esse script cria/reutiliza apenas `vinum_spec_validation`, compara schemas, roda testes e valida perfil/cadastro/pedido/foto/estoque após restart e novo login. Confere fingerprints dos dados reais e idempotência do seed. Não apaga banco nem volume. O banco isolado permanece disponível; fixtures transitórias são removidas somente por seus IDs.
 
-### Mensagem de registro duplicado
+`npm run check` também verifica formatação global. Não execute `npm run format` indiscriminadamente para corrigir apenas um módulo.
 
-Identificadores como e-mail, código do lote, identificador da safra, CNPJ, slug e nomes de referência possuem regras de unicidade. Use um valor ainda não cadastrado ou edite o registro existente.
-
-## 16. Estrutura resumida do projeto
-
-```text
-prisma/
-  schema.prisma       modelo do banco
-  migrations/         alterações versionadas
-  seed.ts             dados iniciais
-backend/
-  src/app.ts          configuração da API
-  src/server.ts       servidor HTTP
-  src/modules/        módulos de autenticação e domínio
-  src/common/         erros, arquivos e formatação
-  uploads/            imagens e QR Codes locais
-src/
-  api/                cliente HTTP do frontend
-  pages/              telas públicas, cliente e administração
-  features/           regras de interface
-  types/              tipos compartilhados
-```
+Relatório completo de implementação, testes, decisões e limitações: [docs/specification-review.md](docs/specification-review.md).
 
 ## Licença e finalidade
 
-Projeto acadêmico desenvolvido para o TCC. O código pode ser usado para fins de estudo, demonstração e evolução do sistema VINUM.
+Projeto acadêmico de Gabriel Klein para o TCC.

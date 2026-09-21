@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import LoginPage from './pages/Login/LoginPage';
 import CadastroPage from './pages/Cadastro/CadastroPage';
@@ -29,6 +30,7 @@ function Loading() {
 }
 
 export default function App() {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [checkingSession, setCheckingSession] = useState(Boolean(getToken()));
   const [user, setUser] = useState<User | null>(getStoredUser());
@@ -44,11 +46,12 @@ export default function App() {
         setUser(currentUser);
       })
       .catch(() => {
+        queryClient.clear();
         clearSession();
         setUser(null);
       })
       .finally(() => setCheckingSession(false));
-  }, []);
+  }, [queryClient]);
 
   async function logout(destination = '/login') {
     try {
@@ -63,6 +66,7 @@ export default function App() {
   }
 
   function loginSuccess(loggedUser: User) {
+    queryClient.clear();
     setUser(loggedUser);
     navigate(loggedUser.role === 'ADMIN' || loggedUser.role === 'EDITOR' ? '/admin' : '/');
   }

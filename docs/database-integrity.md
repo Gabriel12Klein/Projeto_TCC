@@ -1,5 +1,10 @@
 # Integridade do banco — revisão de 20/09/2026
 
+> Registro histórico da revisão anterior à especificação. A implementação posterior,
+> incluindo classificação, vinícola única e instalação vazia, está documentada em
+> [specification-review.md](specification-review.md). As limitações finais deste
+> registro histórico foram reavaliadas nesse relatório.
+
 O banco ativo é PostgreSQL, banco `vinum`, porta local 5433.
 O Docker mantém os dados no volume `vinum-tcc-prototipo-local_vinum_postgres_data`.
 As imagens ficam em `backend/uploads`; o banco guarda os caminhos.
