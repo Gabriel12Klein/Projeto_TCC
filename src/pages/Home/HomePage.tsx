@@ -1,4 +1,5 @@
 import QueryFeedback from '../../ui/QueryFeedback';
+import AuthorFooter from '../../ui/AuthorFooter';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -243,6 +244,7 @@ export default function HomePage({ onLogout }: { onLogout: () => Promise<void> }
           </div>
         </section>
       </main>
+      <AuthorFooter />
     </div>
   );
 }

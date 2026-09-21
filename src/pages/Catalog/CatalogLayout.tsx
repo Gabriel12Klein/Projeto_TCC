@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import type { User } from '../../types';
+import AuthorFooter from '../../ui/AuthorFooter';
 import logo from '../Login/assets/logo-vinum.png';
 
 export default function CatalogLayout({ user, onLogout }: { user: User; onLogout: () => void }) {
@@ -67,6 +68,7 @@ export default function CatalogLayout({ user, onLogout }: { user: User; onLogout
           </div>
         </header>
         <Outlet />
+        <AuthorFooter />
       </div>
     </div>
   );
