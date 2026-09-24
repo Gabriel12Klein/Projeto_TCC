@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../api/api';
+import { formatWineryOrigin } from './formatWineryOrigin';
 
 export default function WineDetailPage() {
   const { slug = '' } = useParams();
@@ -70,7 +71,7 @@ export default function WineDetailPage() {
             <div>
               <dt className="font-bold text-[#5b0c1b]">Origem</dt>
               <dd className="mt-1 text-[#715f59]">
-                {wine.winery ? `${wine.winery.name} · ${wine.winery.city}/${wine.winery.state}` : 'VINUM'}
+                {formatWineryOrigin(wine.winery)}
               </dd>
             </div>
           </dl>

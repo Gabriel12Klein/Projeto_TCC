@@ -2,6 +2,7 @@ import QueryFeedback from '../../ui/QueryFeedback';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../api/api';
+import { formatWineryOrigin } from './formatWineryOrigin';
 
 function formatDate(value: string | null) {
   return value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : 'Aguardando registro';
@@ -91,7 +92,7 @@ export default function BatchPublicPage() {
                   <div className="sm:col-span-2">
                     <dt className="font-semibold text-[#5b0c1b]">Vinícola</dt>
                     <dd className="mt-1 text-[#715f59]">
-                      {batch.wine.winery.name} · {batch.wine.winery.city}/{batch.wine.winery.state}
+                      {formatWineryOrigin(batch.wine.winery)}
                     </dd>
                   </div>
                 )}

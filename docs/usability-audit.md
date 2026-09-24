@@ -176,6 +176,27 @@ Resultados, mensagens, commits e limitações serão consolidados aqui após cad
   build e diff-check aprovados. Build mantém avisos de comentários da dependência
   Zod e bundle acima de 500 kB; não são falhas de compilação.
 
+### Retomada do navegador — validação parcial
+
+- Navegador conectado em `http://localhost:5173`; nenhum dado persistente foi criado,
+  editado ou excluído durante os testes. Login inválido usou somente credenciais
+  fictícias e retornou “E-mail ou senha inválidos.”.
+- Cadastro/login: envio vazio foca o primeiro campo inválido; mensagens inline,
+  associação acessível, mostrar/ocultar senha, checklist, recuperação honesta,
+  navegação por Tab e navegação entre cadastro/login foram conferidos.
+- Catálogo: home, detalhe de vinho, consulta pública de lote e retorno ao catálogo
+  foram percorridos. O console não registrou erros ou avisos nos fluxos testados.
+- Falha confirmada: quando cidade e UF da VINUM estavam vazias, detalhes públicos
+  exibiam `Vinum · /`. Corrigida a formatação compartilhada para mostrar somente
+  `Vinum` (ou apenas a parte disponível da localização) em vinho e lote.
+- Teste da correção: duas rotas públicas recarregadas no navegador mostraram
+  `Vinum`; teste unitário da função tem três casos aprovados. A suíte completa passou
+  com 77 testes em 22 arquivos; lint, typecheck, build e `git diff --check` aprovados.
+- Limites ainda pendentes: sessão cliente/admin autenticada, máscaras e edição no
+  meio, upload/retentativa, menus protegidos, confirmações destrutivas, rede lenta,
+  erro de imagem e validação sistemática em 320/375/768/1024/1440 px e zoom 200%.
+  A auditoria Nielsen continua aberta; a auditoria de integração/regressão não inicia.
+
 ## Consolidação das 10 heurísticas — evidências e limites
 
 **Situação: correções dos grupos 1–9 commitadas; aceite global ainda pendente.**
