@@ -53,7 +53,7 @@ export default function CatalogLayout({ user, onLogout }: { user: User; onLogout
         </nav>
         <button
           className="mt-8 rounded-xl border border-white/25 px-4 py-3 text-left text-white/85 transition hover:bg-white/10 lg:mt-auto"
-          onClick={onLogout}
+          onClick={() => onLogout()}
         >
           Sair
         </button>

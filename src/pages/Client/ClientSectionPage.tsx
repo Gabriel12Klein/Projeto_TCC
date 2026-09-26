@@ -3,13 +3,14 @@ import FieldError from '../../ui/FieldError';
 import { useFormFeedback } from '../../ui/useFormFeedback';
 import { validateInventory, validatePurchase } from './formValidation';
 import PrivateImage from './PrivateImage';
-import { useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/api';
 import type { CustomerOrder, InventoryItem } from '../../types';
 import InventoryWineCard from './InventoryWineCard';
 import BottlePhotoPicker from './BottlePhotoPicker';
+import { persistOrderDraft, readOrderDraft } from './orderDraft';
 
 const input =
   'w-full rounded-xl border border-[#d9cbbd] bg-white px-4 py-3 text-[#321b1c] outline-none focus:border-[#8b2638]';
@@ -23,7 +24,8 @@ function Shell({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function Orders() {
+function Orders({ userId }: { userId: string }) {
+  const [restoredDraft] = useState(() => readOrderDraft(userId));
   const feedback = useFormFeedback('purchase', { quantityBottles: 'qty', wineName: 'name' });
   const sending = useRef(false);
   const deleting = useRef(false);
@@ -32,18 +34,26 @@ function Orders() {
     itemId: string;
     date: string;
     photo?: string | null;
-  } | null>(null);
-  const [purchaseLocation, setPurchaseLocation] = useState('');
+  } | null>(restoredDraft?.editing ?? null);
+  const [purchaseLocation, setPurchaseLocation] = useState(restoredDraft?.purchaseLocation ?? '');
   const [purchasePhoto, setPurchasePhoto] = useState<File | null>(null);
+  const [photoNeedsReselect, setPhotoNeedsReselect] = useState(restoredDraft?.photoNeedsReselect ?? false);
+  const [draftRecovered, setDraftRecovered] = useState(Boolean(restoredDraft));
   const qc = useQueryClient();
   const ordersQuery = useQuery({ queryKey: ['customer-orders'], queryFn: api.customer.orders });
   const winesQuery = useQuery({ queryKey: ['public-wines'], queryFn: () => api.catalog.list() });
-  const [open, setOpen] = useState(false);
-  const [source, setSource] = useState<'VINICULA' | 'OUTRO_LOCAL'>('VINICULA');
-  const [wineId, setWineId] = useState('');
-  const [name, setName] = useState('');
-  const [qty, setQty] = useState('1');
+  const [open, setOpen] = useState(restoredDraft?.open ?? false);
+  const [source, setSource] = useState<'VINICULA' | 'OUTRO_LOCAL'>(restoredDraft?.source ?? 'VINICULA');
+  const [wineId, setWineId] = useState(restoredDraft?.wineId ?? '');
+  const [name, setName] = useState(restoredDraft?.name ?? '');
+  const [qty, setQty] = useState(restoredDraft?.qty ?? '1');
   const [message, setMessage] = useState('');
+  useEffect(() => {
+    persistOrderDraft(userId, {
+      open, source, wineId, name, qty, purchaseLocation, editing,
+      photoNeedsReselect: Boolean(purchasePhoto || photoNeedsReselect),
+    });
+  }, [userId, open, source, wineId, name, qty, purchaseLocation, editing, purchasePhoto, photoNeedsReselect]);
   const orders = ordersQuery.data ?? [];
   const wines = winesQuery.data ?? [];
   const save = useMutation({
@@ -57,6 +67,8 @@ function Orders() {
       setOpen(false);
       setPurchaseLocation('');
       setPurchasePhoto(null);
+      setPhotoNeedsReselect(false);
+      setDraftRecovered(false);
       setName('');
       setWineId('');
       setQty('1');
@@ -154,6 +166,8 @@ function Orders() {
             setEditing(null);
             setPurchaseLocation('');
             setPurchasePhoto(null);
+            setPhotoNeedsReselect(false);
+            setDraftRecovered(false);
             setWineId('');
             setName('');
             setQty('1');
@@ -164,6 +178,11 @@ function Orders() {
           + Adicionar compra
         </button>
       </section>
+      {draftRecovered && (
+        <p className="mt-4 rounded-xl border border-[#eadfd3] bg-white p-4 text-[#5b0c1b]" role="status">
+          Rascunho de pedido recuperado nesta aba. Confira os dados antes de salvar.
+        </p>
+      )}
       {!open && (name || wineId || purchaseLocation || purchasePhoto) && (
         <button type="button" className="mt-4 rounded-xl border border-[#7d1d2d] px-5 py-3 text-[#7d1d2d]" onClick={() => setOpen(true)}>Continuar preenchimento</button>
       )}
@@ -250,9 +269,14 @@ function Orders() {
               buttonId="purchase-photo"
               externalError={feedback.errors.photo}
               value={purchasePhoto}
-              onChange={(file) => { setPurchasePhoto(file); feedback.clear('photo'); }}
+              onChange={(file) => { setPurchasePhoto(file); setPhotoNeedsReselect(false); feedback.clear('photo'); }}
               required={source === 'OUTRO_LOCAL' && !editing?.photo}
             />
+            {photoNeedsReselect && !purchasePhoto && (
+              <p className="text-sm text-[#7d1d2d] md:col-span-2" role="status">
+                A foto escolhida antes da interrupção precisa ser selecionada novamente para ser enviada.
+              </p>
+            )}
             {source === 'VINICULA' && (
               <QueryFeedback
                 loading={winesQuery.isPending}
@@ -283,7 +307,7 @@ function Orders() {
                 onClick={() => {
                   if (
                     window.confirm(
-                      'Fechar este formulário? Os dados preenchidos ficam disponíveis enquanto você permanecer nesta tela.',
+                      'Fechar este formulário? O rascunho ficará disponível nesta sessão até você salvar ou iniciar outra compra.',
                     )
                   )
                     setOpen(false);
@@ -382,6 +406,8 @@ function Orders() {
                               setMessage('');
                               setPurchaseLocation(order.purchaseLocation ?? '');
                               setPurchasePhoto(null);
+                              setPhotoNeedsReselect(false);
+                              setDraftRecovered(false);
                               setSource(order.source);
                               setWineId(item.wineId ?? '');
                               setName(item.wineName);
@@ -622,6 +648,6 @@ function Inventory() {
   );
 }
 
-export default function ClientSectionPage({ title }: { title: string; description?: string }) {
-  return title === 'Meus pedidos' ? <Orders /> : <Inventory />;
+export default function ClientSectionPage({ title, userId }: { title: string; description?: string; userId: string }) {
+  return title === 'Meus pedidos' ? <Orders userId={userId} /> : <Inventory />;
 }

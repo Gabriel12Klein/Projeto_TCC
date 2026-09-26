@@ -8,7 +8,7 @@ import ClientSectionPage from './ClientSectionPage';
 function render(title: string, loaded = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime: Infinity } } });
   if (loaded) client.setQueryData([title === 'Meus pedidos' ? 'customer-orders' : 'customer-inventory'], []);
-  const html = renderToStaticMarkup(createElement(QueryClientProvider, { client }, createElement(MemoryRouter, null, createElement(ClientSectionPage, { title }))));
+  const html = renderToStaticMarkup(createElement(QueryClientProvider, { client }, createElement(MemoryRouter, null, createElement(ClientSectionPage, { title, userId: 'test-user' }))));
   client.clear();
   return html;
 }

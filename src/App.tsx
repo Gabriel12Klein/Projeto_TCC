@@ -140,6 +140,7 @@ export default function App() {
             <ClientSectionPage
               title="Meu estoque"
               description="Aqui você poderá acompanhar os vinhos e lotes vinculados ao seu estoque."
+              userId={user?.id ?? ''}
             />
           }
         />
@@ -160,6 +161,7 @@ export default function App() {
             <ClientSectionPage
               title="Meus pedidos"
               description="Aqui você poderá acompanhar seus pedidos, status e histórico de compras."
+              userId={user?.id ?? ''}
             />
           }
         />

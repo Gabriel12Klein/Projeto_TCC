@@ -309,7 +309,14 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-y-[clamp(14px,1.25vw,18px)] gap-x-[clamp(22px,2.5vw,38px)] max-[1450px]:gap-y-[14px] max-[1450px]:gap-x-6">
       {(config.blockchainInfo ? config.fields.filter((field) => field.name !== 'registrationDate') : config.fields).map((f)=>{
         if (config.key === 'lotes' && f.name === 'vintageId') {
-          f = { ...f, options: f.options.filter((option) => option.wineId === String(form.wineId ?? '')) };
+          const options = f.options.filter((option) => option.wineId === String(form.wineId ?? ''));
+          f = {
+            ...f,
+            options,
+            note: form.wineId && options.length === 0
+              ? 'Este vinho ainda não possui safra cadastrada. Abra Safra no menu para cadastrar uma antes de criar o lote.'
+              : f.note,
+          };
         }
         const wrapper = f.full
           ? `min-w-0 col-span-2 max-sm:col-span-1 ${f.action ? 'grid grid-cols-[minmax(0,1fr)_auto] gap-[14px] items-end' : ''}`

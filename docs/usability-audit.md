@@ -288,7 +288,8 @@ Resultados, mensagens, commits e limitações serão consolidados aqui após cad
 
 ## Consolidação das 10 heurísticas — evidências e limites
 
-**Situação: aceite Nielsen dos fluxos priorizados concluído em 26/09/2026.**
+**Situação: aceite dos fluxos priorizados concluído; cobertura Nielsen ampliada
+em andamento. Não declarar a auditoria inteira concluída ainda.**
 Não confundir testes unitários/renderização estática com avaliação interativa real.
 
 | Heurística | Problemas identificados e correções | Preservado / verificação restante |
@@ -312,7 +313,7 @@ Não confundir testes unitários/renderização estática com avaliação intera
 | Cadastro administrativo | Telefone fixo/celular, CNPJ alfanumérico opcional, labels, requisitos, confirmação de senha, erros associados, proteção de fechamento. | Edição no meio da máscara e Escape testados; nenhum cadastro administrativo real criado. |
 | Perfil do cliente | Máscara, regras de senha, checklist existente, idade derivada, erros inline, proteção de envio e cancelar correto. | Validação, persistência e rascunho após expiração testados; descarte nativo concluído com confirmação visual do usuário. |
 | Vinho | Opções carregadas antes do formulário, foto validada, upload com recuperação, campos opcionais preenchidos validados, erros de API associados. | Upload real, falha parcial, retentativa sem duplicar e falha de conexão testados em vinho fictício inativo. |
-| Safra/lote | Herança preservada, opções com retry, foco livre, envio bloqueado, ajuda/associações dos campos, grid estreito. | Percorrer todas as combinações de vinho/safra e verificar UI de opções indisponíveis. |
+| Safra/lote | Herança preservada, opções com retry, foco livre, envio bloqueado, ajuda/associações dos campos, grid estreito. | Cinco vinhos atuais testados sem salvar: uvas herdadas, safra automática/ausente e troca de seleção. Não cobre combinações futuras em bases maiores. |
 | Uvas/tipos/classificações | Formulário e registros genéricos recebem as correções de validação, foco, envio, consulta e exclusão. | Testar permissões e restrições de vínculo na interface real. |
 | Pedidos | Origem/local distinguíveis, foto existente, quantidade inteira, labels, erro por campo, continuar preenchimento e exclusão com histórico preservado. | Fluxos VINUM/externo, edição, foto, descarte e zoom testados na conta fictícia; rascunho de pedido após expiração não foi testado. |
 | Adega | Labels, foto/quantidade, cancelamento sem apagar preenchimento, mensagens de movimento, consulta distinta de vazio e histórico visível. | Entrada, último consumo, histórico e imagem privada testados; exaustão de cliques rápidos não foi ensaiada. |
@@ -365,15 +366,50 @@ Não confundir testes unitários/renderização estática com avaliação intera
 | `7ebb669` | fix(ux): protege edicoes ao fechar cadastro administrativo |
 | `9e3f9d2` | fix(ux): valida fluxos Nielsen e corrige falhas confirmadas |
 
-## Fechamento Nielsen e próxima etapa
+## Ampliação da cobertura Nielsen — 26/09/2026
 
-- Correções novas foram revalidadas no navegador; lint, typecheck/build,
-  cinco testes unitários focados e `git diff --check` passaram nesta retomada.
-- A amostra não incluiu todas as combinações vinho/safra nem todas as restrições
-  de vínculo, rascunho de pedido após expiração, cliques rápidos exaustivos ou
-  certificação de contraste/acessibilidade WCAG. Esses limites não invalidam
-  o aceite dos fluxos Nielsen priorizados e não devem ser descritos como testes
-  já executados.
+- Lote sem salvamento: percorri todos os cinco vinhos disponíveis. Três têm
+  uma safra relacionada, selecionada automaticamente com a uva correspondente;
+  dois não têm safra. Trocar de vinho com safra para um sem safra limpou a
+  seleção e as uvas antigas. Confirmei que o campo vazio não explicava a
+  ausência de opções. Agora informa “Este vinho ainda não possui safra
+  cadastrada. Abra Safra no menu para cadastrar uma antes de criar o lote.”
+  O aviso está associado ao campo, desaparece quando há safra e coube em
+  320 px sem rolagem horizontal externa. Nenhum lote foi criado.
+- Safra sem salvamento: os cinco vinhos copiaram as uvas esperadas no
+  formulário; desmarcar o vinho limpou a composição. Nenhuma safra foi criada.
+- Pedido na conta Gabriel klein: confirmei perda do rascunho não salvo ao
+  navegar à adega e voltar, e após expiração de sessão. O pedido não foi
+  criado. O formulário agora guarda apenas os campos textuais e a referência
+  de edição na sessão da aba, isolados por ID do cliente. Arquivo de foto não
+  é armazenado; se selecionado, a tela pede nova seleção ao retomar.
+  Navegação adega → pedidos já revalidada com rótulo, local e quantidade
+  preservados. A repetição da expiração após a correção chegou à rota de
+  login com motivo de expiração, mas a tela ficou branca pelo erro descrito
+  abaixo; o aviso visual e a recuperação após novo login aguardam validação.
+- O logout na área do cliente foi observado navegando para `/[object Object]`:
+  o evento de clique era passado como destino à função de saída. O layout
+  agora chama a saída sem argumentos. Validar o destino na próxima sessão.
+- Ao abrir uma aba sem autenticação após adicionar a persistência do pedido,
+  a Home ficou em branco: a rota de cliente avaliava `user.id` mesmo quando
+  `user` era nulo. A referência agora é segura; a Home voltou a exibir o
+  catálogo após recarga. As abas anteriores foram fechadas durante esse
+  incidente, impedindo observar o rascunho original após login; repetir o
+  cenário em uma aba ativa.
+- Pendentes nesta ampliação: confirmar recuperação do pedido após novo login,
+  retestar logout corrigido, cliques rápidos nos controles da adega e avaliar
+  com segurança as restrições de vínculo na UI. Não executar exclusão de
+  dados reais para testar o último.
+
+## Critérios restantes antes do encerramento completo
+
+- A orientação de safra, a retomada após navegação e a Home sem sessão foram
+  revalidadas no navegador. Lint, typecheck/build, 12 testes unitários
+  focados (incluindo rotas sem sessão) e `git diff --check` passaram.
+- A amostra não incluiu todas as combinações possíveis em bases maiores,
+  confirmação da recuperação do pedido após novo login, cliques rápidos exaustivos nem
+  certificação de contraste/acessibilidade WCAG. Não descrever essas
+  verificações como testes já executados.
 - A auditoria de integração/regressão é uma etapa separada, ainda não iniciada.
   Nela cabem os testes de contratos, permissões, transações e histórico, sem
   recriar o banco ou apagar volumes.
