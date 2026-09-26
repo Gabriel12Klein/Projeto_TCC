@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import PrivateImage from './PrivateImage';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -28,6 +28,8 @@ export default function InventoryWineCard({
   const [quantity, setQuantity] = useState('1');
   const [date, setDate] = useState(today());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const consumeButton = useRef<HTMLButtonElement>(null);
+  const quantityInput = useRef<HTMLInputElement>(null);
   const id = useId();
   const slug = item.wine?.slug;
   const {
@@ -67,10 +69,23 @@ export default function InventoryWineCard({
     if (Object.keys(issues).length) return;
     const saved = await onConsume({ quantityBottles: Number(quantity), occurredAt: `${date}T12:00:00.000Z` });
     if (saved) {
-      setConsuming(false);
+      closeConsumption();
       setQuantity('1');
-      setErrors({});
     }
+  }
+  function closeConsumption() {
+    setConsuming(false);
+    setErrors({});
+    window.requestAnimationFrame(() => consumeButton.current?.focus());
+  }
+  function openConsumption() {
+    setConsuming(true);
+    window.requestAnimationFrame(() => quantityInput.current?.focus());
+  }
+  function consumptionKeyboard(event: KeyboardEvent<HTMLFormElement>) {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    closeConsumption();
   }
   return (
     <article className="client-inventory-card inventory-wine-card rounded-2xl">
@@ -100,11 +115,12 @@ export default function InventoryWineCard({
         </button>
         <div className="inventory-wine-card__actions">
           <button
+            ref={consumeButton}
             type="button"
             className="inventory-wine-card__consume"
             aria-label={`Registrar consumo de ${item.name}`}
             disabled={pending || !item.quantityBottles}
-            onClick={() => setConsuming(true)}
+            onClick={openConsumption}
           >
             <span className="inventory-wine-card__action-icon" aria-hidden="true">
               −
@@ -114,10 +130,16 @@ export default function InventoryWineCard({
         </div>
       </div>
       {consuming && (
-        <form className="inventory-wine-card__consumption" onSubmit={submitConsumption} noValidate>
+        <form
+          className="inventory-wine-card__consumption"
+          onSubmit={submitConsumption}
+          onKeyDown={consumptionKeyboard}
+          noValidate
+        >
           <label>
             Quantidade consumida
             <input
+              ref={quantityInput}
               type="number"
               min="1"
               max={item.quantityBottles}
@@ -153,14 +175,7 @@ export default function InventoryWineCard({
             <button type="submit" disabled={pending}>
               {pending ? 'Registrando…' : 'Confirmar consumo'}
             </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => {
-                setConsuming(false);
-                setErrors({});
-              }}
-            >
+            <button type="button" disabled={pending} onClick={closeConsumption}>
               Cancelar
             </button>
           </div>

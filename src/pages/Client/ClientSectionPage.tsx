@@ -27,6 +27,8 @@ function Orders({ userId }: { userId: string }) {
   const [restoredDraft] = useState(() => readOrderDraft(userId));
   const feedback = useFormFeedback('purchase', { quantityBottles: 'qty', wineName: 'name' });
   const sending = useRef(false);
+  const sourceField = useRef<HTMLSelectElement>(null);
+  const resultMessage = useRef<HTMLParagraphElement>(null);
   const [editing, setEditing] = useState<{
     orderId: string;
     itemId: string;
@@ -46,6 +48,12 @@ function Orders({ userId }: { userId: string }) {
   const [name, setName] = useState(restoredDraft?.name ?? '');
   const [qty, setQty] = useState(restoredDraft?.qty ?? '1');
   const [message, setMessage] = useState('');
+  useEffect(() => {
+    if (open) window.requestAnimationFrame(() => sourceField.current?.focus());
+  }, [open]);
+  useEffect(() => {
+    if (message && !open) window.requestAnimationFrame(() => resultMessage.current?.focus());
+  }, [message, open]);
   useEffect(() => {
     persistOrderDraft(userId, {
       open,
@@ -182,6 +190,7 @@ function Orders({ userId }: { userId: string }) {
             <label className="text-sm font-semibold text-[#5b0c1b]">
               Tipo do rótulo *
               <select
+                ref={sourceField}
                 className={input}
                 value={source}
                 onChange={(e) => setSource(e.target.value as typeof source)}
@@ -324,6 +333,8 @@ function Orders({ userId }: { userId: string }) {
       )}
       {message && !open && (
         <p
+          ref={resultMessage}
+          tabIndex={-1}
           role={save.isError ? 'alert' : 'status'}
           className="mt-4 rounded-xl border border-[#eadfd3] bg-white p-4 text-[#5b0c1b]"
         >

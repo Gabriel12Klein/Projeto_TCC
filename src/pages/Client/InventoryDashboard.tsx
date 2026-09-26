@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/api';
@@ -14,6 +14,7 @@ function localYear() {
 export default function InventoryDashboard() {
   const [year, setYear] = useState(localYear());
   const [message, setMessage] = useState('');
+  const resultMessage = useRef<HTMLParagraphElement>(null);
   const qc = useQueryClient();
   const dashboard = useQuery({
     queryKey: ['customer-inventory-dashboard', year],
@@ -41,6 +42,9 @@ export default function InventoryDashboard() {
       setMessage(error instanceof Error ? error.message : 'Não foi possível registrar o consumo.'),
   });
   const items = inventory.data ?? [];
+  useEffect(() => {
+    if (message) window.requestAnimationFrame(() => resultMessage.current?.focus());
+  }, [message]);
 
   return (
     <main className="client-section-page mx-auto max-w-6xl px-5 py-10 lg:px-10">
@@ -144,6 +148,8 @@ export default function InventoryDashboard() {
         />
         {message && (
           <p
+            ref={resultMessage}
+            tabIndex={-1}
             className="mt-4 rounded-xl border border-[#dfd0bd] p-4"
             role={consume.isError ? 'alert' : 'status'}
           >
