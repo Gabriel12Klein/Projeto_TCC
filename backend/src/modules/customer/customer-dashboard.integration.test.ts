@@ -55,17 +55,40 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
     });
     const stockA = await prisma.inventoryItem.findFirstOrThrow({ where: { userId: userA, wineId: wineA } });
     expect(await customerService.getInventoryDashboard(userA, 2026)).toMatchObject({
-      totals: { acquiredBottles: 6, consumedBottles: 0, availableBottles: 6, labelCount: 1 },
+      totals: {
+        acquiredBottles: 6,
+        consumedBottles: 0,
+        availableBottles: 6,
+        openedBottles: 0,
+        labelCount: 1,
+      },
     });
 
-    await customerService.registerConsumption(userA, stockA.id, {
-      quantityBottles: 2,
+    const firstBottles = await customerService.listBottles(userA);
+    expect(firstBottles).toHaveLength(6);
+    const opened = await customerService.openBottle(userA, firstBottles[0].id, {
+      occurredAt: new Date('2026-01-10T12:00:00Z'),
+    });
+    expect(opened.status).toBe('ABERTA');
+    expect(opened.openedAt).toEqual(new Date('2026-01-10T12:00:00Z'));
+    expect((await customerService.getInventoryDashboard(userA, 2026)).totals.openedBottles).toBe(1);
+    await customerService.finishBottle(userA, firstBottles[0].id, {
       occurredAt: new Date('2026-01-15T12:00:00Z'),
     });
+    await customerService.finishBottle(userA, firstBottles[1].id, {
+      occurredAt: new Date('2026-01-15T12:00:00Z'),
+    });
+    const consumedBottle = await customerService.getBottle(userA, firstBottles[0].id);
+    expect(consumedBottle.status).toBe('CONSUMIDA');
+    expect(consumedBottle.finishedAt).toEqual(new Date('2026-01-15T12:00:00Z'));
+    await expect(
+      customerService.openBottle(userA, firstBottles[0].id, { occurredAt: new Date() }),
+    ).rejects.toThrow('disponível');
     expect((await customerService.getInventoryDashboard(userA, 2026)).totals).toEqual({
       acquiredBottles: 6,
       consumedBottles: 2,
       availableBottles: 4,
+      openedBottles: 0,
       labelCount: 1,
     });
 
@@ -79,6 +102,7 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
       acquiredBottles: 9,
       consumedBottles: 2,
       availableBottles: 7,
+      openedBottles: 0,
       labelCount: 1,
     });
     expect(await prisma.inventoryItem.count({ where: { userId: userA, wineId: wineA } })).toBe(1);
@@ -93,6 +117,7 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
       acquiredBottles: 13,
       consumedBottles: 2,
       availableBottles: 11,
+      openedBottles: 0,
       labelCount: 2,
     });
 
@@ -112,6 +137,7 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
       acquiredBottles: 16,
       consumedBottles: 2,
       availableBottles: 14,
+      openedBottles: 0,
       labelCount: 3,
     });
     expect(await prisma.wine.count({ where: { name: externalName } })).toBe(0);
@@ -124,7 +150,7 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
         quantityBottles: 5,
         occurredAt: new Date('2026-02-10T12:00:00Z'),
       }),
-    ).rejects.toThrow('maior que o estoque');
+    ).rejects.toThrow('maior que o saldo');
     expect((await prisma.inventoryItem.findUniqueOrThrow({ where: { id: stockB.id } })).quantityBottles).toBe(
       4,
     );
@@ -150,6 +176,7 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
       acquiredBottles: 16,
       consumedBottles: 8,
       availableBottles: 8,
+      openedBottles: 0,
       labelCount: 3,
     });
 
@@ -157,10 +184,12 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
       acquiredBottles: 0,
       consumedBottles: 0,
       availableBottles: 0,
+      openedBottles: 0,
       labelCount: 0,
     });
     expect(await customerService.listOrders(userB)).toEqual([]);
     expect(await customerService.listInventory(userB)).toEqual([]);
+    await expect(customerService.getBottle(userB, firstBottles[0].id)).rejects.toThrow('não encontrada');
     await expect(
       customerService.registerConsumption(userB, stockA.id, {
         quantityBottles: 1,

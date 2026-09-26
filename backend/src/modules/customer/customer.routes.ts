@@ -6,7 +6,7 @@ import { ensureUploadDirectory } from '../../common/files.js';
 import { AppError } from '../../common/http.js';
 import { asyncRoute } from '../../common/http.js';
 import { requireAuth, requireRoles } from '../auth/auth.middleware.js';
-import { consumptionSchema, orderSchema } from './customer.schema.js';
+import { bottleEventSchema, orderSchema } from './customer.schema.js';
 import { customerService } from './customer.service.js';
 
 const router = Router();
@@ -113,14 +113,39 @@ router.get(
     res.json(await customerService.getInventoryDashboard(String(res.locals.user.id), year));
   }),
 );
+router.get(
+  '/estoque/garrafas',
+  asyncRoute(async (req, res) => {
+    const status = req.query.status == null ? undefined : String(req.query.status);
+    res.json(await customerService.listBottles(String(res.locals.user.id), status));
+  }),
+);
+router.get(
+  '/estoque/garrafas/:id',
+  asyncRoute(async (req, res) => {
+    res.json(await customerService.getBottle(String(res.locals.user.id), String(req.params.id)));
+  }),
+);
 router.post(
-  '/estoque/:id/consumos',
+  '/estoque/garrafas/:id/abrir',
   asyncRoute(async (req, res) => {
     res.json(
-      await customerService.registerConsumption(
+      await customerService.openBottle(
         String(res.locals.user.id),
         String(req.params.id),
-        consumptionSchema.parse(req.body),
+        bottleEventSchema.parse(req.body),
+      ),
+    );
+  }),
+);
+router.post(
+  '/estoque/garrafas/:id/consumir',
+  asyncRoute(async (req, res) => {
+    res.json(
+      await customerService.finishBottle(
+        String(res.locals.user.id),
+        String(req.params.id),
+        bottleEventSchema.parse(req.body),
       ),
     );
   }),

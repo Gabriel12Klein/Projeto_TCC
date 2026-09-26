@@ -1,6 +1,6 @@
 import { AppError } from '../../common/http.js';
 import { prisma } from '../../lib/prisma.js';
-import { orderSchema, type ConsumptionInput, type OrderInput } from './customer.schema.js';
+import { orderSchema, type BottleEventInput, type OrderInput } from './customer.schema.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 
 // Serialize stock changes per owner, including first insertion of a label.
@@ -14,16 +14,33 @@ const itemInclude = {
   movements: { orderBy: { occurredAt: 'desc' as const } },
 };
 
-const orderCorrectionReasons = [
-  'Correção da quantidade ou do rótulo do pedido',
-  'Rótulo corrigido no pedido',
-];
+const bottleInclude = {
+  inventoryItem: {
+    include: {
+      wine: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          volumeMl: true,
+          winery: { select: { name: true } },
+          image: { select: { path: true } },
+        },
+      },
+    },
+  },
+  orderItem: {
+    include: { order: { select: { id: true, purchaseDate: true, purchaseLocation: true, source: true } } },
+  },
+  movements: { orderBy: { occurredAt: 'asc' as const } },
+};
 
-const actualConsumptionWhere = (userId: string) => ({
-  type: 'CONSUMO',
-  inventoryItem: { userId },
-  OR: [{ reason: null }, { reason: { notIn: orderCorrectionReasons } }],
-});
+function assertBottleEventDate(date: Date, purchasedAt: Date, openedAt?: Date | null) {
+  const minimum = openedAt ?? purchasedAt;
+  if (date < minimum)
+    throw new AppError(400, 'A data não pode ser anterior à compra ou à abertura da garrafa.');
+}
 
 export const customerService = {
   async listOrders(userId: string) {
@@ -87,7 +104,7 @@ export const customerService = {
               },
             });
 
-        await transaction.customerOrderItem.create({
+        const orderItem = await transaction.customerOrderItem.create({
           data: {
             orderId: order.id,
             wineId: wine?.id ?? null,
@@ -100,6 +117,14 @@ export const customerService = {
             unitPrice: item.unitPrice ?? null,
             inventoryItemId: inventoryItem.id,
           },
+        });
+        await transaction.cellarBottle.createMany({
+          data: Array.from({ length: item.quantityBottles }, () => ({
+            userId,
+            inventoryItemId: inventoryItem.id,
+            orderItemId: orderItem.id,
+            purchasedAt: input.purchaseDate,
+          })),
         });
         await transaction.inventoryMovement.create({
           data: {
@@ -155,6 +180,24 @@ export const customerService = {
       if (!name) throw new AppError(400, 'Informe o nome do rótulo.');
       const sameWine = (wine?.id ?? null) === old.wineId && (Boolean(wine) || name === old.wineName);
       const removedQuantity = sameWine ? old.quantityBottles - item.quantityBottles : old.quantityBottles;
+      const editableBottles = await transaction.cellarBottle.findMany({
+        where: { orderItemId: old.id, userId, status: 'DISPONIVEL' },
+        orderBy: [{ purchasedAt: 'desc' }, { id: 'desc' }],
+        select: { id: true },
+      });
+      const earliestLifecycleEvent = await transaction.cellarBottle.findFirst({
+        where: { orderItemId: old.id, userId, NOT: { openedAt: null } },
+        orderBy: { openedAt: 'asc' },
+        select: { openedAt: true },
+      });
+      if (earliestLifecycleEvent?.openedAt && input.purchaseDate > earliestLifecycleEvent.openedAt)
+        throw new AppError(409, 'A data da compra não pode ser posterior à abertura de uma garrafa.');
+      const bottlesToRemove = Math.max(removedQuantity, 0);
+      if (editableBottles.length < bottlesToRemove)
+        throw new AppError(
+          409,
+          'A alteração retiraria garrafas abertas ou consumidas. Apenas garrafas disponíveis podem ser corrigidas.',
+        );
       const nextPrevious = previous.quantityBottles - removedQuantity;
       if (nextPrevious < 0)
         throw new AppError(
@@ -183,6 +226,11 @@ export const customerService = {
             reason: `Correção da quantidade ou do rótulo do pedido (${removedQuantity > 0 ? 'redução' : 'aumento'})`,
           },
         });
+      if (bottlesToRemove > 0) {
+        await transaction.cellarBottle.deleteMany({
+          where: { id: { in: editableBottles.slice(0, bottlesToRemove).map(({ id }) => id) } },
+        });
+      }
       let targetId = previous.id;
       if (!sameWine) {
         const target = await transaction.inventoryItem.findFirst({
@@ -238,9 +286,24 @@ export const customerService = {
           unitPrice: item.unitPrice,
         },
       });
+      const bottlesToAdd = sameWine ? Math.max(-removedQuantity, 0) : item.quantityBottles;
+      if (bottlesToAdd > 0) {
+        await transaction.cellarBottle.createMany({
+          data: Array.from({ length: bottlesToAdd }, () => ({
+            userId,
+            inventoryItemId: targetId,
+            orderItemId: old.id,
+            purchasedAt: input.purchaseDate,
+          })),
+        });
+      }
       await transaction.inventoryMovement.updateMany({
         where: { orderId },
         data: { purchaseLocation: input.purchaseLocation || null },
+      });
+      await transaction.cellarBottle.updateMany({
+        where: { orderItemId: old.id, userId },
+        data: { purchasedAt: input.purchaseDate },
       });
       return transaction.customerOrder.update({
         where: { id: orderId },
@@ -276,39 +339,39 @@ export const customerService = {
   },
 
   async getInventoryDashboard(userId: string, requestedYear?: number) {
-    const [stock, consumption] = await Promise.all([
-      prisma.inventoryItem.findMany({
-        where: { userId },
-        select: { quantityBottles: true },
-      }),
-      prisma.inventoryMovement.findMany({
-        where: actualConsumptionWhere(userId),
-        select: { quantityBottles: true, occurredAt: true },
-        orderBy: { occurredAt: 'asc' },
-      }),
-    ]);
+    const bottles = await prisma.cellarBottle.findMany({
+      where: { userId },
+      select: { status: true, finishedAt: true, inventoryItemId: true },
+      orderBy: { finishedAt: 'asc' },
+    });
+    const consumption = bottles.filter(
+      (bottle): bottle is typeof bottle & { finishedAt: Date } =>
+        bottle.status === 'CONSUMIDA' && bottle.finishedAt != null,
+    );
     const currentYear = new Date().getUTCFullYear();
-    const years = [...new Set(consumption.map((movement) => movement.occurredAt.getUTCFullYear()))].sort(
+    const years = [...new Set(consumption.map((bottle) => bottle.finishedAt.getUTCFullYear()))].sort(
       (a, b) => b - a,
     );
     if (!years.length) years.push(currentYear);
     const selectedYear = requestedYear ?? years[0];
     if (!years.includes(selectedYear)) years.push(selectedYear);
     years.sort((a, b) => b - a);
-    const availableBottles = stock.reduce((total, item) => total + item.quantityBottles, 0);
-    const consumedBottles = consumption.reduce((total, movement) => total + movement.quantityBottles, 0);
+    const availableBottles = bottles.filter((bottle) => bottle.status === 'DISPONIVEL').length;
+    const openedBottles = bottles.filter((bottle) => bottle.status === 'ABERTA').length;
+    const consumedBottles = consumption.length;
     const monthlyConsumption = Array.from({ length: 12 }, (_, index) => ({ month: index + 1, bottles: 0 }));
-    for (const movement of consumption) {
-      if (movement.occurredAt.getUTCFullYear() === selectedYear) {
-        monthlyConsumption[movement.occurredAt.getUTCMonth()].bottles += movement.quantityBottles;
+    for (const bottle of consumption) {
+      if (bottle.finishedAt.getUTCFullYear() === selectedYear) {
+        monthlyConsumption[bottle.finishedAt.getUTCMonth()].bottles += 1;
       }
     }
     return {
       totals: {
-        acquiredBottles: availableBottles + consumedBottles,
+        acquiredBottles: bottles.length,
         consumedBottles,
         availableBottles,
-        labelCount: stock.length,
+        openedBottles,
+        labelCount: new Set(bottles.map((bottle) => bottle.inventoryItemId)).size,
       },
       selectedYear,
       years,
@@ -316,28 +379,155 @@ export const customerService = {
     };
   },
 
-  async registerConsumption(userId: string, itemId: string, input: ConsumptionInput) {
+  async listBottles(userId: string, status?: string) {
+    const allowed = ['DISPONIVEL', 'ABERTA', 'CONSUMIDA'];
+    if (status && !allowed.includes(status)) throw new AppError(400, 'Informe um status de garrafa válido.');
+    const bottles = await prisma.cellarBottle.findMany({
+      where: { userId },
+      include: bottleInclude,
+      orderBy: [{ purchasedAt: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+    });
+    const totalsByItem = new Map<string, number>();
+    const ordered = [...bottles].sort(
+      (a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime() || a.id.localeCompare(b.id),
+    );
+    const numbers = new Map<string, number>();
+    for (const bottle of ordered) {
+      const next = (totalsByItem.get(bottle.inventoryItemId) ?? 0) + 1;
+      totalsByItem.set(bottle.inventoryItemId, next);
+      numbers.set(bottle.id, next);
+    }
+    return bottles
+      .filter((bottle) => !status || bottle.status === status)
+      .map((bottle) => ({ ...bottle, bottleNumber: numbers.get(bottle.id) ?? 1 }));
+  },
+
+  async getBottle(userId: string, bottleId: string) {
+    const bottle = await prisma.cellarBottle.findFirst({
+      where: { id: bottleId, userId },
+      include: bottleInclude,
+    });
+    if (!bottle) throw new AppError(404, 'Garrafa não encontrada na sua adega.');
+    return bottle;
+  },
+
+  async openBottle(userId: string, bottleId: string, input: BottleEventInput) {
     return prisma.$transaction(async (transaction) => {
       await lockInventory(transaction, userId);
-      const item = await transaction.inventoryItem.findFirst({ where: { id: itemId, userId } });
-      if (!item) throw new AppError(404, 'Item não encontrado no estoque.');
-      const nextQuantity = item.quantityBottles - input.quantityBottles;
-      if (nextQuantity < 0)
-        throw new AppError(400, 'A quantidade consumida é maior que o estoque disponível.');
+      const bottle = await transaction.cellarBottle.findFirst({ where: { id: bottleId, userId } });
+      if (!bottle) throw new AppError(404, 'Garrafa não encontrada na sua adega.');
+      if (bottle.status !== 'DISPONIVEL')
+        throw new AppError(409, 'Somente uma garrafa disponível pode ser aberta.');
+      assertBottleEventDate(input.occurredAt, bottle.purchasedAt);
       await transaction.inventoryItem.update({
-        where: { id: item.id },
-        data: { quantityBottles: nextQuantity, active: nextQuantity > 0 },
+        where: { id: bottle.inventoryItemId },
+        data: { quantityBottles: { decrement: 1 } },
+      });
+      await transaction.cellarBottle.update({
+        where: { id: bottle.id },
+        data: { status: 'ABERTA', openedAt: input.occurredAt },
       });
       await transaction.inventoryMovement.create({
         data: {
-          inventoryItemId: item.id,
-          type: 'CONSUMO',
-          quantityBottles: input.quantityBottles,
+          inventoryItemId: bottle.inventoryItemId,
+          cellarBottleId: bottle.id,
+          type: 'ABERTURA',
+          quantityBottles: 1,
           occurredAt: input.occurredAt,
-          reason: 'Consumo registrado pelo cliente',
+          reason: 'Garrafa aberta pelo cliente',
         },
       });
-      return transaction.inventoryItem.findUniqueOrThrow({ where: { id: item.id }, include: itemInclude });
+      const available = await transaction.cellarBottle.count({
+        where: { inventoryItemId: bottle.inventoryItemId, status: 'DISPONIVEL' },
+      });
+      await transaction.inventoryItem.update({
+        where: { id: bottle.inventoryItemId },
+        data: { quantityBottles: available, active: available > 0 },
+      });
+      return transaction.cellarBottle.findUniqueOrThrow({ where: { id: bottle.id }, include: bottleInclude });
+    });
+  },
+
+  async finishBottle(userId: string, bottleId: string, input: BottleEventInput) {
+    return prisma.$transaction(async (transaction) => {
+      await lockInventory(transaction, userId);
+      const bottle = await transaction.cellarBottle.findFirst({ where: { id: bottleId, userId } });
+      if (!bottle) throw new AppError(404, 'Garrafa não encontrada na sua adega.');
+      if (bottle.status === 'CONSUMIDA')
+        throw new AppError(409, 'Esta garrafa já foi consumida e permanece no histórico.');
+      assertBottleEventDate(input.occurredAt, bottle.purchasedAt, bottle.openedAt);
+      await transaction.cellarBottle.update({
+        where: { id: bottle.id },
+        data: {
+          status: 'CONSUMIDA',
+          openedAt: bottle.openedAt ?? input.occurredAt,
+          finishedAt: input.occurredAt,
+        },
+      });
+      await transaction.inventoryMovement.create({
+        data: {
+          inventoryItemId: bottle.inventoryItemId,
+          cellarBottleId: bottle.id,
+          type: 'CONSUMO',
+          quantityBottles: 1,
+          occurredAt: input.occurredAt,
+          reason: 'Consumo finalizado pelo cliente',
+        },
+      });
+      const available = await transaction.cellarBottle.count({
+        where: { inventoryItemId: bottle.inventoryItemId, status: 'DISPONIVEL' },
+      });
+      await transaction.inventoryItem.update({
+        where: { id: bottle.inventoryItemId },
+        data: { quantityBottles: available, active: available > 0 },
+      });
+      return transaction.cellarBottle.findUniqueOrThrow({ where: { id: bottle.id }, include: bottleInclude });
+    });
+  },
+
+  // Kept as a service-level compatibility bridge for older integrations. The public API
+  // uses the individual bottle endpoints above.
+  async registerConsumption(
+    userId: string,
+    itemId: string,
+    input: { quantityBottles: number; occurredAt: Date },
+  ) {
+    return prisma.$transaction(async (transaction) => {
+      await lockInventory(transaction, userId);
+      const item = await transaction.inventoryItem.findFirst({ where: { id: itemId, userId } });
+      if (!item) throw new AppError(404, 'Item não encontrado na adega.');
+      const bottles = await transaction.cellarBottle.findMany({
+        where: { userId, inventoryItemId: itemId, status: 'DISPONIVEL' },
+        orderBy: [{ purchasedAt: 'asc' }, { id: 'asc' }],
+        take: input.quantityBottles,
+      });
+      if (bottles.length !== input.quantityBottles)
+        throw new AppError(400, 'A quantidade consumida é maior que o saldo disponível.');
+      for (const bottle of bottles) {
+        assertBottleEventDate(input.occurredAt, bottle.purchasedAt);
+        await transaction.cellarBottle.update({
+          where: { id: bottle.id },
+          data: { status: 'CONSUMIDA', openedAt: input.occurredAt, finishedAt: input.occurredAt },
+        });
+        await transaction.inventoryMovement.create({
+          data: {
+            inventoryItemId: itemId,
+            cellarBottleId: bottle.id,
+            type: 'CONSUMO',
+            quantityBottles: 1,
+            occurredAt: input.occurredAt,
+            reason: 'Consumo finalizado pelo cliente',
+          },
+        });
+      }
+      const available = await transaction.cellarBottle.count({
+        where: { inventoryItemId: itemId, status: 'DISPONIVEL' },
+      });
+      return transaction.inventoryItem.update({
+        where: { id: itemId },
+        data: { quantityBottles: available, active: available > 0 },
+        include: itemInclude,
+      });
     });
   },
 };

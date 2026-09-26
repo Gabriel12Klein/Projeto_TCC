@@ -253,7 +253,7 @@ describe('Integridade real no PostgreSQL', () => {
     expect(
       (await prisma.inventoryItem.findUniqueOrThrow({ where: { id: stock[0].id } })).quantityBottles,
     ).toBe(2);
-    expect(await prisma.inventoryMovement.count({ where: { inventoryItemId: stock[0].id } })).toBe(4);
+    expect(await prisma.inventoryMovement.count({ where: { inventoryItemId: stock[0].id } })).toBe(7);
   });
 
   it('reverte pedido, item e estoque quando uma etapa da compra falha', async () => {
@@ -292,6 +292,13 @@ describe('Integridade real no PostgreSQL', () => {
         reason: 'Rótulo adicionado diretamente ao estoque',
       },
     });
+    await prisma.cellarBottle.createMany({
+      data: Array.from({ length: 4 }, () => ({
+        userId,
+        inventoryItemId: item.id,
+        purchasedAt: new Date('2026-03-01T12:00:00Z'),
+      })),
+    });
     expect(item.wineId).toBeNull();
     const consumed = await customerService.registerConsumption(userId, item.id, {
       quantityBottles: 1,
@@ -306,7 +313,7 @@ describe('Integridade real no PostgreSQL', () => {
     ).rejects.toThrow('Item não encontrado');
     await expect(
       customerService.registerConsumption(userId, item.id, { quantityBottles: 4, occurredAt: new Date() }),
-    ).rejects.toThrow('maior que o estoque');
+    ).rejects.toThrow('maior que o saldo');
     expect((await prisma.inventoryItem.findUniqueOrThrow({ where: { id: item.id } })).quantityBottles).toBe(
       3,
     );
@@ -341,7 +348,7 @@ describe('Integridade real no PostgreSQL', () => {
         ...input,
         items: [{ wineId: wineIds[1], quantityBottles: 1 }],
       }),
-    ).rejects.toThrow('já consumidas');
+    ).rejects.toThrow('abertas ou consumidas');
     expect(
       (await prisma.customerOrderItem.findUniqueOrThrow({ where: { id: item.id } })).quantityBottles,
     ).toBe(3);
@@ -365,7 +372,7 @@ describe('Integridade real no PostgreSQL', () => {
     expect(dashboard.totals.availableBottles).toBe(stock._sum.quantityBottles ?? 0);
     expect(dashboard.totals.consumedBottles).toBe(consumed._sum.quantityBottles ?? 0);
     expect(dashboard.totals.acquiredBottles).toBe(
-      dashboard.totals.availableBottles + dashboard.totals.consumedBottles,
+      dashboard.totals.availableBottles + dashboard.totals.openedBottles + dashboard.totals.consumedBottles,
     );
     expect(dashboard.totals.labelCount).toBe(stock._count);
     expect(dashboard.monthlyConsumption).toHaveLength(12);

@@ -35,12 +35,11 @@ export const orderSchema = z
     });
   });
 
-export const consumptionSchema = z.object({
-  quantityBottles: z.coerce.number().int().positive('Informe uma quantidade inteira maior que zero.'),
+export const bottleEventSchema = z.object({
   occurredAt: z.coerce
     .date()
-    .refine((date) => date <= new Date(), 'A data do consumo não pode estar no futuro.'),
+    .refine((date) => date <= new Date(), 'A data informada não pode estar no futuro.'),
 });
 
 export type OrderInput = z.infer<typeof orderSchema>;
-export type ConsumptionInput = z.infer<typeof consumptionSchema>;
+export type BottleEventInput = z.infer<typeof bottleEventSchema>;
