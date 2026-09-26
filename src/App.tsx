@@ -36,10 +36,11 @@ export default function App() {
   const [checkingSession, setCheckingSession] = useState(Boolean(getToken()));
   const [user, setUser] = useState<User | null>(getStoredUser());
   const [sessionProblem, setSessionProblem] = useState('');
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
     const expired = () => {
-      clearSession(); queryClient.clear(); setUser(null); setCheckingSession(false);
+      clearSession(); queryClient.clear(); setSessionExpired(true); setUser(null); setCheckingSession(false);
       navigate('/login?motivo=sessao-expirada', { replace: true });
     };
     window.addEventListener('vinum:session-expired', expired);
@@ -60,7 +61,7 @@ export default function App() {
       })
       .catch((error) => {
         if (error instanceof ApiError && error.status === 401) {
-          queryClient.clear(); clearSession(); setUser(null);
+          queryClient.clear(); clearSession(); setSessionExpired(true); setUser(null);
         } else setSessionProblem('Não foi possível verificar sua sessão. Sua conta não foi desconectada; tente novamente quando o serviço estiver disponível.');
       })
       .finally(() => setCheckingSession(false));
@@ -80,12 +81,17 @@ export default function App() {
 
   function loginSuccess(loggedUser: User) {
     queryClient.clear();
+    setSessionExpired(false);
     setUser(loggedUser);
     navigate(loggedUser.role === 'ADMIN' || loggedUser.role === 'EDITOR' ? '/admin' : '/');
   }
 
   if (checkingSession) return <Loading />;
   if (sessionProblem) return <main className="mx-auto max-w-xl p-8"><h1 className="text-2xl">Não foi possível continuar</h1><p role="alert" className="my-4">{sessionProblem}</p><button type="button" className="rounded-lg bg-[#5b0c1b] px-5 py-3 text-white" onClick={() => window.location.reload()}>Tentar novamente</button></main>;
+
+  const expiredLoginDestination = '/login?motivo=sessao-expirada';
+  const customerFallback = sessionExpired ? expiredLoginDestination : '/';
+  const adminFallback = sessionExpired ? expiredLoginDestination : '/login';
 
   return (
     <Routes>
@@ -98,7 +104,7 @@ export default function App() {
           user?.role === 'CUSTOMER' ? (
             <CatalogLayout user={user} onLogout={logout} />
           ) : (
-            <Navigate to={user ? '/admin' : '/'} replace />
+            <Navigate to={user ? '/admin' : customerFallback} replace />
           )
         }
       >
@@ -112,7 +118,7 @@ export default function App() {
           user?.role === 'CUSTOMER' ? (
             <CatalogLayout user={user} onLogout={logout} />
           ) : (
-            <Navigate to={user ? '/admin' : '/'} replace />
+            <Navigate to={user ? '/admin' : customerFallback} replace />
           )
         }
       >
@@ -124,7 +130,7 @@ export default function App() {
           user?.role === 'CUSTOMER' ? (
             <CatalogLayout user={user} onLogout={logout} />
           ) : (
-            <Navigate to={user ? '/admin' : '/'} replace />
+            <Navigate to={user ? '/admin' : customerFallback} replace />
           )
         }
       >
@@ -144,7 +150,7 @@ export default function App() {
           user?.role === 'CUSTOMER' ? (
             <CatalogLayout user={user} onLogout={logout} />
           ) : (
-            <Navigate to={user ? '/admin' : '/'} replace />
+            <Navigate to={user ? '/admin' : customerFallback} replace />
           )
         }
       >
@@ -171,7 +177,7 @@ export default function App() {
           ) : user && (user.role === 'ADMIN' || user.role === 'EDITOR') ? (
             <AdminPage user={user} onLogout={() => void logout('/')} onUserUpdate={updated => { const token = getToken(); if (token) saveSession({ token, user: updated }); setUser(updated); }} />
           ) : (
-            <Navigate to={user ? '/catalogo' : '/login'} replace />
+            <Navigate to={user ? '/catalogo' : adminFallback} replace />
           )
         }
       />

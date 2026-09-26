@@ -246,43 +246,76 @@ Resultados, mensagens, commits e limitações serão consolidados aqui após cad
   Nenhum arquivo de QR ou dado histórico foi recriado/removido.
 - Tentativa de simular Offline pelo DevTools: após o usuário ativar a opção, um
   salvamento e uma recarga ainda acessaram a API e mostraram os registros. Não
-  há evidência de que o bloqueio tenha atingido a aba controlada; **falha e
-  retentativa continuam sem validação**.
-- Pendências de aceite: provocar e recuperar uma falha real de rede na UI,
-  inclusive o retry de upload parcial; conferir expiração de sessão com rascunho; fechar
-  confirmação nativa de descarte do perfil no navegador (a automação abriu o
-  diálogo, mas não conseguiu concluí-lo). Não declarar Nielsen concluída ainda.
+  há evidência de que o bloqueio tenha atingido a aba controlada. Para obter
+  um caso real, somente o processo local da API foi interrompido brevemente e
+  reiniciado com `npm.cmd run backend`; frontend, PostgreSQL e volumes ficaram
+  ativos. Na recarga, o VINUM mostrou “Não foi possível verificar sua sessão”
+  sem desconectar o administrador; “Tentar novamente” restaurou a lista. Em
+  outra interrupção, a edição do vinho fictício retornou “O serviço está
+  temporariamente indisponível”, preservou todos os campos e a foto anterior.
+  Após restaurar a API, o mesmo formulário salvou e a nova descrição apareceu
+  no detalhe, sem criar outro vinho.
+- Upload parcial, em cenário controlado: somente o vinho fictício inativo teve a
+  rota de foto temporariamente indisponível, antes de gravar qualquer arquivo.
+  A edição dos dados concluiu, mas a tela manteve o formulário e o PNG escolhido,
+  mostrando “O vinho foi salvo, mas a foto não foi enviada… sem duplicar o vinho”.
+  A simulação foi removida, a API reiniciada normalmente e o mesmo botão reenviou
+  a foto. A lista filtrada mostrou **um** registro, o detalhe exibiu a nova
+  descrição e a imagem da edição carregou (`naturalWidth` 1301). Nenhuma
+  instrumentação de falha ficou no código versionado.
+- Expiração de sessão com rascunho: a duplicação da aba copiou a sessão. Após
+  sair na cópia, a aba original ainda tinha a cidade não salva. O primeiro
+  teste revelou redirecionamento para a Home sem aviso, por disputa com a guarda
+  de rota. Corrigida a guarda em `App.tsx`. Repetido o mesmo cenário: ao salvar,
+  a aba abriu `/login?motivo=sessao-expirada` com “Sua sessão expirou. Entre
+  novamente para continuar.”; após entrar de novo, o rascunho reapareceu.
+  A cidade da conta de teste foi restaurada para “Cidade de teste, RS”.
+  Sem expiração, as guardas mantêm o comportamento anterior: `/perfil` sem
+  sessão volta à Home e `/admin` sem sessão abre o login (ambos revalidados).
+- Confirmação de descarte do perfil: o diálogo nativo abriu com alteração
+  não salva; após a tentativa de cancelar o diálogo, o formulário ainda exibia
+  “Rascunho descartável Nielsen”. A conexão da automação travou ao confirmar
+  o descarte. O usuário confirmou manualmente na aba que, após aceitar, voltou
+  ao resumo com o botão “Editar informações” e “Cidade de teste, RS”. Nenhum
+  valor do rascunho foi salvo.
+- Aceite Nielsen dos fluxos priorizados: administração e cliente autenticados,
+  formulários, máscaras, senha, foco/teclado, menus, mensagens, uploads,
+  indisponibilidade/retentativa, expiração de sessão, responsividade e zoom
+  200% foram validados nas condições descritas acima. A auditoria de
+  integração/regressão **não foi iniciada**. Os limites da amostra estão
+  explicitados na consolidação abaixo; este aceite não certifica WCAG nem
+  garante todas as combinações de dados ou condições de rede.
 
 ## Consolidação das 10 heurísticas — evidências e limites
 
-**Situação: correções dos grupos 1–9 commitadas; aceite global ainda pendente.**
+**Situação: aceite Nielsen dos fluxos priorizados concluído em 26/09/2026.**
 Não confundir testes unitários/renderização estática com avaliação interativa real.
 
 | Heurística | Problemas identificados e correções | Preservado / verificação restante |
 | --- | --- | --- |
-| H1 — Visibilidade do estado | Consultas deixavam erro parecer vazio; envio e movimentos sem feedback. QueryFeedback, status de envio, contador sem zero prematuro e mensagens de resultado. | Dados carregados e cache não são apagados por falha transitória. Falta validar rede lenta na UI. |
+| H1 — Visibilidade do estado | Consultas deixavam erro parecer vazio; envio e movimentos sem feedback. QueryFeedback, status de envio, contador sem zero prematuro e mensagens de resultado. | Carregamentos observados sob Slow 3G configurado pelo usuário; taxa exata não aferida. Falha real da API e retentativa observadas. |
 | H2 — Correspondência com o mundo real | JSON técnico nos detalhes, unidades ausentes, cadastro prometia administração ao cliente. Detalhes com nomes, unidades e linguagem por perfil. | Vocabulário vinho/safra/lote/garrafa, identidade VINUM e relações existentes. |
-| H3 — Controle e liberdade | Foco sequencial obrigatório; descarte administrativo sem confirmação; cancelar perfil em rota errada. Navegação livre entre campos, confirmações, retorno ao perfil e retomada de pedido fechado. | Regras de exclusão e histórico. Falta testar Escape, restauração de foco e navegação durante requisições. |
+| H3 — Controle e liberdade | Foco sequencial obrigatório; descarte administrativo sem confirmação; cancelar perfil em rota errada. Navegação livre entre campos, confirmações, retorno ao perfil e retomada de pedido fechado. | Escape, foco do menu, descarte de pedido e bloqueio durante salvamento testados. O usuário confirmou visualmente o retorno ao resumo após descarte do perfil. |
 | H4 — Consistência | Senhas e telefone inconsistentes, controles sem efeito. Componentes compartilhados, regras únicas, labels e feedback de campo. | Paleta, fluxos e estrutura das páginas; não houve redesign arbitrário. |
 | H5 — Prevenção de erros | Quantidade fracionária/negativa, upload após navegação, repetição de envio, contato inválido. Validações frontend/API e bloqueios síncronos. | Transações, autorização e constraints anteriores. Bloqueio no cliente não garante idempotência após perda de resposta do servidor. |
 | H6 — Reconhecimento | IDs nos detalhes e campos sem rótulo persistente. Nomes relacionados, foto atual, labels e requisitos visíveis. | Uvas herdadas e composição histórica de safra, seleção automática apenas quando aplicável. |
 | H7 — Flexibilidade e eficiência | Filtro e ordenação decorativos; paginação distante. Controles funcionais, busca sem acento, limpar filtros e paginação próxima. | Defaults e dados já cadastrados, sem criar estruturas duplicadas. |
-| H8 — Estética e simplicidade | Dados técnicos e descrições longas em listagem. Conteúdo resumido na tabela e completo no detalhe. Painéis de autenticação podem crescer com os avisos. | Observações e dados originais não foram truncados no banco. Falta medir layout/contraste/zoom em navegador. |
-| H9 — Reconhecimento e recuperação de erros | Inglês, falha de rede/JSON, expiração indevida por indisponibilidade, foto com sucesso parcial. Mensagens seguras, retry, manutenção de campos e identificação do vinho salvo. | Logs técnicos seguros e códigos HTTP. Falta teste interativo completo de sessão expirada com formulário preenchido. |
+| H8 — Estética e simplicidade | Dados técnicos e descrições longas em listagem. Conteúdo resumido na tabela e completo no detalhe. Painéis de autenticação podem crescer com os avisos. | Layout e zoom 200% medidos nas seis larguras listadas; sem certificação de contraste WCAG. Dados originais não foram truncados. |
+| H9 — Reconhecimento e recuperação de erros | Inglês, falha de rede/JSON, expiração indevida por indisponibilidade, foto com sucesso parcial. Mensagens seguras, retry, manutenção de campos e identificação do vinho salvo. | Falha da API, expiração com rascunho e upload parcial com retentativa testados no navegador. Logs técnicos e códigos HTTP preservados. |
 | H10 — Ajuda e documentação | Requisitos de senha ocultos e ações futuras parecendo prontas. Checklist, exemplos, ajuda de foto/origem e recuperação de senha explicada honestamente. | QR/blockchain futuros não foram implementados nem dados existentes removidos. |
 
 ## Padronização de formulários e prevenção de erros
 
 | Formulários | O que foi revisado/corrigido | Limite de validação atual |
 | --- | --- | --- |
-| Login e cadastro | Mostrar/ocultar, autocomplete, regras/checklist de senha, confirmação, erros inline, envio único, sucesso persistente. | Alternância independente, Tab e foco precisam de teste real. |
-| Cadastro administrativo | Telefone fixo/celular, CNPJ alfanumérico opcional, labels, requisitos, confirmação de senha, erros associados, proteção de fechamento. | Colar/apagar no meio da máscara e Escape dependem de navegador. |
-| Perfil do cliente | Máscara, regras de senha, checklist existente, idade derivada, erros inline, proteção de envio e cancelar correto. | Validação após interação e restauração de foco ainda devem ser percorridas manualmente. |
-| Vinho | Opções carregadas antes do formulário, foto validada, upload com recuperação, campos opcionais preenchidos validados, erros de API associados. | Confirmar upload real, erro de rede e retomada com arquivo novamente selecionado. |
+| Login e cadastro | Mostrar/ocultar, autocomplete, regras/checklist de senha, confirmação, erros inline, envio único, sucesso persistente. | Alternância, Tab e foco testados no navegador; sem auditoria WCAG integral. |
+| Cadastro administrativo | Telefone fixo/celular, CNPJ alfanumérico opcional, labels, requisitos, confirmação de senha, erros associados, proteção de fechamento. | Edição no meio da máscara e Escape testados; nenhum cadastro administrativo real criado. |
+| Perfil do cliente | Máscara, regras de senha, checklist existente, idade derivada, erros inline, proteção de envio e cancelar correto. | Validação, persistência e rascunho após expiração testados; descarte nativo concluído com confirmação visual do usuário. |
+| Vinho | Opções carregadas antes do formulário, foto validada, upload com recuperação, campos opcionais preenchidos validados, erros de API associados. | Upload real, falha parcial, retentativa sem duplicar e falha de conexão testados em vinho fictício inativo. |
 | Safra/lote | Herança preservada, opções com retry, foco livre, envio bloqueado, ajuda/associações dos campos, grid estreito. | Percorrer todas as combinações de vinho/safra e verificar UI de opções indisponíveis. |
 | Uvas/tipos/classificações | Formulário e registros genéricos recebem as correções de validação, foco, envio, consulta e exclusão. | Testar permissões e restrições de vínculo na interface real. |
-| Pedidos | Origem/local distinguíveis, foto existente, quantidade inteira, labels, erro por campo, continuar preenchimento e exclusão com histórico preservado. | Dados ficam em memória durante esta tela; recuperação após expiração de sessão/navegação precisa de verificação específica. |
-| Adega | Labels, foto/quantidade, cancelamento sem apagar preenchimento, mensagens de movimento, consulta distinta de vazio e histórico visível. | Cliques rápidos, último consumo e falha de imagem precisam de validação interativa. |
+| Pedidos | Origem/local distinguíveis, foto existente, quantidade inteira, labels, erro por campo, continuar preenchimento e exclusão com histórico preservado. | Fluxos VINUM/externo, edição, foto, descarte e zoom testados na conta fictícia; rascunho de pedido após expiração não foi testado. |
+| Adega | Labels, foto/quantidade, cancelamento sem apagar preenchimento, mensagens de movimento, consulta distinta de vazio e histórico visível. | Entrada, último consumo, histórico e imagem privada testados; exaustão de cliques rápidos não foi ensaiada. |
 
 ### Exemplos de mensagens alteradas
 
@@ -330,14 +363,17 @@ Não confundir testes unitários/renderização estática com avaliação intera
 | `a312da9` | fix(ux): valida pedidos e melhora feedback da adega |
 | `fa4e9ec` | fix(ux): rejeita respostas incompletas antes da renderizacao |
 | `7ebb669` | fix(ux): protege edicoes ao fechar cadastro administrativo |
+| `9e3f9d2` | fix(ux): valida fluxos Nielsen e corrige falhas confirmadas |
 
-## Próxima etapa e critérios de conclusão
+## Fechamento Nielsen e próxima etapa
 
-1. Continuar no navegador conectado e concluir as pendências de aceite da seção
-   “Continuação interativa de Nielsen” acima, incluindo administração autenticada.
-2. Revalidar qualquer correção nova no navegador, executar verificações focadas,
-   fazer commit e push das mudanças verificadas.
-3. Atualizar a consolidação final **somente após o aceite global**.
-
-Não há declaração de auditoria 100% concluída: testes automatizados não comprovam
-sozinhos usabilidade interativa, responsividade ou acessibilidade integral.
+- Correções novas foram revalidadas no navegador; lint, typecheck/build,
+  cinco testes unitários focados e `git diff --check` passaram nesta retomada.
+- A amostra não incluiu todas as combinações vinho/safra nem todas as restrições
+  de vínculo, rascunho de pedido após expiração, cliques rápidos exaustivos ou
+  certificação de contraste/acessibilidade WCAG. Esses limites não invalidam
+  o aceite dos fluxos Nielsen priorizados e não devem ser descritos como testes
+  já executados.
+- A auditoria de integração/regressão é uma etapa separada, ainda não iniciada.
+  Nela cabem os testes de contratos, permissões, transações e histórico, sem
+  recriar o banco ou apagar volumes.
