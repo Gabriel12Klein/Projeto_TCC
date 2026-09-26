@@ -447,3 +447,14 @@ Conclusão: a revisão Nielsen das telas afetadas está encerrada. Detalhes de
 arquitetura, migrations, cálculos e testes estão em
 `docs/customer-stock-dashboard.md`. A auditoria geral de integração/regressão
 permanece separada e não foi iniciada.
+
+## Revisão Nielsen da mudança Estoque → Dashboard — 26/09/2026
+
+- O item `Meu estoque` foi substituído por `Dashboard` no menu, na Home e no H1; a rota antiga redireciona para a nova.
+- Os indicadores agora correspondem ao pedido do professor: adquiridas, disponíveis, abertas e consumidas.
+- Cada garrafa aparece separadamente e mantém compra, abertura e consumo visíveis; garrafas consumidas continuam no histórico.
+- Abrir e finalizar usam formulário com data, confirmação e cancelamento, mantendo prevenção de data futura e de transição inválida no backend.
+- O filtro por status e a expansão de detalhes foram validados no navegador autenticado. A apresentação ampliada não criou overflow horizontal externo.
+- A conversão do legado preservou 36 unidades (19 disponíveis e 17 consumidas), sem reset ou exclusão de registros.
+
+Conclusão: a revisão Nielsen das telas diretamente afetadas por esta mudança está encerrada. A regressão geral continua separada e não foi iniciada.
