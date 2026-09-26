@@ -1,5 +1,20 @@
-import type { AuthSession, CatalogWine, CatalogWineDetail, CustomerOrder, EntityRecord, InventoryItem, PublicBatchDetail, ResourceKey, User } from '../types';
-import type { AdminSummary, WineryAccount, WineryAccountInput } from '../pages/Admin/components/adminAccount.types';
+import type {
+  AuthSession,
+  CatalogWine,
+  CatalogWineDetail,
+  CustomerOrder,
+  EntityRecord,
+  InventoryDashboard,
+  InventoryItem,
+  PublicBatchDetail,
+  ResourceKey,
+  User,
+} from '../types';
+import type {
+  AdminSummary,
+  WineryAccount,
+  WineryAccountInput,
+} from '../pages/Admin/components/adminAccount.types';
 import { ApiError, networkMessage, responseMessage, type FieldIssue } from './feedback';
 import { validResponse } from './responseShape';
 
@@ -36,24 +51,48 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   try {
     response = await fetch(`${API_URL}${path}`, { ...options, headers });
     text = await response.text();
-  } catch { throw new ApiError(networkMessage, 0); }
-  if (response.status === 401 && token && path !== '/auth/login') window.dispatchEvent(new Event('vinum:session-expired'));
+  } catch {
+    throw new ApiError(networkMessage, 0);
+  }
+  if (response.status === 401 && token && path !== '/auth/login')
+    window.dispatchEvent(new Event('vinum:session-expired'));
   let data: any;
-  try { data = text ? JSON.parse(text) : null; } catch {
-    throw new ApiError('O serviço não respondeu como esperado. Aguarde um momento e tente novamente.', response.status);
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    throw new ApiError(
+      'O serviço não respondeu como esperado. Aguarde um momento e tente novamente.',
+      response.status,
+    );
   }
   if (!response.ok) {
-    const issues: FieldIssue[] = Array.isArray(data?.issues) ? data.issues.filter((issue: unknown) => issue && typeof issue === 'object').map((issue: FieldIssue) => ({ path: Array.isArray(issue.path) ? issue.path : [], message: responseMessage(response.status, issue.message) })) : [];
-    throw new ApiError(issues.map(issue => issue.message).join(' ') || responseMessage(response.status, data?.message), response.status, issues);
+    const issues: FieldIssue[] = Array.isArray(data?.issues)
+      ? data.issues
+          .filter((issue: unknown) => issue && typeof issue === 'object')
+          .map((issue: FieldIssue) => ({
+            path: Array.isArray(issue.path) ? issue.path : [],
+            message: responseMessage(response.status, issue.message),
+          }))
+      : [];
+    throw new ApiError(
+      issues.map((issue) => issue.message).join(' ') || responseMessage(response.status, data?.message),
+      response.status,
+      issues,
+    );
   }
-  if (!validResponse(path, options.method ?? 'GET', data)) throw new ApiError('O serviço retornou dados incompletos. Tente novamente. Se estava salvando, confira a lista antes de repetir a operação.', response.status);
+  if (!validResponse(path, options.method ?? 'GET', data))
+    throw new ApiError(
+      'O serviço retornou dados incompletos. Tente novamente. Se estava salvando, confira a lista antes de repetir a operação.',
+      response.status,
+    );
   return data;
 }
 
 export const api = {
   admin: {
     account: () => request<WineryAccount>('/admin/cadastro'),
-    updateAccount: (payload: WineryAccountInput) => request<WineryAccount>('/admin/cadastro', { method: 'PUT', body: JSON.stringify(payload) }),
+    updateAccount: (payload: WineryAccountInput) =>
+      request<WineryAccount>('/admin/cadastro', { method: 'PUT', body: JSON.stringify(payload) }),
     summary: () => request<AdminSummary>('/admin/resumo'),
   },
   login: (payload: { email: string; password: string }) =>
@@ -103,16 +142,42 @@ export const api = {
   },
   customer: {
     orders: () => request<CustomerOrder[]>('/cliente/pedidos'),
-    createOrder: (payload: { source: 'VINICULA' | 'OUTRO_LOCAL'; purchaseDate: string; purchaseLocation?: string; photo?: File; notes?: string; items: Array<{ wineId?: string; wineName?: string; wineryName?: string; vintageYear?: number; quantityBottles: number; volumeMl?: number; unitPrice?: number }> }) => {
+    createOrder: (payload: {
+      source: 'VINICULA' | 'OUTRO_LOCAL';
+      purchaseDate: string;
+      purchaseLocation?: string;
+      photo?: File;
+      notes?: string;
+      items: Array<{
+        wineId?: string;
+        wineName?: string;
+        wineryName?: string;
+        vintageYear?: number;
+        quantityBottles: number;
+        volumeMl?: number;
+        unitPrice?: number;
+      }>;
+    }) => {
       const { photo, ...data } = payload;
-      if (!photo) return request<CustomerOrder>('/cliente/pedidos', { method: 'POST', body: JSON.stringify(data) });
+      if (!photo)
+        return request<CustomerOrder>('/cliente/pedidos', { method: 'POST', body: JSON.stringify(data) });
       const body = new FormData();
       body.append('payload', JSON.stringify(data));
       body.append('photo', photo);
       return request<CustomerOrder>('/cliente/pedidos', { method: 'POST', body });
     },
     removeOrder: (id: string) => request<void>(`/cliente/pedidos/${id}`, { method: 'DELETE' }),
-    updateOrderItem: (orderId: string, itemId: string, payload: { source: 'VINICULA' | 'OUTRO_LOCAL'; purchaseDate: string; purchaseLocation?: string; photo?: File; items: Array<{ wineId?: string; wineName?: string; quantityBottles: number }> }) => {
+    updateOrderItem: (
+      orderId: string,
+      itemId: string,
+      payload: {
+        source: 'VINICULA' | 'OUTRO_LOCAL';
+        purchaseDate: string;
+        purchaseLocation?: string;
+        photo?: File;
+        items: Array<{ wineId?: string; wineName?: string; quantityBottles: number }>;
+      },
+    ) => {
       const { photo, ...data } = payload;
       const url = `/cliente/pedidos/${encodeURIComponent(orderId)}/itens/${encodeURIComponent(itemId)}`;
       if (!photo) return request<CustomerOrder>(url, { method: 'PUT', body: JSON.stringify(data) });
@@ -122,15 +187,12 @@ export const api = {
       return request<CustomerOrder>(url, { method: 'PUT', body });
     },
     inventory: () => request<InventoryItem[]>('/cliente/estoque'),
-    createInventoryItem: (payload: { name: string; wineryName?: string; quantityBottles: number; photo: File }) => {
-      const body = new FormData();
-      body.append('name', payload.name);
-      body.append('quantityBottles', String(payload.quantityBottles));
-      if (payload.wineryName) body.append('wineryName', payload.wineryName);
-      body.append('photo', payload.photo);
-      return request<InventoryItem>('/cliente/estoque', { method: 'POST', body });
-    },
-    movement: (itemId: string, payload: { type: 'CONSUMO' | 'ENTRADA' | 'AJUSTE'; quantityBottles: number; reason?: string }) =>
-      request<InventoryItem>(`/cliente/estoque/${itemId}/movimentos`, { method: 'POST', body: JSON.stringify(payload) }),
+    inventoryDashboard: (year?: number) =>
+      request<InventoryDashboard>(`/cliente/estoque/resumo${year ? `?year=${year}` : ''}`),
+    consume: (itemId: string, payload: { quantityBottles: number; occurredAt: string }) =>
+      request<InventoryItem>(`/cliente/estoque/${itemId}/consumos`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
   },
 };

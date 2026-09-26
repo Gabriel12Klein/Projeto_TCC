@@ -17,7 +17,8 @@ export type User = {
 };
 
 export type AuthSession = { token: string; user: User };
-export type ResourceKey = 'vinicolas' | 'vinhos' | 'tipos-vinho' | 'uvas' | 'safras' | 'lotes' | 'classificacoes';
+export type ResourceKey =
+  'vinicolas' | 'vinhos' | 'tipos-vinho' | 'uvas' | 'safras' | 'lotes' | 'classificacoes';
 export type EntityRecord = { id: string; [key: string]: unknown };
 
 export type CatalogWine = {
@@ -136,4 +137,16 @@ export type InventoryItem = {
   wineId: string | null;
   wine?: { id: string; name: string; slug: string } | null;
   movements: InventoryMovement[];
+};
+
+export type InventoryDashboard = {
+  totals: {
+    acquiredBottles: number;
+    consumedBottles: number;
+    availableBottles: number;
+    labelCount: number;
+  };
+  selectedYear: number;
+  years: number[];
+  monthlyConsumption: { month: number; bottles: number }[];
 };

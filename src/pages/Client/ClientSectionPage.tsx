@@ -1,17 +1,15 @@
 import QueryFeedback from '../../ui/QueryFeedback';
 import FieldError from '../../ui/FieldError';
 import { useFormFeedback } from '../../ui/useFormFeedback';
-import { validateInventory, validatePurchase } from './formValidation';
+import { validatePurchase } from './formValidation';
 import PrivateImage from './PrivateImage';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { api } from '../../api/api';
-import type { CustomerOrder, InventoryItem } from '../../types';
-import InventoryWineCard from './InventoryWineCard';
+import type { CustomerOrder } from '../../types';
 import BottlePhotoPicker from './BottlePhotoPicker';
 import { persistOrderDraft, readOrderDraft } from './orderDraft';
-import { runSingleFlight } from '../../ui/singleFlight';
+import InventoryDashboard from './InventoryDashboard';
 
 const input =
   'w-full rounded-xl border border-[#d9cbbd] bg-white px-4 py-3 text-[#321b1c] outline-none focus:border-[#8b2638]';
@@ -29,7 +27,6 @@ function Orders({ userId }: { userId: string }) {
   const [restoredDraft] = useState(() => readOrderDraft(userId));
   const feedback = useFormFeedback('purchase', { quantityBottles: 'qty', wineName: 'name' });
   const sending = useRef(false);
-  const deleting = useRef(false);
   const [editing, setEditing] = useState<{
     orderId: string;
     itemId: string;
@@ -51,7 +48,13 @@ function Orders({ userId }: { userId: string }) {
   const [message, setMessage] = useState('');
   useEffect(() => {
     persistOrderDraft(userId, {
-      open, source, wineId, name, qty, purchaseLocation, editing,
+      open,
+      source,
+      wineId,
+      name,
+      qty,
+      purchaseLocation,
+      editing,
       photoNeedsReselect: Boolean(purchasePhoto || photoNeedsReselect),
     });
   }, [userId, open, source, wineId, name, qty, purchaseLocation, editing, purchasePhoto, photoNeedsReselect]);
@@ -75,24 +78,16 @@ function Orders({ userId }: { userId: string }) {
       setQty('1');
       await qc.invalidateQueries({ queryKey: ['customer-orders'] });
       await qc.invalidateQueries({ queryKey: ['customer-inventory'] });
+      await qc.invalidateQueries({ queryKey: ['customer-inventory-dashboard'] });
     },
     onError: (e) => {
       feedback.fromApi(e);
       setMessage(e instanceof Error ? e.message : 'Não foi possível salvar o pedido. Tente novamente.');
     },
   });
-  const remove = useMutation({
-    mutationFn: api.customer.removeOrder,
-    onSuccess: async () => {
-      setMessage('Pedido excluído.');
-      await qc.invalidateQueries({ queryKey: ['customer-orders'] });
-      await qc.invalidateQueries({ queryKey: ['customer-inventory'] });
-    },
-    onError: (e) => setMessage(e instanceof Error ? e.message : 'Não foi possível excluir o pedido.'),
-  });
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (sending.current || deleting.current) return;
+    if (sending.current) return;
     const issues = {
       ...feedback.nativeErrors(e.currentTarget as HTMLFormElement),
       ...validatePurchase({
@@ -130,33 +125,16 @@ function Orders({ userId }: { userId: string }) {
       sending.current = false;
     }
   }
-  async function deleteOrder(id: string) {
-    if (deleting.current || sending.current) return;
-    if (
-      !window.confirm(
-        'Excluir este pedido do histórico? As garrafas e movimentações do estoque serão mantidas.',
-      )
-    )
-      return;
-    deleting.current = true;
-    setMessage('');
-    try {
-      await remove.mutateAsync(id);
-    } catch {
-      /* mutation reports the error */
-    } finally {
-      deleting.current = false;
-    }
-  }
-
   return (
     <Shell title="Meus pedidos">
       <section className="mt-8 rounded-3xl bg-[#5b0c1b] p-8 text-white">
-        <h2 className="font-playfair text-3xl">Histórico de compras</h2>
-        <p className="mt-2 text-white">Registre vinhos da Vinum ou de qualquer outro local.</p>
+        <h2 className="font-playfair text-3xl">Registre suas compras</h2>
+        <p className="mt-2 text-white">
+          Cada compra salva entra automaticamente na sua adega e no resumo de consumo.
+        </p>
         <button
           className="mt-5 rounded-xl bg-[#d0a565] px-5 py-3 font-semibold text-[#4c151c]"
-          disabled={save.isPending || remove.isPending}
+          disabled={save.isPending}
           onClick={() => {
             if (
               (name || wineId || purchaseLocation || purchasePhoto) &&
@@ -176,7 +154,7 @@ function Orders({ userId }: { userId: string }) {
             setOpen(true);
           }}
         >
-          + Adicionar compra
+          + Registrar compra
         </button>
       </section>
       {draftRecovered && (
@@ -185,7 +163,13 @@ function Orders({ userId }: { userId: string }) {
         </p>
       )}
       {!open && (name || wineId || purchaseLocation || purchasePhoto) && (
-        <button type="button" className="mt-4 rounded-xl border border-[#7d1d2d] px-5 py-3 text-[#7d1d2d]" onClick={() => setOpen(true)}>Continuar preenchimento</button>
+        <button
+          type="button"
+          className="mt-4 rounded-xl border border-[#7d1d2d] px-5 py-3 text-[#7d1d2d]"
+          onClick={() => setOpen(true)}
+        >
+          Continuar preenchimento
+        </button>
       )}
       {open && (
         <form
@@ -194,7 +178,7 @@ function Orders({ userId }: { userId: string }) {
           noValidate
           aria-busy={save.isPending}
         >
-          <fieldset disabled={save.isPending || remove.isPending} className="contents">
+          <fieldset disabled={save.isPending} className="contents">
             <label className="text-sm font-semibold text-[#5b0c1b]">
               Tipo do rótulo *
               <select
@@ -216,7 +200,9 @@ function Orders({ userId }: { userId: string }) {
                   onChange={(e) => setWineId(e.target.value)}
                 >
                   <option value="">Selecione o vinho</option>
-                  {editing && wineId && !wines.some(wine => wine.id === wineId) && <option value={wineId}>{name} (rótulo deste pedido)</option>}
+                  {editing && wineId && !wines.some((wine) => wine.id === wineId) && (
+                    <option value={wineId}>{name} (rótulo deste pedido)</option>
+                  )}
                   {wines.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.name}
@@ -265,12 +251,27 @@ function Orders({ userId }: { userId: string }) {
               />
               <FieldError id="purchase-qty-error" message={feedback.errors.qty} />
             </label>
-            {editing?.photo && !purchasePhoto && <div className="md:col-span-2 flex items-center gap-3"><PrivateImage src={editing.photo} alt="Foto atual do pedido" className="h-20 w-14 object-contain" /><p className="text-sm text-[#715f59]">A foto atual será mantida se você não selecionar outra.</p></div>}
+            {editing?.photo && !purchasePhoto && (
+              <div className="md:col-span-2 flex items-center gap-3">
+                <PrivateImage
+                  src={editing.photo}
+                  alt="Foto atual do pedido"
+                  className="h-20 w-14 object-contain"
+                />
+                <p className="text-sm text-[#715f59]">
+                  A foto atual será mantida se você não selecionar outra.
+                </p>
+              </div>
+            )}
             <BottlePhotoPicker
               buttonId="purchase-photo"
               externalError={feedback.errors.photo}
               value={purchasePhoto}
-              onChange={(file) => { setPurchasePhoto(file); setPhotoNeedsReselect(false); feedback.clear('photo'); }}
+              onChange={(file) => {
+                setPurchasePhoto(file);
+                setPhotoNeedsReselect(false);
+                feedback.clear('photo');
+              }}
               required={source === 'OUTRO_LOCAL' && !editing?.photo}
             />
             {photoNeedsReselect && !purchasePhoto && (
@@ -323,7 +324,7 @@ function Orders({ userId }: { userId: string }) {
       )}
       {message && !open && (
         <p
-          role={remove.isError ? 'alert' : 'status'}
+          role={save.isError ? 'alert' : 'status'}
           className="mt-4 rounded-xl border border-[#eadfd3] bg-white p-4 text-[#5b0c1b]"
         >
           {message}
@@ -340,7 +341,7 @@ function Orders({ userId }: { userId: string }) {
           error={ordersQuery.error}
           fetching={ordersQuery.isFetching}
           empty={!orders.length}
-          emptyText="Nenhum pedido registrado. Use Adicionar compra para registrar o primeiro."
+          emptyText="Nenhum pedido registrado. Use Registrar compra para adicionar o primeiro."
           loadingText="Carregando pedidos…"
           retry={() => void ordersQuery.refetch()}
         />
@@ -390,7 +391,7 @@ function Orders({ userId }: { userId: string }) {
                         <div className="flex justify-end gap-2">
                           <button
                             className="rounded-lg border border-[#9a6a2d] px-3 py-2 text-xs font-semibold text-[#7d5b2b]"
-                            disabled={save.isPending || remove.isPending}
+                            disabled={save.isPending}
                             onClick={() => {
                               if (
                                 open &&
@@ -418,15 +419,6 @@ function Orders({ userId }: { userId: string }) {
                           >
                             Editar
                           </button>
-                          <button
-                            type="button"
-                            disabled={remove.isPending}
-                            style={{ backgroundColor: '#c62828', color: '#ffffff' }}
-                            className="rounded-lg border border-red-700 px-3 py-2 text-xs font-semibold transition hover:opacity-90 disabled:opacity-50"
-                            onClick={() => deleteOrder(order.id)}
-                          >
-                            {remove.isPending && remove.variables === order.id ? 'Excluindo...' : 'Excluir'}
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -441,213 +433,13 @@ function Orders({ userId }: { userId: string }) {
   );
 }
 
-function Inventory() {
-  const feedback = useFormFeedback('inventory', { quantityBottles: 'qty' });
-  const sending = useRef(false);
-  const moving = useRef(false);
-  const qc = useQueryClient();
-  const itemsQuery = useQuery({ queryKey: ['customer-inventory'], queryFn: api.customer.inventory });
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [winery, setWinery] = useState('');
-  const [qty, setQty] = useState('1');
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [message, setMessage] = useState('');
-  const create = useMutation({
-    mutationFn: api.customer.createInventoryItem,
-    onSuccess: async () => {
-      setMessage('Rótulo adicionado ao estoque.');
-      setOpen(false);
-      setName('');
-      setWinery('');
-      setQty('1');
-      setPhoto(null);
-      await qc.invalidateQueries({ queryKey: ['customer-inventory'] });
-    },
-    onError: (e) => {
-      feedback.fromApi(e);
-      setMessage(e instanceof Error ? e.message : 'Não foi possível adicionar o rótulo. Tente novamente.');
-    },
-  });
-  const move = useMutation({
-    mutationFn: ({ id, type }: { id: string; type: 'ENTRADA' | 'CONSUMO' }) =>
-      api.customer.movement(id, { type, quantityBottles: 1 }),
-    onSuccess: async (_data, variables) => {
-      setMessage(
-        variables.type === 'ENTRADA'
-          ? 'Entrada de uma garrafa registrada.'
-          : 'Consumo de uma garrafa registrado.',
-      );
-      await qc.invalidateQueries({ queryKey: ['customer-inventory'] });
-    },
-    onError: (e) =>
-      setMessage(e instanceof Error ? e.message : 'Não foi possível atualizar o estoque. Tente novamente.'),
-  });
-  const items = itemsQuery.data ?? [];
-  async function add(e: FormEvent) {
-    e.preventDefault();
-    if (sending.current || moving.current) return;
-    const issues = validateInventory({ name, qty, photo: Boolean(photo) });
-    feedback.show(issues);
-    if (Object.keys(issues).length || !photo)
-      return setMessage('Confira os campos destacados. Seus dados foram mantidos.');
-    sending.current = true;
-    setMessage('');
-    try {
-      await create.mutateAsync({
-        name: name.trim(),
-        wineryName: winery.trim() || undefined,
-        quantityBottles: Number(qty),
-        photo,
-      });
-    } catch {
-      /* mutation reports the error */
-    } finally {
-      sending.current = false;
-    }
-  }
-  async function registerMovement(id: string, type: 'ENTRADA' | 'CONSUMO') {
-    if (sending.current) return;
-    await runSingleFlight(moving, async () => {
-      setMessage('Registrando movimentação…');
-      try {
-        await move.mutateAsync({ id, type });
-      } catch {
-        /* mutation reports the error */
-      }
-    });
-  }
-  return (
-    <Shell title="Meu estoque">
-      <section className="mt-8 rounded-3xl bg-[#5b0c1b] p-8 text-white">
-        <h2 className="font-playfair text-3xl">Minha adega</h2>
-        <p className="mt-2 text-white">Adicione rótulos com foto e controle entradas e consumos.</p>
-      </section>
-      <section className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-[#9a6a2d]">Minha coleção</p>
-            <h2 className="inventory-stock-total">
-              <strong className="inventory-stock-total__number">
-                {itemsQuery.isPending
-                  ? '…'
-                  : itemsQuery.isError
-                    ? '—'
-                    : items.reduce((s, i) => s + i.quantityBottles, 0)}
-              </strong>
-              <span className="inventory-stock-total__label">
-                Garrafas disponíveis<span className="inventory-stock-total__detail">no seu estoque</span>
-              </span>
-            </h2>
-          </div>
-          <button
-            className="self-center rounded-xl bg-[#7d1d2d] px-4 py-3 font-semibold text-white"
-            disabled={create.isPending || move.isPending}
-            onClick={() => setOpen(!open)}
-          >
-            {open ? 'Fechar formulário' : '+ Adicionar rótulo'}
-          </button>
-        </div>
-        {open && (
-          <form
-            className="mt-6 grid gap-4 rounded-2xl bg-[#fffaf5] p-5 md:grid-cols-2"
-            noValidate
-            aria-busy={create.isPending}
-            onSubmit={add}
-          >
-            <fieldset className="contents" disabled={create.isPending || move.isPending}>
-              <label className="text-sm font-semibold text-[#5b0c1b]">
-                Nome do rótulo *
-                <input
-                  className={input}
-                  {...feedback.field('name')}
-                  placeholder="Ex.: Reserva Merlot"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-                <FieldError id="inventory-name-error" message={feedback.errors.name} />
-              </label>
-              <label className="text-sm font-semibold text-[#5b0c1b]">
-                Vinícola ou origem (opcional)
-                <input
-                  className={input}
-                  placeholder="Ex.: Vinícola VINUM"
-                  value={winery}
-                  onChange={(e) => setWinery(e.target.value)}
-                />
-              </label>
-              <label className="text-sm font-semibold text-[#5b0c1b]">
-                Quantidade de garrafas *
-                <input
-                  className={input}
-                  type="number"
-                  min="1"
-                  step="1"
-                  {...feedback.field('qty')}
-                  value={qty}
-                  onChange={(e) => setQty(e.target.value)}
-                />
-                <FieldError id="inventory-qty-error" message={feedback.errors.qty} />
-              </label>
-              <BottlePhotoPicker
-                buttonId="inventory-photo"
-                externalError={feedback.errors.photo}
-                value={photo}
-                onChange={(file) => { setPhoto(file); feedback.clear('photo'); }}
-              />
-              <button
-                className="rounded-xl bg-[#7d1d2d] px-5 py-3 font-semibold text-white"
-                disabled={create.isPending}
-              >
-                {create.isPending ? 'Salvando…' : 'Salvar rótulo'}
-              </button>
-              <button
-                type="button"
-                className="rounded-xl border border-[#7d1d2d] px-5 py-3"
-                disabled={create.isPending}
-                onClick={() => setOpen(false)}
-              >
-                Cancelar
-              </button>
-              {message && <p role="status">{message}</p>}
-            </fieldset>
-          </form>
-        )}
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          {items.map((item: InventoryItem) => (
-            <InventoryWineCard
-              key={item.id}
-              item={item}
-              pending={move.isPending || create.isPending || itemsQuery.isError}
-              onMove={(type) => void registerMovement(item.id, type)}
-            />
-          ))}
-        </div>
-        <QueryFeedback
-          loading={itemsQuery.isPending}
-          error={itemsQuery.error}
-          fetching={itemsQuery.isFetching}
-          empty={!items.length}
-          emptyText="Seu estoque está vazio. Adicione um rótulo ou registre uma compra para começar."
-          loadingText="Carregando sua adega…"
-          retry={() => void itemsQuery.refetch()}
-        />
-        {message && !open && (
-          <p
-            className="mt-4 rounded-xl border border-[#dfd0bd] p-4"
-            role={move.isError || create.isError ? 'alert' : 'status'}
-          >
-            {message}
-          </p>
-        )}
-        <Link className="mt-6 inline-block text-sm font-semibold text-[#7d1d2d]" to="/pedidos">
-          Registrar também um pedido completo -&gt;
-        </Link>
-      </section>
-    </Shell>
-  );
-}
-
-export default function ClientSectionPage({ title, userId }: { title: string; description?: string; userId: string }) {
-  return title === 'Meus pedidos' ? <Orders userId={userId} /> : <Inventory />;
+export default function ClientSectionPage({
+  title,
+  userId,
+}: {
+  title: string;
+  description?: string;
+  userId: string;
+}) {
+  return title === 'Meus pedidos' ? <Orders userId={userId} /> : <InventoryDashboard />;
 }
