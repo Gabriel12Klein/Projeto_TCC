@@ -22,8 +22,8 @@ export const moduleConfigs = {
     key:'classificacoes', label:'Classificação', singular:'classificação', heading:'Gerenciamento das Classificações', icon:vinhoRepresentative,
     formTitle:'Dados da Classificação', formSubtitle:'Classificação é independente do tipo de vinho.', recordsTitle:'Classificações', recordsSubtitle:'Referências persistidas no banco de dados.', searchPlaceholder:'Buscar classificação...',
     fields:[
-      { name:'name', label:'Nome', required:true, validation:{ minLength:2 } },
-      { name:'description', label:'Descrição', type:'textarea', full:true, maxLength:500 },
+      { name:'name', label:'Nome', required:true, placeholder:'Ex.: Reserva', validation:{ minLength:2 } },
+      { name:'description', label:'Descrição', type:'textarea', full:true, placeholder:'Explique brevemente esta classificação.', maxLength:500 },
       { name:'status', label:'Situação', required:true, type:'select', options:['Ativo','Inativo'] }
     ],
     columns:[['name','Nome'],['description','Descrição'],['status','Situação']]
