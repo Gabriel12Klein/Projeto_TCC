@@ -40,7 +40,11 @@ export default function App() {
 
   useEffect(() => {
     const expired = () => {
-      clearSession(); queryClient.clear(); setSessionExpired(true); setUser(null); setCheckingSession(false);
+      clearSession();
+      queryClient.clear();
+      setSessionExpired(true);
+      setUser(null);
+      setCheckingSession(false);
       navigate('/login?motivo=sessao-expirada', { replace: true });
     };
     window.addEventListener('vinum:session-expired', expired);
@@ -61,8 +65,14 @@ export default function App() {
       })
       .catch((error) => {
         if (error instanceof ApiError && error.status === 401) {
-          queryClient.clear(); clearSession(); setSessionExpired(true); setUser(null);
-        } else setSessionProblem('Não foi possível verificar sua sessão. Sua conta não foi desconectada; tente novamente quando o serviço estiver disponível.');
+          queryClient.clear();
+          clearSession();
+          setSessionExpired(true);
+          setUser(null);
+        } else
+          setSessionProblem(
+            'Não foi possível verificar sua sessão. Sua conta não foi desconectada; tente novamente quando o serviço estiver disponível.',
+          );
       })
       .finally(() => setCheckingSession(false));
   }, [queryClient]);
@@ -87,7 +97,22 @@ export default function App() {
   }
 
   if (checkingSession) return <Loading />;
-  if (sessionProblem) return <main className="mx-auto max-w-xl p-8"><h1 className="text-2xl">Não foi possível continuar</h1><p role="alert" className="my-4">{sessionProblem}</p><button type="button" className="rounded-lg bg-[#5b0c1b] px-5 py-3 text-white" onClick={() => window.location.reload()}>Tentar novamente</button></main>;
+  if (sessionProblem)
+    return (
+      <main className="mx-auto max-w-xl p-8">
+        <h1 className="text-2xl">Não foi possível continuar</h1>
+        <p role="alert" className="my-4">
+          {sessionProblem}
+        </p>
+        <button
+          type="button"
+          className="rounded-lg bg-[#5b0c1b] px-5 py-3 text-white"
+          onClick={() => window.location.reload()}
+        >
+          Tentar novamente
+        </button>
+      </main>
+    );
 
   const expiredLoginDestination = '/login?motivo=sessao-expirada';
   const customerFallback = sessionExpired ? expiredLoginDestination : '/';
@@ -122,10 +147,22 @@ export default function App() {
           )
         }
       >
-        <Route index element={<ProfilePage user={user as User} onUpdate={updated => { const token = getToken(); if (token) saveSession({ token, user: updated }); setUser(updated); }} />} />
+        <Route
+          index
+          element={
+            <ProfilePage
+              user={user as User}
+              onUpdate={(updated) => {
+                const token = getToken();
+                if (token) saveSession({ token, user: updated });
+                setUser(updated);
+              }}
+            />
+          }
+        />
       </Route>
       <Route
-        path="/estoque"
+        path="/dashboard"
         element={
           user?.role === 'CUSTOMER' ? (
             <CatalogLayout user={user} onLogout={logout} />
@@ -138,13 +175,14 @@ export default function App() {
           index
           element={
             <ClientSectionPage
-              title="Meu estoque"
-              description="Aqui você poderá acompanhar os vinhos e lotes vinculados ao seu estoque."
+              title="Dashboard"
+              description="Acompanhe o ciclo e o histórico individual das garrafas da sua adega."
               userId={user?.id ?? ''}
             />
           }
         />
       </Route>
+      <Route path="/estoque" element={<Navigate to="/dashboard" replace />} />
       <Route
         path="/pedidos"
         element={
@@ -177,7 +215,15 @@ export default function App() {
           checkingSession ? (
             <Loading />
           ) : user && (user.role === 'ADMIN' || user.role === 'EDITOR') ? (
-            <AdminPage user={user} onLogout={() => void logout('/')} onUserUpdate={updated => { const token = getToken(); if (token) saveSession({ token, user: updated }); setUser(updated); }} />
+            <AdminPage
+              user={user}
+              onLogout={() => void logout('/')}
+              onUserUpdate={(updated) => {
+                const token = getToken();
+                if (token) saveSession({ token, user: updated });
+                setUser(updated);
+              }}
+            />
           ) : (
             <Navigate to={user ? '/catalogo' : adminFallback} replace />
           )

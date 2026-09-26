@@ -1,5 +1,6 @@
 import type {
   AuthSession,
+  CellarBottle,
   CatalogWine,
   CatalogWineDetail,
   CustomerOrder,
@@ -189,10 +190,19 @@ export const api = {
     inventory: () => request<InventoryItem[]>('/cliente/estoque'),
     inventoryDashboard: (year?: number) =>
       request<InventoryDashboard>(`/cliente/estoque/resumo${year ? `?year=${year}` : ''}`),
-    consume: (itemId: string, payload: { quantityBottles: number; occurredAt: string }) =>
-      request<InventoryItem>(`/cliente/estoque/${itemId}/consumos`, {
+    bottles: (status?: string) =>
+      request<CellarBottle[]>(`/cliente/estoque/garrafas${status ? `?status=${status}` : ''}`),
+    bottle: (bottleId: string) =>
+      request<CellarBottle>(`/cliente/estoque/garrafas/${encodeURIComponent(bottleId)}`),
+    openBottle: (bottleId: string, occurredAt: string) =>
+      request<CellarBottle>(`/cliente/estoque/garrafas/${encodeURIComponent(bottleId)}/abrir`, {
         method: 'POST',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ occurredAt }),
+      }),
+    finishBottle: (bottleId: string, occurredAt: string) =>
+      request<CellarBottle>(`/cliente/estoque/garrafas/${encodeURIComponent(bottleId)}/consumir`, {
+        method: 'POST',
+        body: JSON.stringify({ occurredAt }),
       }),
   },
 };

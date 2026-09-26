@@ -10,10 +10,16 @@ function render(title: string, loaded = false) {
     defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime: Infinity } },
   });
   if (loaded && title === 'Meus pedidos') client.setQueryData(['customer-orders'], []);
-  if (loaded && title === 'Meu estoque') {
-    client.setQueryData(['customer-inventory'], []);
+  if (loaded && title === 'Dashboard') {
+    client.setQueryData(['customer-cellar-bottles', ''], []);
     client.setQueryData(['customer-inventory-dashboard', new Date().getFullYear()], {
-      totals: { acquiredBottles: 0, consumedBottles: 0, availableBottles: 0, labelCount: 0 },
+      totals: {
+        acquiredBottles: 0,
+        consumedBottles: 0,
+        availableBottles: 0,
+        openedBottles: 0,
+        labelCount: 0,
+      },
       selectedYear: new Date().getFullYear(),
       years: [new Date().getFullYear()],
       monthlyConsumption: Array.from({ length: 12 }, (_, month) => ({ month: month + 1, bottles: 0 })),
@@ -36,11 +42,11 @@ it('não apresenta pedidos vazios enquanto a consulta está carregando', () => {
   expect(render('Meus pedidos', true)).toContain('Nenhum pedido registrado.');
 });
 it('não apresenta painel vazio enquanto as consultas estão carregando', () => {
-  const html = render('Meu estoque');
-  expect(html).toContain('Carregando sua adega');
-  expect(html).toContain('Carregando resumo da adega');
-  expect(html).not.toContain('Seu estoque está vazio.');
-  const empty = render('Meu estoque', true);
+  const html = render('Dashboard');
+  expect(html).toContain('Carregando histórico da adega');
+  expect(html).toContain('Carregando dashboard');
+  expect(html).not.toContain('Sua adega está vazia.');
+  const empty = render('Dashboard', true);
   expect(empty).toContain('Sua adega está vazia.');
   expect(empty).toContain('Garrafas adquiridas');
   expect(empty).toContain('Registrar nova compra');

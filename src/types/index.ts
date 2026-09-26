@@ -121,7 +121,7 @@ export type InventoryMovement = {
   orderId?: string | null;
   purchaseLocation?: string | null;
   id: string;
-  type: 'CONSUMO' | 'ENTRADA' | 'AJUSTE';
+  type: 'CONSUMO' | 'ENTRADA' | 'AJUSTE' | 'ABERTURA';
   quantityBottles: number;
   reason: string | null;
   occurredAt: string;
@@ -144,9 +144,47 @@ export type InventoryDashboard = {
     acquiredBottles: number;
     consumedBottles: number;
     availableBottles: number;
+    openedBottles: number;
     labelCount: number;
   };
   selectedYear: number;
   years: number[];
   monthlyConsumption: { month: number; bottles: number }[];
+};
+
+export type BottleStatus = 'DISPONIVEL' | 'ABERTA' | 'CONSUMIDA';
+
+export type CellarBottle = {
+  id: string;
+  bottleNumber: number;
+  status: BottleStatus;
+  purchasedAt: string;
+  openedAt: string | null;
+  finishedAt: string | null;
+  inventoryItem: {
+    id: string;
+    name: string;
+    wineryName: string | null;
+    photoPath: string | null;
+    wine: {
+      id: string;
+      name: string;
+      slug: string;
+      description: string;
+      volumeMl: number;
+      winery: { name: string } | null;
+      image: { path: string } | null;
+    } | null;
+  };
+  orderItem: {
+    vintageYear: number | null;
+    volumeMl: number | null;
+    order: {
+      id: string;
+      purchaseDate: string;
+      purchaseLocation: string | null;
+      source: 'VINICULA' | 'OUTRO_LOCAL';
+    };
+  } | null;
+  movements: InventoryMovement[];
 };

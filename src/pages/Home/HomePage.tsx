@@ -98,11 +98,11 @@ export default function HomePage({ onLogout }: { onLogout: () => Promise<void> }
                   </Link>
                   <Link
                     className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#5b0c1b] transition hover:bg-[#f3e4d2]"
-                    to="/estoque"
+                    to="/dashboard"
 
                     onClick={() => setProfileMenuOpen(false)}
                   >
-                    Meu estoque
+                    Dashboard
                   </Link>
                   <Link
                     className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#5b0c1b] transition hover:bg-[#f3e4d2]"

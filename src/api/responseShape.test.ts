@@ -13,7 +13,13 @@ it('rejeita sucesso malformado antes de renderizar listas', () => {
   ).toBe(false);
   expect(
     validResponse('/cliente/estoque/resumo?year=2026', 'GET', {
-      totals: { acquiredBottles: 5, consumedBottles: 2, availableBottles: 3, labelCount: 1 },
+      totals: {
+        acquiredBottles: 5,
+        consumedBottles: 2,
+        availableBottles: 2,
+        openedBottles: 1,
+        labelCount: 1,
+      },
       selectedYear: 2026,
       years: [2026],
       monthlyConsumption: Array.from({ length: 12 }, (_, month) => ({ month: month + 1, bottles: 0 })),

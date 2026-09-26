@@ -28,7 +28,7 @@ const inventory = (value: unknown) =>
 const inventoryDashboard = (value: unknown) =>
   object(value) &&
   object(value.totals) &&
-  ['acquiredBottles', 'consumedBottles', 'availableBottles', 'labelCount'].every((key) =>
+  ['acquiredBottles', 'consumedBottles', 'availableBottles', 'openedBottles', 'labelCount'].every((key) =>
     Number.isFinite(value.totals[key]),
   ) &&
   Number.isInteger(value.selectedYear) &&
@@ -73,6 +73,16 @@ export function validResponse(path: string, method: string, value: unknown) {
   if (route.startsWith('/cliente/pedidos')) return order(value);
   if (route === '/cliente/estoque' && method === 'GET') return Array.isArray(value) && value.every(inventory);
   if (route === '/cliente/estoque/resumo' && method === 'GET') return inventoryDashboard(value);
+  if (route === '/cliente/estoque/garrafas' && method === 'GET')
+    return (
+      Array.isArray(value) &&
+      value.every(
+        (bottle) =>
+          object(bottle) &&
+          typeof bottle.id === 'string' &&
+          ['DISPONIVEL', 'ABERTA', 'CONSUMIDA'].includes(bottle.status),
+      )
+    );
   // Mutation responses need not include loaded relations.
   if (route.startsWith('/cliente/estoque')) return object(value) && typeof value.id === 'string';
   if (route === '/admin/cadastro') return object(value) && object(value.winery) && user(value.account);
