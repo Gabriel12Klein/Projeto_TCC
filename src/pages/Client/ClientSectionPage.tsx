@@ -11,6 +11,7 @@ import type { CustomerOrder, InventoryItem } from '../../types';
 import InventoryWineCard from './InventoryWineCard';
 import BottlePhotoPicker from './BottlePhotoPicker';
 import { persistOrderDraft, readOrderDraft } from './orderDraft';
+import { runSingleFlight } from '../../ui/singleFlight';
 
 const input =
   'w-full rounded-xl border border-[#d9cbbd] bg-white px-4 py-3 text-[#321b1c] outline-none focus:border-[#8b2638]';
@@ -506,16 +507,15 @@ function Inventory() {
     }
   }
   async function registerMovement(id: string, type: 'ENTRADA' | 'CONSUMO') {
-    if (moving.current || sending.current) return;
-    moving.current = true;
-    setMessage('Registrando movimentação…');
-    try {
-      await move.mutateAsync({ id, type });
-    } catch {
-      /* mutation reports the error */
-    } finally {
-      moving.current = false;
-    }
+    if (sending.current) return;
+    await runSingleFlight(moving, async () => {
+      setMessage('Registrando movimentação…');
+      try {
+        await move.mutateAsync({ id, type });
+      } catch {
+        /* mutation reports the error */
+      }
+    });
   }
   return (
     <Shell title="Meu estoque">

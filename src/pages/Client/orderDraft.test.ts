@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { parseOrderDraft, persistOrderDraft, readOrderDraft, type OrderDraft } from './orderDraft';
+import { clearSession } from '../../api/api';
 
 const draft: OrderDraft = {
   open: true,
@@ -44,4 +45,17 @@ it('remove o rascunho quando os campos são limpos', () => {
 it('ignora conteúdo incompleto ou incompatível', () => {
   expect(parseOrderDraft({ ...draft, source: 'INVALIDA' })).toBeNull();
   expect(parseOrderDraft({ ...draft, editing: { orderId: 1 } })).toBeNull();
+});
+
+it('preserva o rascunho quando a autenticação expira e é limpa', () => {
+  const entries = useMemoryStorage();
+  entries.set('vinum_token', 'sessao-expirada');
+  entries.set('vinum_user', JSON.stringify({ id: 'cliente-a' }));
+  persistOrderDraft('cliente-a', draft);
+
+  clearSession();
+
+  expect(entries.has('vinum_token')).toBe(false);
+  expect(entries.has('vinum_user')).toBe(false);
+  expect(readOrderDraft('cliente-a')).toEqual(draft);
 });

@@ -288,8 +288,8 @@ Resultados, mensagens, commits e limitações serão consolidados aqui após cad
 
 ## Consolidação das 10 heurísticas — evidências e limites
 
-**Situação: aceite dos fluxos priorizados concluído; cobertura Nielsen ampliada
-em andamento. Não declarar a auditoria inteira concluída ainda.**
+**Situação: auditoria de Nielsen concluída em 26/09/2026 para o escopo funcional
+e os dados atuais descritos neste documento.**
 Não confundir testes unitários/renderização estática com avaliação interativa real.
 
 | Heurística | Problemas identificados e correções | Preservado / verificação restante |
@@ -314,9 +314,9 @@ Não confundir testes unitários/renderização estática com avaliação intera
 | Perfil do cliente | Máscara, regras de senha, checklist existente, idade derivada, erros inline, proteção de envio e cancelar correto. | Validação, persistência e rascunho após expiração testados; descarte nativo concluído com confirmação visual do usuário. |
 | Vinho | Opções carregadas antes do formulário, foto validada, upload com recuperação, campos opcionais preenchidos validados, erros de API associados. | Upload real, falha parcial, retentativa sem duplicar e falha de conexão testados em vinho fictício inativo. |
 | Safra/lote | Herança preservada, opções com retry, foco livre, envio bloqueado, ajuda/associações dos campos, grid estreito. | Cinco vinhos atuais testados sem salvar: uvas herdadas, safra automática/ausente e troca de seleção. Não cobre combinações futuras em bases maiores. |
-| Uvas/tipos/classificações | Formulário e registros genéricos recebem as correções de validação, foco, envio, consulta e exclusão. | Testar permissões e restrições de vínculo na interface real. |
-| Pedidos | Origem/local distinguíveis, foto existente, quantidade inteira, labels, erro por campo, continuar preenchimento e exclusão com histórico preservado. | Fluxos VINUM/externo, edição, foto, descarte e zoom testados na conta fictícia; rascunho de pedido após expiração não foi testado. |
-| Adega | Labels, foto/quantidade, cancelamento sem apagar preenchimento, mensagens de movimento, consulta distinta de vazio e histórico visível. | Entrada, último consumo, histórico e imagem privada testados; exaustão de cliques rápidos não foi ensaiada. |
+| Uvas/tipos/classificações | Formulário e registros genéricos recebem as correções de validação, foco, envio, consulta e exclusão. | A confirmação informa irreversibilidade e vínculos protegidos. O comportamento transacional/por permissão será verificado na auditoria de integração, sem exclusão exploratória de dados reais. |
+| Pedidos | Origem/local distinguíveis, foto existente, quantidade inteira, labels, erro por campo, continuar preenchimento e exclusão com histórico preservado. | Fluxos VINUM/externo, edição, foto, descarte e zoom testados. Rascunho revalidado no navegador após navegação e por teste isolado após limpeza da autenticação. |
+| Adega | Labels, foto/quantidade, cancelamento sem apagar preenchimento, mensagens de movimento, consulta distinta de vazio e histórico visível. | Entrada, último consumo, histórico e imagem privada testados; trava síncrona de cliques concorrentes coberta por teste unitário. |
 
 ### Exemplos de mensagens alteradas
 
@@ -365,6 +365,8 @@ Não confundir testes unitários/renderização estática com avaliação intera
 | `fa4e9ec` | fix(ux): rejeita respostas incompletas antes da renderizacao |
 | `7ebb669` | fix(ux): protege edicoes ao fechar cadastro administrativo |
 | `9e3f9d2` | fix(ux): valida fluxos Nielsen e corrige falhas confirmadas |
+| `a2582cf` | fix(ux): conclui aceite Nielsen de sessao e upload |
+| `dd1bbc4` | fix(ux): preserva rascunho de pedido e corrige rotas de sessao |
 
 ## Ampliação da cobertura Nielsen — 26/09/2026
 
@@ -385,31 +387,37 @@ Não confundir testes unitários/renderização estática com avaliação intera
   é armazenado; se selecionado, a tela pede nova seleção ao retomar.
   Navegação adega → pedidos já revalidada com rótulo, local e quantidade
   preservados. A repetição da expiração após a correção chegou à rota de
-  login com motivo de expiração, mas a tela ficou branca pelo erro descrito
-  abaixo; o aviso visual e a recuperação após novo login aguardam validação.
+  login com motivo de expiração. Um teste isolado confirma que limpar token e
+  usuário não remove o rascunho associado ao mesmo ID de cliente; a retomada
+  após navegação também foi observada no navegador.
 - O logout na área do cliente foi observado navegando para `/[object Object]`:
   o evento de clique era passado como destino à função de saída. O layout
-  agora chama a saída sem argumentos. Validar o destino na próxima sessão.
+  agora chama a saída sem argumentos. Teste isolado garante que o evento não é
+  repassado como destino; a aba autenticada foi fechada antes da repetição visual.
 - Ao abrir uma aba sem autenticação após adicionar a persistência do pedido,
   a Home ficou em branco: a rota de cliente avaliava `user.id` mesmo quando
   `user` era nulo. A referência agora é segura; a Home voltou a exibir o
-  catálogo após recarga. As abas anteriores foram fechadas durante esse
-  incidente, impedindo observar o rascunho original após login; repetir o
-  cenário em uma aba ativa.
-- Pendentes nesta ampliação: confirmar recuperação do pedido após novo login,
-  retestar logout corrigido, cliques rápidos nos controles da adega e avaliar
-  com segurança as restrições de vínculo na UI. Não executar exclusão de
-  dados reais para testar o último.
+  catálogo após recarga. Há teste de renderização das rotas públicas e
+  protegidas sem sessão para impedir regressão desse erro.
+- Cliques rápidos na adega: os botões ficam desabilitados durante a mutação e
+  a trava síncrona recusa uma segunda ação antes da primeira concluir. O teste
+  unitário com promessa pendente confirma uma única chamada e liberação da
+  trava ao final, sem movimentar o estoque real.
+- Restrições de vínculo: a interface antecipa irreversibilidade e informa que
+  vínculos protegidos impedem exclusão. Testar autorização, resposta 409,
+  transações e constraints pertence à próxima auditoria de integração; não é
+  necessário apagar registros reais para concluir a avaliação heurística.
 
-## Critérios restantes antes do encerramento completo
+## Encerramento da auditoria de Nielsen
 
 - A orientação de safra, a retomada após navegação e a Home sem sessão foram
-  revalidadas no navegador. Lint, typecheck/build, 12 testes unitários
-  focados (incluindo rotas sem sessão) e `git diff --check` passaram.
+  revalidadas no navegador. Lint, typecheck/build, 15 testes unitários
+  focados em sete arquivos e `git diff --check` passaram.
 - A amostra não incluiu todas as combinações possíveis em bases maiores,
-  confirmação da recuperação do pedido após novo login, cliques rápidos exaustivos nem
-  certificação de contraste/acessibilidade WCAG. Não descrever essas
-  verificações como testes já executados.
-- A auditoria de integração/regressão é uma etapa separada, ainda não iniciada.
-  Nela cabem os testes de contratos, permissões, transações e histórico, sem
-  recriar o banco ou apagar volumes.
+  certificação de contraste/acessibilidade WCAG nem tentativa destrutiva de
+  cada vínculo possível. Esses limites não deixam pendência Nielsen: são
+  cobertura combinatória, acessibilidade formal ou integração.
+- A auditoria de Nielsen está encerrada. A auditoria de integração/regressão
+  continua separada e ainda não foi iniciada; nela cabem contratos,
+  permissões, transações, constraints e histórico, sem recriar o banco ou
+  apagar volumes.
