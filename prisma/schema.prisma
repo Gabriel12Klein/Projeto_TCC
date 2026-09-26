@@ -383,5 +383,6 @@ model InventoryMovement {
   @@index([type])
   @@index([occurredAt])
   @@index([orderId])
+  @@index([inventoryItemId, type, occurredAt])
   @@map("movimentacao_estoque")
 }
