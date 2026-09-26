@@ -19,17 +19,7 @@ export default function CatalogLayout({ user, onLogout }: { user: User; onLogout
           <p className="mt-1 truncate font-semibold">{user.name}</p>
         </div>
         <nav className="flex flex-col gap-2" aria-label="Menu do cliente">
-          <p className="px-3 pb-1 text-xs font-bold uppercase tracking-[0.2em] text-[#e2bd76]">Vinho</p>
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) =>
-              `rounded-xl px-4 py-3 transition ${isActive ? 'bg-[#d0a565] font-semibold text-[#4c151c]' : 'text-white/85 hover:bg-white/10'}`
-            }
-          >
-            Início
-          </NavLink>
-          <p className="mb-1 mt-8 px-3 text-xs font-bold uppercase tracking-[0.2em] text-[#e2bd76]">Conta</p>
+          <p className="mb-1 px-3 text-xs font-bold uppercase tracking-[0.2em] text-[#e2bd76]">Conta</p>
           <NavLink
             to="/perfil"
             className={({ isActive }) =>
