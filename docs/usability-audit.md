@@ -5,16 +5,16 @@ Modelo single-tenant, PostgreSQL, histórico e dados atuais devem ser preservado
 
 ## Matriz inicial (antes das correções)
 
-| Grupo | Heurísticas | Evidência / problema | Severidade | Camadas / teste |
-| --- | --- | --- | --- | --- |
-| API/erros/sessão | H1,H2,H5,H9 | Zod envia mensagens em inglês; metadados desconhecidos de banco podem aparecer; rede/JSON não tratados; indisponibilidade encerra sessão | Alta | API/frontend; erros simulados, sessão e regressão |
-| Login/cadastro/senhas | H1,H4,H5,H9,H10 | Sem mostrar senha; lembrar de mim sem efeito; requisitos inconsistentes; feedback não associado aos campos | Alta | Componentes e schemas; requisitos, campos e teclado |
-| Catálogo/menu público | H1,H3,H9 | Home confunde erro com lista vazia; menu não trata Escape; logout local não revoga sessão | Moderada | Frontend; consulta e navegação |
-| Vinícola/perfil | H4,H5,H9,H10 | Telefone sem padrão compartilhado; máscara de perfil trata fixo como celular; senha sem visibilidade; validação local incompleta | Alta | Frontend/backend; máscara, validação e persistência |
-| Cadastros produtivos | H1,H3,H5,H6,H9 | Foco forçado antes de campos anteriores preenchidos; sem bloqueio de salvamento; navega antes de upload, permitindo sucesso parcial enganoso | Alta | Form/API; submit duplicado, upload e recuperação |
-| Registros administrativos | H1,H2,H3,H7,H9 | Visualizar abre JSON técnico; filtrar/ordenar sem ação; vazio sem explicação; exclusão sem feedback de sucesso | Alta | Frontend; detalhes, filtros, paginação e exclusão |
-| Estoque/pedidos | H1,H4,H5,H9,H10 | Carregamento/erro confundidos com vazio; campos sem label persistente; consumo sem retorno de erro claro | Alta | Frontend/API; movimento, saldo, pedido e rollback |
-| Banco/histórico | H5 | Constraints e transações já validadas; nenhuma nova estrutura justificada inicialmente | Preservar | Auditoria SQL e suíte de integração |
+| Grupo                     | Heurísticas     | Evidência / problema                                                                                                                         | Severidade | Camadas / teste                                     |
+| ------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------- |
+| API/erros/sessão          | H1,H2,H5,H9     | Zod envia mensagens em inglês; metadados desconhecidos de banco podem aparecer; rede/JSON não tratados; indisponibilidade encerra sessão     | Alta       | API/frontend; erros simulados, sessão e regressão   |
+| Login/cadastro/senhas     | H1,H4,H5,H9,H10 | Sem mostrar senha; lembrar de mim sem efeito; requisitos inconsistentes; feedback não associado aos campos                                   | Alta       | Componentes e schemas; requisitos, campos e teclado |
+| Catálogo/menu público     | H1,H3,H9        | Home confunde erro com lista vazia; menu não trata Escape; logout local não revoga sessão                                                    | Moderada   | Frontend; consulta e navegação                      |
+| Vinícola/perfil           | H4,H5,H9,H10    | Telefone sem padrão compartilhado; máscara de perfil trata fixo como celular; senha sem visibilidade; validação local incompleta             | Alta       | Frontend/backend; máscara, validação e persistência |
+| Cadastros produtivos      | H1,H3,H5,H6,H9  | Foco forçado antes de campos anteriores preenchidos; sem bloqueio de salvamento; navega antes de upload, permitindo sucesso parcial enganoso | Alta       | Form/API; submit duplicado, upload e recuperação    |
+| Registros administrativos | H1,H2,H3,H7,H9  | Visualizar abre JSON técnico; filtrar/ordenar sem ação; vazio sem explicação; exclusão sem feedback de sucesso                               | Alta       | Frontend; detalhes, filtros, paginação e exclusão   |
+| Estoque/pedidos           | H1,H4,H5,H9,H10 | Carregamento/erro confundidos com vazio; campos sem label persistente; consumo sem retorno de erro claro                                     | Alta       | Frontend/API; movimento, saldo, pedido e rollback   |
+| Banco/histórico           | H5              | Constraints e transações já validadas; nenhuma nova estrutura justificada inicialmente                                                       | Preservar  | Auditoria SQL e suíte de integração                 |
 
 ## Processo
 
@@ -292,31 +292,31 @@ Resultados, mensagens, commits e limitações serão consolidados aqui após cad
 e os dados atuais descritos neste documento.**
 Não confundir testes unitários/renderização estática com avaliação interativa real.
 
-| Heurística | Problemas identificados e correções | Preservado / verificação restante |
-| --- | --- | --- |
-| H1 — Visibilidade do estado | Consultas deixavam erro parecer vazio; envio e movimentos sem feedback. QueryFeedback, status de envio, contador sem zero prematuro e mensagens de resultado. | Carregamentos observados sob Slow 3G configurado pelo usuário; taxa exata não aferida. Falha real da API e retentativa observadas. |
-| H2 — Correspondência com o mundo real | JSON técnico nos detalhes, unidades ausentes, cadastro prometia administração ao cliente. Detalhes com nomes, unidades e linguagem por perfil. | Vocabulário vinho/safra/lote/garrafa, identidade VINUM e relações existentes. |
-| H3 — Controle e liberdade | Foco sequencial obrigatório; descarte administrativo sem confirmação; cancelar perfil em rota errada. Navegação livre entre campos, confirmações, retorno ao perfil e retomada de pedido fechado. | Escape, foco do menu, descarte de pedido e bloqueio durante salvamento testados. O usuário confirmou visualmente o retorno ao resumo após descarte do perfil. |
-| H4 — Consistência | Senhas e telefone inconsistentes, controles sem efeito. Componentes compartilhados, regras únicas, labels e feedback de campo. | Paleta, fluxos e estrutura das páginas; não houve redesign arbitrário. |
-| H5 — Prevenção de erros | Quantidade fracionária/negativa, upload após navegação, repetição de envio, contato inválido. Validações frontend/API e bloqueios síncronos. | Transações, autorização e constraints anteriores. Bloqueio no cliente não garante idempotência após perda de resposta do servidor. |
-| H6 — Reconhecimento | IDs nos detalhes e campos sem rótulo persistente. Nomes relacionados, foto atual, labels e requisitos visíveis. | Uvas herdadas e composição histórica de safra, seleção automática apenas quando aplicável. |
-| H7 — Flexibilidade e eficiência | Filtro e ordenação decorativos; paginação distante. Controles funcionais, busca sem acento, limpar filtros e paginação próxima. | Defaults e dados já cadastrados, sem criar estruturas duplicadas. |
-| H8 — Estética e simplicidade | Dados técnicos e descrições longas em listagem. Conteúdo resumido na tabela e completo no detalhe. Painéis de autenticação podem crescer com os avisos. | Layout e zoom 200% medidos nas seis larguras listadas; sem certificação de contraste WCAG. Dados originais não foram truncados. |
-| H9 — Reconhecimento e recuperação de erros | Inglês, falha de rede/JSON, expiração indevida por indisponibilidade, foto com sucesso parcial. Mensagens seguras, retry, manutenção de campos e identificação do vinho salvo. | Falha da API, expiração com rascunho e upload parcial com retentativa testados no navegador. Logs técnicos e códigos HTTP preservados. |
-| H10 — Ajuda e documentação | Requisitos de senha ocultos e ações futuras parecendo prontas. Checklist, exemplos, ajuda de foto/origem e recuperação de senha explicada honestamente. | QR/blockchain futuros não foram implementados nem dados existentes removidos. |
+| Heurística                                 | Problemas identificados e correções                                                                                                                                                               | Preservado / verificação restante                                                                                                                             |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| H1 — Visibilidade do estado                | Consultas deixavam erro parecer vazio; envio e movimentos sem feedback. QueryFeedback, status de envio, contador sem zero prematuro e mensagens de resultado.                                     | Carregamentos observados sob Slow 3G configurado pelo usuário; taxa exata não aferida. Falha real da API e retentativa observadas.                            |
+| H2 — Correspondência com o mundo real      | JSON técnico nos detalhes, unidades ausentes, cadastro prometia administração ao cliente. Detalhes com nomes, unidades e linguagem por perfil.                                                    | Vocabulário vinho/safra/lote/garrafa, identidade VINUM e relações existentes.                                                                                 |
+| H3 — Controle e liberdade                  | Foco sequencial obrigatório; descarte administrativo sem confirmação; cancelar perfil em rota errada. Navegação livre entre campos, confirmações, retorno ao perfil e retomada de pedido fechado. | Escape, foco do menu, descarte de pedido e bloqueio durante salvamento testados. O usuário confirmou visualmente o retorno ao resumo após descarte do perfil. |
+| H4 — Consistência                          | Senhas e telefone inconsistentes, controles sem efeito. Componentes compartilhados, regras únicas, labels e feedback de campo.                                                                    | Paleta, fluxos e estrutura das páginas; não houve redesign arbitrário.                                                                                        |
+| H5 — Prevenção de erros                    | Quantidade fracionária/negativa, upload após navegação, repetição de envio, contato inválido. Validações frontend/API e bloqueios síncronos.                                                      | Transações, autorização e constraints anteriores. Bloqueio no cliente não garante idempotência após perda de resposta do servidor.                            |
+| H6 — Reconhecimento                        | IDs nos detalhes e campos sem rótulo persistente. Nomes relacionados, foto atual, labels e requisitos visíveis.                                                                                   | Uvas herdadas e composição histórica de safra, seleção automática apenas quando aplicável.                                                                    |
+| H7 — Flexibilidade e eficiência            | Filtro e ordenação decorativos; paginação distante. Controles funcionais, busca sem acento, limpar filtros e paginação próxima.                                                                   | Defaults e dados já cadastrados, sem criar estruturas duplicadas.                                                                                             |
+| H8 — Estética e simplicidade               | Dados técnicos e descrições longas em listagem. Conteúdo resumido na tabela e completo no detalhe. Painéis de autenticação podem crescer com os avisos.                                           | Layout e zoom 200% medidos nas seis larguras listadas; sem certificação de contraste WCAG. Dados originais não foram truncados.                               |
+| H9 — Reconhecimento e recuperação de erros | Inglês, falha de rede/JSON, expiração indevida por indisponibilidade, foto com sucesso parcial. Mensagens seguras, retry, manutenção de campos e identificação do vinho salvo.                    | Falha da API, expiração com rascunho e upload parcial com retentativa testados no navegador. Logs técnicos e códigos HTTP preservados.                        |
+| H10 — Ajuda e documentação                 | Requisitos de senha ocultos e ações futuras parecendo prontas. Checklist, exemplos, ajuda de foto/origem e recuperação de senha explicada honestamente.                                           | QR/blockchain futuros não foram implementados nem dados existentes removidos.                                                                                 |
 
 ## Padronização de formulários e prevenção de erros
 
-| Formulários | O que foi revisado/corrigido | Limite de validação atual |
-| --- | --- | --- |
-| Login e cadastro | Mostrar/ocultar, autocomplete, regras/checklist de senha, confirmação, erros inline, envio único, sucesso persistente. | Alternância, Tab e foco testados no navegador; sem auditoria WCAG integral. |
-| Cadastro administrativo | Telefone fixo/celular, CNPJ alfanumérico opcional, labels, requisitos, confirmação de senha, erros associados, proteção de fechamento. | Edição no meio da máscara e Escape testados; nenhum cadastro administrativo real criado. |
-| Perfil do cliente | Máscara, regras de senha, checklist existente, idade derivada, erros inline, proteção de envio e cancelar correto. | Validação, persistência e rascunho após expiração testados; descarte nativo concluído com confirmação visual do usuário. |
-| Vinho | Opções carregadas antes do formulário, foto validada, upload com recuperação, campos opcionais preenchidos validados, erros de API associados. | Upload real, falha parcial, retentativa sem duplicar e falha de conexão testados em vinho fictício inativo. |
-| Safra/lote | Herança preservada, opções com retry, foco livre, envio bloqueado, ajuda/associações dos campos, grid estreito. | Cinco vinhos atuais testados sem salvar: uvas herdadas, safra automática/ausente e troca de seleção. Não cobre combinações futuras em bases maiores. |
-| Uvas/tipos/classificações | Formulário e registros genéricos recebem as correções de validação, foco, envio, consulta e exclusão. | A confirmação informa irreversibilidade e vínculos protegidos. O comportamento transacional/por permissão será verificado na auditoria de integração, sem exclusão exploratória de dados reais. |
-| Pedidos | Origem/local distinguíveis, foto existente, quantidade inteira, labels, erro por campo, continuar preenchimento e exclusão com histórico preservado. | Fluxos VINUM/externo, edição, foto, descarte e zoom testados. Rascunho revalidado no navegador após navegação e por teste isolado após limpeza da autenticação. |
-| Adega | Labels, foto/quantidade, cancelamento sem apagar preenchimento, mensagens de movimento, consulta distinta de vazio e histórico visível. | Entrada, último consumo, histórico e imagem privada testados; trava síncrona de cliques concorrentes coberta por teste unitário. |
+| Formulários               | O que foi revisado/corrigido                                                                                                                         | Limite de validação atual                                                                                                                                                                       |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Login e cadastro          | Mostrar/ocultar, autocomplete, regras/checklist de senha, confirmação, erros inline, envio único, sucesso persistente.                               | Alternância, Tab e foco testados no navegador; sem auditoria WCAG integral.                                                                                                                     |
+| Cadastro administrativo   | Telefone fixo/celular, CNPJ alfanumérico opcional, labels, requisitos, confirmação de senha, erros associados, proteção de fechamento.               | Edição no meio da máscara e Escape testados; nenhum cadastro administrativo real criado.                                                                                                        |
+| Perfil do cliente         | Máscara, regras de senha, checklist existente, idade derivada, erros inline, proteção de envio e cancelar correto.                                   | Validação, persistência e rascunho após expiração testados; descarte nativo concluído com confirmação visual do usuário.                                                                        |
+| Vinho                     | Opções carregadas antes do formulário, foto validada, upload com recuperação, campos opcionais preenchidos validados, erros de API associados.       | Upload real, falha parcial, retentativa sem duplicar e falha de conexão testados em vinho fictício inativo.                                                                                     |
+| Safra/lote                | Herança preservada, opções com retry, foco livre, envio bloqueado, ajuda/associações dos campos, grid estreito.                                      | Cinco vinhos atuais testados sem salvar: uvas herdadas, safra automática/ausente e troca de seleção. Não cobre combinações futuras em bases maiores.                                            |
+| Uvas/tipos/classificações | Formulário e registros genéricos recebem as correções de validação, foco, envio, consulta e exclusão.                                                | A confirmação informa irreversibilidade e vínculos protegidos. O comportamento transacional/por permissão será verificado na auditoria de integração, sem exclusão exploratória de dados reais. |
+| Pedidos                   | Origem/local distinguíveis, foto existente, quantidade inteira, labels, erro por campo, continuar preenchimento e exclusão com histórico preservado. | Fluxos VINUM/externo, edição, foto, descarte e zoom testados. Rascunho revalidado no navegador após navegação e por teste isolado após limpeza da autenticação.                                 |
+| Adega                     | Labels, foto/quantidade, cancelamento sem apagar preenchimento, mensagens de movimento, consulta distinta de vazio e histórico visível.              | Entrada, último consumo, histórico e imagem privada testados; trava síncrona de cliques concorrentes coberta por teste unitário.                                                                |
 
 ### Exemplos de mensagens alteradas
 
@@ -353,19 +353,19 @@ Não confundir testes unitários/renderização estática com avaliação intera
 
 ## Commits funcionais
 
-| Hash | Mensagem |
-| --- | --- |
-| `31a60ca` | fix(ux): padroniza erros e recuperacao de sessao |
-| `9e2a62a` | fix(ux): padroniza senhas e feedback de autenticacao |
-| `6375ad8` | fix(ux): diferencia falhas do catalogo e melhora menu publico |
-| `495c11d` | fix(ux): unifica contato e validacao dos perfis |
+| Hash      | Mensagem                                                       |
+| --------- | -------------------------------------------------------------- |
+| `31a60ca` | fix(ux): padroniza erros e recuperacao de sessao               |
+| `9e2a62a` | fix(ux): padroniza senhas e feedback de autenticacao           |
+| `6375ad8` | fix(ux): diferencia falhas do catalogo e melhora menu publico  |
+| `495c11d` | fix(ux): unifica contato e validacao dos perfis                |
 | `6d39bae` | fix(ux): preserva cadastro ao falhar upload e bloqueia reenvio |
-| `d1476a3` | fix(ux): implementa filtros e detalhes legiveis dos registros |
-| `a312da9` | fix(ux): valida pedidos e melhora feedback da adega |
-| `fa4e9ec` | fix(ux): rejeita respostas incompletas antes da renderizacao |
-| `7ebb669` | fix(ux): protege edicoes ao fechar cadastro administrativo |
-| `9e3f9d2` | fix(ux): valida fluxos Nielsen e corrige falhas confirmadas |
-| `a2582cf` | fix(ux): conclui aceite Nielsen de sessao e upload |
+| `d1476a3` | fix(ux): implementa filtros e detalhes legiveis dos registros  |
+| `a312da9` | fix(ux): valida pedidos e melhora feedback da adega            |
+| `fa4e9ec` | fix(ux): rejeita respostas incompletas antes da renderizacao   |
+| `7ebb669` | fix(ux): protege edicoes ao fechar cadastro administrativo     |
+| `9e3f9d2` | fix(ux): valida fluxos Nielsen e corrige falhas confirmadas    |
+| `a2582cf` | fix(ux): conclui aceite Nielsen de sessao e upload             |
 | `dd1bbc4` | fix(ux): preserva rascunho de pedido e corrige rotas de sessao |
 
 ## Ampliação da cobertura Nielsen — 26/09/2026
@@ -421,3 +421,29 @@ Não confundir testes unitários/renderização estática com avaliação intera
   continua separada e ainda não foi iniciada; nela cabem contratos,
   permissões, transações, constraints e histórico, sem recriar o banco ou
   apagar volumes.
+
+## Revisão Nielsen da nova regra Pedidos → Estoque — 26/09/2026
+
+A nova regra do professor substitui, nas telas afetadas, as referências acima
+ao cadastro e à entrada direta pela adega. `Meus pedidos` passou a ser a origem
+das aquisições e `Meu estoque` passou a ser o dashboard consolidado.
+
+- O navegador confirmou compra → estoque, consumo → cards/gráfico, reload,
+  edição transacional do pedido, mensagem/retentativa após indisponibilidade da
+  API e persistência após reinício do serviço.
+- Foram diferenciados os estados carregando, vazio, erro, zero consumo e dados.
+- Quantidade acima do saldo e data futura exibiram mensagens associadas aos
+  campos sem envio. Cancelar/Escape devolveu o foco ao botão de consumo.
+- Abrir pedido passou a focar o primeiro controle; erros seguem a ordem visual;
+  resultados de salvamento recebem foco além do anúncio por live region.
+- O dashboard usa labels não ambíguas: garrafas adquiridas, consumidas,
+  disponíveis e rótulos registrados. O gráfico mensal usa movimentos reais.
+- Em 390 px e 823 px (redução equivalente ao reflow de zoom 200%), cards,
+  gráfico e formulário permaneceram legíveis, sem overflow horizontal externo.
+- Nenhuma entrada direta nova é oferecida no estoque; registros antigos foram
+  preservados e identificados como legado.
+
+Conclusão: a revisão Nielsen das telas afetadas está encerrada. Detalhes de
+arquitetura, migrations, cálculos e testes estão em
+`docs/customer-stock-dashboard.md`. A auditoria geral de integração/regressão
+permanece separada e não foi iniciada.

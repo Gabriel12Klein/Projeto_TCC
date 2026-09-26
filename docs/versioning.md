@@ -4,10 +4,10 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.0.1**
+Versão atual: **2.1.0**
 
-- `PATCH` (`2.0.1`): correções e ajustes sem mudança incompatível.
-- `MINOR` (`2.1.0`): nova funcionalidade compatível com a versão anterior.
+- `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
+- `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
 - `MAJOR` (`3.0.0`): mudança incompatível ou quebra de contrato.
 
 Fluxo para os próximos envios:
