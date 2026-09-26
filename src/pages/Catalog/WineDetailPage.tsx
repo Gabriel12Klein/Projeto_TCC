@@ -38,7 +38,7 @@ export default function WineDetailPage() {
       <Link className="text-sm font-semibold text-[#851329]" to="/catalogo">
         ← Voltar ao catálogo
       </Link>
-      <section className="mt-7 grid overflow-hidden rounded-3xl border border-[#dfd0bd] bg-white shadow-xl lg:grid-cols-2">
+      <section className="mt-7 grid grid-cols-1 overflow-hidden rounded-3xl border border-[#dfd0bd] bg-white shadow-xl lg:grid-cols-2">
         <div className="grid min-h-[420px] place-items-center overflow-hidden bg-[radial-gradient(circle,#f2dfc1,#cfae79)] p-8">
           {image ? (
             <img
@@ -52,7 +52,7 @@ export default function WineDetailPage() {
         </div>
         <div className="p-8 lg:p-12">
           <span className="text-sm font-bold uppercase tracking-[0.25em] text-[#9a6a2d]">{wine.type}</span>
-          <h1 className="mt-3 font-playfair text-5xl font-semibold text-[#5b0c1b]">{wine.name}</h1>
+          <h1 className="mt-3 break-words font-playfair text-3xl font-semibold text-[#5b0c1b] sm:text-5xl">{wine.name}</h1>
           <p className="mt-6 leading-7 text-[#66534f]">{wine.description}</p>
           <dl className="mt-8 grid grid-cols-2 gap-5 border-y border-[#eee3d5] py-6 text-sm">
             <div><dt className="font-bold text-[#5b0c1b]">Classificação</dt><dd className="mt-1 text-[#715f59]">{wine.classification || 'Ainda não informada'}</dd></div>
@@ -104,7 +104,7 @@ export default function WineDetailPage() {
         {wine.vintages.length === 0 ? (
           <p className="mt-4 text-[#715f59]">Nenhuma safra publicada para este vinho.</p>
         ) : (
-          <div className="mt-5 grid gap-5 md:grid-cols-2">
+          <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
             {wine.vintages.map((vintage) => {
               const selectedBatch = vintage.batches.find((batch) => batch.code === openQrCode);
               return (
@@ -161,8 +161,7 @@ export default function WineDetailPage() {
               {selectedBatch?.qrCodePath && (
                 <aside className="mt-5 flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-[#dfd0bd] bg-[#fffdf9] p-6 text-center md:mt-0">
                   <h4 className="font-semibold text-[#5b0c1b]">QR Code do lote {selectedBatch.code}</h4>
-                  <img className="mt-4 h-56 w-56 object-contain" src={selectedBatch.qrCodePath} alt={`QR Code do lote ${selectedBatch.code}`} />
-                  <span className="mt-3 text-xs text-[#715f59]">Aponte a câmera para consultar este lote.</span>
+                  <BatchQrImage key={selectedBatch.qrCodePath} code={selectedBatch.code} path={selectedBatch.qrCodePath} />
                 </aside>
               )}
               </div>
@@ -172,5 +171,23 @@ export default function WineDetailPage() {
         )}
       </section>
     </main>
+  );
+}
+
+function BatchQrImage({ code, path }: { code: string; path: string }) {
+  const [unavailable, setUnavailable] = useState(false);
+  if (unavailable) return (
+    <>
+      <p className="mt-4 text-sm text-[#715f59]" role="status">A imagem do QR Code está indisponível.</p>
+      <Link className="mt-3 text-sm font-semibold text-[#851329] underline" to={`/consulta/lotes/${encodeURIComponent(code)}`}>
+        Consultar o lote {code}
+      </Link>
+    </>
+  );
+  return (
+    <>
+      <img className="mt-4 h-auto w-56 max-w-full object-contain" src={path} alt={`QR Code do lote ${code}`} onError={() => setUnavailable(true)} />
+      <span className="mt-3 text-xs text-[#715f59]">Aponte a câmera para consultar este lote.</span>
+    </>
   );
 }

@@ -7,7 +7,7 @@
 [aria-invalid="true"] { border-color: #b42332 !important; }
 /* Auth panels must grow when inline errors/checklists add content. */
 .auth-stage { padding-block: 3rem; }
-.auth-stage .auth-panel { position: relative; top: auto; height: auto; max-height: none; transform: none; }
+.auth-stage .auth-panel { position: relative; top: auto; height: auto; max-height: none; transform: none; translate: none; }
 /* Keep the complete registration form reachable inside the clipped stage. */
 .auth-stage .registration-panel {
   max-height: calc(100dvh - clamp(36px, 6.4vw, 120px) - 6rem);

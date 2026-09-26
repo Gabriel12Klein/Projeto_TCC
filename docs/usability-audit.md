@@ -197,6 +197,62 @@ Resultados, mensagens, commits e limitações serão consolidados aqui após cad
   erro de imagem e validação sistemática em 320/375/768/1024/1440 px e zoom 200%.
   A auditoria Nielsen continua aberta; a auditoria de integração/regressão não inicia.
 
+### Continuação interativa de Nielsen — 24 a 26/09/2026
+
+- Administração: menu de conta, cadastro de vinícola, formulário de vinho, safra,
+  lote, listagem, filtro, detalhe e foco pelo teclado percorridos na sessão
+  administrativa. Telefone e CNPJ perdiam o cursor ao apagar no meio; a máscara
+  agora preserva a posição (retorno visual e três testes unitários). Um arquivo
+  `.txt` no campo de foto gerava mensagem genérica; agora informa formatos e
+  limite de 5 MB. Depois, um vinho **inativo** e fictício chamado
+  `Auditoria Nielsen — vinho de teste 20260926` foi salvo com PNG real sob Slow
+  3G. “Salvando…” desabilitou os controles; a lista mostrou o cadastro e a
+  imagem reapareceu na edição (`naturalWidth` 1301). O cadastro fica no banco
+  para rastreabilidade, sem publicação no catálogo público.
+- Layout: autenticação em 320 px cortava os campos por `translate` remanescente;
+  detalhe público cortava título e safra; painel administrativo transbordava em
+  1024 px, e cabeçalho/menu sobrepunham-se em 320 px. Correções pontuais
+  conferidas no navegador. Em larguras normais de 320/375/425/768/1024/1440 px,
+  os formulários e páginas percorridos não tiveram transbordamento externo.
+- Cliente de teste criado pela interface: `auditoria.nielsen.20260925@example.test`
+  (há também uma conta de teste da retomada anterior, de 24/09). No perfil,
+  telefone inválido foi rejeitado com foco e mensagem; telefone, cidade fictícia
+  e UF normalizada foram salvos e reapareceram após recarga. Senha não alterada.
+- Pedidos: estado vazio, campos obrigatórios, quantidade fracionária, edição,
+  cancelamento de descarte e alteração de 2 para 3 garrafas testados. Criados
+  apenas nessa conta dois pedidos fictícios: um VINUM e outro de local externo.
+  O externo exigiu foto, manteve os campos após erro, recebeu PNG real e exibiu
+  a imagem salva durante a edição. Após seleção válida, o erro de foto agora
+  desaparece. Os pedidos permanecem no histórico de teste.
+- Adega: saldo e movimentações reagiram à edição do pedido; entrada e consumo de
+  uma garrafa exibiram estados e mensagens corretos. Um rótulo fictício com foto
+  foi enviado com sucesso. Ao consumir sua última garrafa, o serviço o marcou
+  inativo e a coleção deixou de exibi-lo; o histórico não foi apagado. A frase
+  automática da compra agora mostra “Compra registrada em Meus pedidos.” no
+  lugar do identificador interno, sem alterar o registro persistido. A imagem
+  privada do pedido externo carregou após recarga (largura natural 1301 px).
+- Zoom **real** de 200% confirmado no Brave (`devicePixelRatio` ≈ 2). Adega,
+  formulário de pedido, perfil editável e painel administrativo medidos em larguras CSS de
+  320/375/425/768/1024/1440 px; sem rolagem horizontal da página. O teste
+  estreito de 320 px correspondeu a viewport física de 640 px com zoom 200%.
+- Rede lenta configurada pelo usuário como Slow 3G: a interface mostrou
+  “Carregando VINUM…”, “Carregando sua adega…”, “Carregando vinho…” e
+  “Carregando foto…” antes do conteúdo; o pedido externo concluiu com feedback
+  de sucesso e atualização posterior da lista. A ferramenta não informou a
+  taxa exata aplicada, portanto esta evidência não comprova um valor de latência.
+- Lote público L26254: `qrCodePath` existente aponta para imagem que não carrega
+  (`naturalWidth` 0). A interface agora explica a indisponibilidade e oferece
+  “Consultar o lote L26254”; o destino foi aberto e mostrou os dados do lote.
+  Nenhum arquivo de QR ou dado histórico foi recriado/removido.
+- Tentativa de simular Offline pelo DevTools: após o usuário ativar a opção, um
+  salvamento e uma recarga ainda acessaram a API e mostraram os registros. Não
+  há evidência de que o bloqueio tenha atingido a aba controlada; **falha e
+  retentativa continuam sem validação**.
+- Pendências de aceite: provocar e recuperar uma falha real de rede na UI,
+  inclusive o retry de upload parcial; conferir expiração de sessão com rascunho; fechar
+  confirmação nativa de descarte do perfil no navegador (a automação abriu o
+  diálogo, mas não conseguiu concluí-lo). Não declarar Nielsen concluída ainda.
+
 ## Consolidação das 10 heurísticas — evidências e limites
 
 **Situação: correções dos grupos 1–9 commitadas; aceite global ainda pendente.**
@@ -277,15 +333,11 @@ Não confundir testes unitários/renderização estática com avaliação intera
 
 ## Próxima etapa e critérios de conclusão
 
-1. Conectar navegador ao VINUM. A skill Browser foi consultada e a descoberta
-   retornou lista vazia inclusive nesta retomada; conexão solicitada ao usuário.
-2. Validar como visitante/cliente/admin: formulários, cliques repetidos, rede lenta,
-   erros/retentativa, sessão, foto, máscaras ao editar no meio, mostrar/ocultar,
-   foco inicial/de erro/restaurado, Escape, cancelamento e ações destrutivas.
-3. Conferir responsividade a 320/375/768/1024/1440 px, zoom de 200%, contraste,
-   leitura por teclado e anúncios de carregamento/erro. Não há screenshots de aceite.
-4. Corrigir somente regressões concretas encontradas e commitá-las após testes.
-5. Atualizar esta consolidação para relatório final **somente após o aceite global**.
+1. Continuar no navegador conectado e concluir as pendências de aceite da seção
+   “Continuação interativa de Nielsen” acima, incluindo administração autenticada.
+2. Revalidar qualquer correção nova no navegador, executar verificações focadas,
+   fazer commit e push das mudanças verificadas.
+3. Atualizar a consolidação final **somente após o aceite global**.
 
 Não há declaração de auditoria 100% concluída: testes automatizados não comprovam
 sozinhos usabilidade interativa, responsividade ou acessibilidade integral.

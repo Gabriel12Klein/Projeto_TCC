@@ -136,6 +136,7 @@ function isValidField(field, value, form) {
 }
 
 function invalidFieldMessage(field) {
+  if (field.type === 'file') return 'Selecione uma imagem PNG, JPG ou WebP de até 5 MB.';
   if (field.type === 'multi-select') return `Selecione pelo menos uma opção em ${field.label}.`;
   if (field.validation === 'positiveNumber') return `O campo ${field.label} deve conter um número maior que zero.`;
   if (field.validation === 'alcohol') return `O campo ${field.label} deve conter um número entre 0 e 100.`;

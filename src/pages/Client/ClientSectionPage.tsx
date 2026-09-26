@@ -250,7 +250,7 @@ function Orders() {
               buttonId="purchase-photo"
               externalError={feedback.errors.photo}
               value={purchasePhoto}
-              onChange={setPurchasePhoto}
+              onChange={(file) => { setPurchasePhoto(file); feedback.clear('photo'); }}
               required={source === 'OUTRO_LOCAL' && !editing?.photo}
             />
             {source === 'VINICULA' && (
@@ -567,7 +567,7 @@ function Inventory() {
                 buttonId="inventory-photo"
                 externalError={feedback.errors.photo}
                 value={photo}
-                onChange={setPhoto}
+                onChange={(file) => { setPhoto(file); feedback.clear('photo'); }}
               />
               <button
                 className="rounded-xl bg-[#7d1d2d] px-5 py-3 font-semibold text-white"

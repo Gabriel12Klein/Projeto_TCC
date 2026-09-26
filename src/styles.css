@@ -1,5 +1,10 @@
 @import 'tailwindcss';
 
+/* Fit the administrative shell to tablets; tables retain their own scrolling. */
+@media (max-width: 1250px) {
+  .admin-page > div { width: 100%; min-width: 0; }
+}
+
 /* Cartões das áreas do cliente: deixam o histórico e o estoque mais fáceis de ler. */
 .client-inventory-card {
   position: relative;

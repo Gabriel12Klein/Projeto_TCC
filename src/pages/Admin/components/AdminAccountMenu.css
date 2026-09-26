@@ -51,6 +51,7 @@
 .admin-registration-summary__statuses dl > div { display: flex; gap: 12px; justify-content: space-between; padding: 9px 0; font-size: 13px; border-top: 1px solid #eee6dc; }
 .admin-registration-summary__statuses dd { margin: 0; font-weight: 700; color: #751c2d; }
 @media (max-width: 620px) {
+  .admin-account__dropdown { left: 0; right: auto; width: min(290px, calc(100vw - 96px)); }
   .admin-account-dialog__body, .admin-account-dialog__heading { padding: 20px 16px; }
   .admin-account-dialog__tabs { padding: 0 16px; gap: 16px; font-size: 13px; }
   .admin-account-form__grid, .admin-registration-summary__statuses { grid-template-columns: 1fr; }

@@ -1,4 +1,5 @@
 import { formatPhone, phoneSchema } from '../../../shared/contact';
+import { updateMaskedInput } from '../../ui/maskedInput';
 import { useFormFeedback } from '../../ui/useFormFeedback';
 import FieldError from '../../ui/FieldError';
 import PasswordInput, { PasswordChecklist } from '../../ui/PasswordInput';
@@ -285,7 +286,7 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
               autoComplete="tel"
               placeholder="(55) 99935-4038"
               {...feedback.field('phone')} value={form.phone}
-              onChange={(event) => setField('phone', formatPhone(event.target.value))}
+              onChange={(event) => updateMaskedInput(event, formatPhone, value => setField('phone', value))}
             />
           <FieldError id="profile-phone-error" message={feedback.errors.phone} /></label>
           <label className="font-semibold" htmlFor="profile-street">

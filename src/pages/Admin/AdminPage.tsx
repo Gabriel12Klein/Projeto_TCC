@@ -109,7 +109,7 @@ export default function AdminPage({ user, onLogout, onUserUpdate }: { user: User
     : 'grid-cols-[clamp(250px,17vw,270px)_minmax(0,1fr)] gap-[clamp(18px,1.5vw,28px)] max-[1450px]:grid-cols-[clamp(245px,18vw,260px)_minmax(0,1fr)] max-[1450px]:gap-[18px]';
 
   return (
-    <main className="min-h-screen w-full flex justify-center items-start p-[clamp(10px,1.3vw,22px)] overflow-auto bg-[radial-gradient(circle_at_50%_10%,#731426_0%,#4a0b17_38%,#2b070e_100%)] font-inter text-vinum-text max-[1250px]:justify-start max-[1160px]:p-2">
+    <main className="admin-page min-h-screen w-full flex justify-center items-start p-[clamp(10px,1.3vw,22px)] overflow-auto bg-[radial-gradient(circle_at_50%_10%,#731426_0%,#4a0b17_38%,#2b070e_100%)] font-inter text-vinum-text max-[1250px]:justify-start max-[1160px]:p-2">
       <div
         className={`relative w-[min(97vw,1600px)] min-w-[1180px] h-[clamp(760px,94vh,1040px)] grid ${shellClass} py-[clamp(16px,1.4vw,24px)] px-[clamp(18px,1.7vw,30px)] border-[3px] border-[#c49a57] rounded-[clamp(28px,2.2vw,42px)] shadow-[0_18px_55px_rgb(14_0_4_/_45%),inset_0_0_0_4px_rgba(255,255,255,.75)] overflow-hidden transition-[grid-template-columns,gap] duration-[220ms] max-[1450px]:w-[98vw] max-[1450px]:min-w-[1160px] max-[1450px]:py-4 max-[1450px]:px-[18px] max-[1250px]:min-w-[1140px] max-[1160px]:w-[1140px] max-[1160px]:min-w-[1140px] max-[1160px]:h-[clamp(740px,96vh,920px)] max-[900px]:min-w-0 max-[900px]:w-full max-[900px]:h-auto max-[900px]:min-h-screen max-[900px]:grid-cols-1 max-[900px]:overflow-visible`}
         style={{ background: `#f9f6f1 url(${adminBackground}) center / cover no-repeat` }}

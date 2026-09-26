@@ -87,7 +87,9 @@ export default function InventoryWineCard({ item, onMove, pending }: {
           {item.movements?.length ? <ul className="space-y-2">{item.movements.map(movement => <li key={movement.id} className="border-b border-[#e8dccc] pb-2 text-sm">
             <strong>{{ ENTRADA: 'Entrada', CONSUMO: 'Consumo', AJUSTE: 'Ajuste' }[movement.type]}</strong>: {movement.quantityBottles} garrafa(s) · {new Date(movement.occurredAt).toLocaleString('pt-BR')}
             {movement.purchaseLocation && <span className="block">Local: {movement.purchaseLocation}</span>}
-            {movement.reason && <span className="block">{movement.reason}</span>}
+            {movement.reason && <span className="block">{movement.orderId && movement.reason === `Compra registrada no pedido ${movement.orderId}`
+              ? 'Compra registrada em Meus pedidos.'
+              : movement.reason}</span>}
           </li>)}</ul> : <p>Nenhuma movimentação disponível para este rótulo.</p>}
         </section>
       </div>}
