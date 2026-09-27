@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.6.0**
+Versão atual: **2.6.1**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -55,3 +55,10 @@ Separa Vinícola e Local de compra no histórico da adega e adiciona exclusão
 permanente de uma unidade ou de todas as garrafas de uma compra. A remoção é
 transacional, limitada ao proprietário e recalcula pedidos, estoque e Dashboard
 sem excluir outras compras ou cadastros de catálogo.
+
+## Versão 2.6.1
+
+Substitui globalmente as confirmações nativas do navegador por um modal VINUM
+reutilizável, responsivo e acessível. A alteração preserva as regras existentes
+de rascunho, cancelamento, exclusão e troca de telas, sem mudanças no backend ou
+no banco de dados.
