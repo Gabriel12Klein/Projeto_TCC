@@ -66,3 +66,7 @@ A regressão geral permanece separada e não foi iniciada por esta alteração.
 Foram removidos somente dados pessoais de adega: 6 pedidos, 6 itens de pedido, 8 itens de adega, 36 garrafas e 46 movimentos. Usuários e dados administrativos foram preservados. Ao final permanecem 6 vinhos oficiais, 1 vinícola, 4 safras e 4 lotes.
 
 Não foram encontrados arrays, mocks ou fallbacks de garrafas fora do PostgreSQL. O teste visual criou um vinho controlado com três garrafas, abriu e consumiu a unidade 2, confirmou posição, filtros, totais, gráfico e persistência após recarga. Esses registros controlados foram removidos depois do teste; o Dashboard final está zerado.
+
+### Correção de espaçamento — versão 2.2.2
+
+- O estado vazio de `Meus vinhos` passou a usar o mesmo recuo horizontal do cabeçalho do card: 24 px em telas pequenas e 32 px a partir de telas médias.

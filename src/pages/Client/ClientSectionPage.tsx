@@ -352,15 +352,17 @@ function Orders({ userId }: { userId: string }) {
           <h2 className="mt-1 font-playfair text-2xl text-[#5b0c1b]">Histórico da adega</h2>
           <p className="mt-2 text-[#715f59]">Consulte os rótulos, quantidades, datas e origens.</p>
         </div>
-        <QueryFeedback
-          loading={ordersQuery.isPending}
-          error={ordersQuery.error}
-          fetching={ordersQuery.isFetching}
-          empty={!orders.length}
-          emptyText="Você ainda não possui vinhos cadastrados. Use Cadastrar vinho para adicionar o primeiro."
-          loadingText="Carregando vinhos…"
-          retry={() => void ordersQuery.refetch()}
-        />
+        <div className="client-empty-feedback px-6 md:px-8">
+          <QueryFeedback
+            loading={ordersQuery.isPending}
+            error={ordersQuery.error}
+            fetching={ordersQuery.isFetching}
+            empty={!orders.length}
+            emptyText="Você ainda não possui vinhos cadastrados. Use Cadastrar vinho para adicionar o primeiro."
+            loadingText="Carregando vinhos…"
+            retry={() => void ordersQuery.refetch()}
+          />
+        </div>
         {orders.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left">

@@ -39,7 +39,9 @@ it('não apresenta pedidos vazios enquanto a consulta está carregando', () => {
   const html = render('Meus vinhos');
   expect(html).toContain('Carregando vinhos');
   expect(html).not.toContain('Você ainda não possui vinhos cadastrados.');
-  expect(render('Meus vinhos', true)).toContain('Você ainda não possui vinhos cadastrados.');
+  const empty = render('Meus vinhos', true);
+  expect(empty).toContain('Você ainda não possui vinhos cadastrados.');
+  expect(empty).toContain('client-empty-feedback px-6 md:px-8');
 });
 it('não apresenta painel vazio enquanto as consultas estão carregando', () => {
   const html = render('Dashboard');
