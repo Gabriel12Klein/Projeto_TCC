@@ -223,6 +223,7 @@ export const customerService = {
     return prisma.customerOrder.findMany({
       where: { userId },
       include: {
+        purchaseLocationRef: { select: { id: true, name: true } },
         items: {
           include: {
             wine: { select: { id: true, name: true, slug: true } },
@@ -580,6 +581,90 @@ export const customerService = {
     throw new AppError(
       409,
       'Pedidos que alimentam a adega são preservados como histórico. Edite o pedido para corrigir seus dados.',
+    );
+  },
+
+  async removeOrderItemBottles(
+    userId: string,
+    orderId: string,
+    itemId: string,
+    all: boolean,
+    bottleId?: string,
+  ) {
+    return prisma.$transaction(async (transaction) => {
+      await lockInventory(transaction, userId);
+      const item = await transaction.customerOrderItem.findFirst({
+        where: { id: itemId, orderId, order: { userId } },
+        include: { bottles: { where: { userId }, orderBy: { createdAt: 'desc' } } },
+      });
+      if (!item) throw new AppError(404, 'Registro da adega não encontrado.');
+      if (!item.bottles.length) throw new AppError(409, 'Este registro não possui garrafas para excluir.');
+      const selected = bottleId
+        ? item.bottles.filter(({ id }) => id === bottleId)
+        : all
+          ? item.bottles
+          : item.bottles.slice(0, 1);
+      if (!selected.length) throw new AppError(404, 'Garrafa não encontrada neste registro.');
+      const bottleIds = selected.map(({ id }) => id);
+      await transaction.inventoryMovement.deleteMany({ where: { cellarBottleId: { in: bottleIds } } });
+      await transaction.cellarBottle.deleteMany({ where: { id: { in: bottleIds }, userId } });
+      const remainingQuantity = item.bottles.length - selected.length;
+      if (remainingQuantity > 0) {
+        await transaction.customerOrderItem.update({
+          where: { id: item.id },
+          data: { quantityBottles: remainingQuantity },
+        });
+        await transaction.inventoryMovement.updateMany({
+          where: { orderId, inventoryItemId: item.inventoryItemId ?? undefined, type: 'ENTRADA' },
+          data: { quantityBottles: remainingQuantity },
+        });
+      } else {
+        await transaction.inventoryMovement.deleteMany({
+          where: { orderId, inventoryItemId: item.inventoryItemId ?? undefined },
+        });
+        await transaction.customerOrderItem.delete({ where: { id: item.id } });
+        if ((await transaction.customerOrderItem.count({ where: { orderId } })) === 0) {
+          await transaction.inventoryMovement.deleteMany({ where: { orderId } });
+          await transaction.customerOrder.delete({ where: { id: orderId } });
+        }
+      }
+      if (item.inventoryItemId) {
+        const [available, bottleCount, itemCount] = await Promise.all([
+          transaction.cellarBottle.count({
+            where: { inventoryItemId: item.inventoryItemId, userId, status: 'DISPONIVEL' },
+          }),
+          transaction.cellarBottle.count({ where: { inventoryItemId: item.inventoryItemId, userId } }),
+          transaction.customerOrderItem.count({ where: { inventoryItemId: item.inventoryItemId } }),
+        ]);
+        if (!bottleCount && !itemCount) {
+          await transaction.inventoryMovement.deleteMany({
+            where: { inventoryItemId: item.inventoryItemId },
+          });
+          await transaction.inventoryItem.delete({ where: { id: item.inventoryItemId } });
+        } else {
+          await transaction.inventoryItem.update({
+            where: { id: item.inventoryItemId },
+            data: { quantityBottles: available, active: available > 0 },
+          });
+        }
+      }
+      return { deletedBottles: selected.length };
+    });
+  },
+
+  async removeBottle(userId: string, bottleId: string) {
+    const bottle = await prisma.cellarBottle.findFirst({
+      where: { id: bottleId, userId },
+      select: { orderItemId: true, orderItem: { select: { orderId: true } } },
+    });
+    if (!bottle?.orderItemId || !bottle.orderItem)
+      throw new AppError(404, 'Garrafa vinculada à compra não encontrada.');
+    return customerService.removeOrderItemBottles(
+      userId,
+      bottle.orderItem.orderId,
+      bottle.orderItemId,
+      false,
+      bottleId,
     );
   },
 

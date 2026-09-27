@@ -219,5 +219,23 @@ describe('Catálogo privado do cliente', () => {
     });
     expect(await prisma.customerOrder.count({ where: { userId: userA } })).toBe(2);
     expect(otherWine.externalWineryId).toBe(secondWinery.id);
+
+    const disposableWinery = await customerService.createExternalWinery(userA, {
+      name: 'Vinícola descartável',
+    });
+    const disposableWine = await customerService.createExternalWine(userA, {
+      name: 'Vinho descartável',
+      externalWineryId: disposableWinery.id,
+      grapeIds: [],
+    });
+    const disposableLocation = await customerService.createPurchaseLocation(userA, {
+      name: 'Local descartável',
+    });
+    await customerService.removeExternalWine(userA, disposableWine.id);
+    await customerService.removeExternalWinery(userA, disposableWinery.id);
+    await customerService.removePurchaseLocation(userA, disposableLocation.id);
+    expect(await prisma.externalWine.findUnique({ where: { id: disposableWine.id } })).toBeNull();
+    expect(await prisma.externalWinery.findUnique({ where: { id: disposableWinery.id } })).toBeNull();
+    expect(await prisma.purchaseLocation.findUnique({ where: { id: disposableLocation.id } })).toBeNull();
   });
 });

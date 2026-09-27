@@ -65,6 +65,30 @@ router.put(
   }),
 );
 router.delete(
+  '/pedidos/:id/itens/:itemId/garrafas/uma',
+  asyncRoute(async (req, res) => {
+    await customerService.removeOrderItemBottles(
+      String(res.locals.user.id),
+      String(req.params.id),
+      String(req.params.itemId),
+      false,
+    );
+    res.status(204).send();
+  }),
+);
+router.delete(
+  '/pedidos/:id/itens/:itemId/garrafas',
+  asyncRoute(async (req, res) => {
+    await customerService.removeOrderItemBottles(
+      String(res.locals.user.id),
+      String(req.params.id),
+      String(req.params.itemId),
+      true,
+    );
+    res.status(204).send();
+  }),
+);
+router.delete(
   '/vinicolas-externas/:id',
   asyncRoute(async (req, res) => {
     await customerService.removeExternalWinery(String(res.locals.user.id), String(req.params.id));
@@ -81,6 +105,13 @@ router.get(
         req.query.wineryId == null ? undefined : String(req.query.wineryId),
       ),
     );
+  }),
+);
+router.delete(
+  '/estoque/garrafas/:id',
+  asyncRoute(async (req, res) => {
+    await customerService.removeBottle(String(res.locals.user.id), String(req.params.id));
+    res.status(204).send();
   }),
 );
 router.post(
