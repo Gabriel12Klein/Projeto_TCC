@@ -85,3 +85,25 @@ A validação visual autenticada final não foi repetida porque a sessão do
 navegador expirou e as abas foram redirecionadas ao login. Nenhum resultado
 visual autenticado foi presumido; a etapa foi coberta pelos testes automatizados
 e essa limitação fica registrada aqui.
+
+## Ampliação — versão 2.4.0
+
+A migration incremental `20260927043000_expand_customer_private_catalogs`
+adicionou bairro, cidade, estado/região e país às vinícolas externas e aos locais
+de compra. Em `vinhos_externo`, adicionou ano da safra do rótulo, descrição,
+características, aromas e notas de degustação.
+
+A nova tabela associativa `vinho_externo_uva` liga vinhos externos à tabela
+oficial `uva` em uma relação N:N. O backend valida que todas as uvas selecionadas
+estão ativas e sincroniza os vínculos durante a edição do mesmo vinho.
+
+Na navegação, os cadastros agora aparecem na ordem vinícola, vinho e local de
+compra. Os três formulários permitem cadastrar, editar e cancelar. A tela de
+local oferece sugestões apenas das vinícolas do cliente autenticado; a busca é
+parcial, ignora caixa, acentos e espaços repetidos. Clique, Enter ou Tab aceitam
+somente a opção destacada e copiam os campos para o formulário, sem salvar.
+
+Os dados copiados continuam independentes: alterações posteriores na vinícola
+não modificam um local já salvo. Testes com duas contas validaram as rotas, a
+manipulação direta de IDs, o catálogo compartilhado de uvas e o isolamento de
+vinícolas, vinhos e locais.
