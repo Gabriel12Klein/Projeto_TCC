@@ -6,6 +6,7 @@ import QueryFeedback from '../../ui/QueryFeedback';
 import type { BottleStatus, CellarBottle } from '../../types';
 import PrivateImage from './PrivateImage';
 import wineIcon from '../../assets/admin/sidebar/vinho.png';
+import ConfirmDeleteDialog from '../../ui/ConfirmDeleteDialog';
 
 function today() {
   const now = new Date();
@@ -42,10 +43,12 @@ function BottleRow({
   bottle,
   pending,
   onEvent,
+  onDelete,
 }: {
   bottle: CellarBottle;
   pending: boolean;
   onEvent: (id: string, action: 'open' | 'finish', date: string) => Promise<boolean>;
+  onDelete: (bottle: CellarBottle) => void;
 }) {
   const [action, setAction] = useState<'open' | 'finish' | null>(null);
   const [date, setDate] = useState(today());
@@ -124,6 +127,14 @@ function BottleRow({
               Finalizar garrafa
             </button>
           )}
+          <button
+            type="button"
+            className="rounded-lg border border-[#7d1d2d] px-3 py-2 text-sm font-semibold text-[#7d1d2d]"
+            disabled={pending}
+            onClick={() => onDelete(bottle)}
+          >
+            Excluir garrafa
+          </button>
         </div>
       </div>
       {action && (
@@ -204,6 +215,7 @@ function BottleRow({
 export default function BottleHistory() {
   const [status, setStatus] = useState('');
   const [message, setMessage] = useState('');
+  const [deleting, setDeleting] = useState<CellarBottle | null>(null);
   const resultMessage = useRef<HTMLParagraphElement>(null);
   const qc = useQueryClient();
   const bottles = useQuery({
@@ -236,6 +248,23 @@ export default function BottleHistory() {
     onError: (error) =>
       setMessage(error instanceof Error ? error.message : 'Não foi possível atualizar a garrafa.'),
   });
+  const remove = useMutation({
+    mutationFn: api.customer.removeBottle,
+    onSuccess: async () => {
+      setDeleting(null);
+      setMessage('Garrafa e histórico relacionado excluídos permanentemente.');
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['customer-orders'] }),
+        qc.invalidateQueries({ queryKey: ['customer-inventory'] }),
+        qc.invalidateQueries({ queryKey: ['customer-cellar-bottles'] }),
+        qc.invalidateQueries({ queryKey: ['customer-inventory-dashboard'] }),
+      ]);
+    },
+    onError: (error) => {
+      setDeleting(null);
+      setMessage(error instanceof Error ? error.message : 'Não foi possível excluir a garrafa.');
+    },
+  });
   useEffect(() => {
     if (message) window.requestAnimationFrame(() => resultMessage.current?.focus());
   }, [message]);
@@ -266,7 +295,8 @@ export default function BottleHistory() {
           <BottleRow
             key={bottle.id}
             bottle={bottle}
-            pending={mutation.isPending}
+            pending={mutation.isPending || remove.isPending}
+            onDelete={setDeleting}
             onEvent={async (id, action, occurredAt) => {
               setMessage('');
               try {
@@ -293,11 +323,20 @@ export default function BottleHistory() {
           ref={resultMessage}
           tabIndex={-1}
           className="mt-4 rounded-xl border border-[#dfd0bd] p-4"
-          role={mutation.isError ? 'alert' : 'status'}
+          role={mutation.isError || remove.isError ? 'alert' : 'status'}
         >
           {message}
         </p>
       )}
+      <ConfirmDeleteDialog
+        open={Boolean(deleting)}
+        title="Excluir garrafa?"
+        description={`Esta ação removerá permanentemente a unidade ${deleting?.bottleNumber ?? ''} de ${deleting?.inventoryItem.name ?? 'este vinho'} e seu histórico de abertura/consumo.`}
+        confirmLabel="Excluir garrafa"
+        pending={remove.isPending}
+        onCancel={() => setDeleting(null)}
+        onConfirm={() => deleting && remove.mutate(deleting.id)}
+      />
     </section>
   );
 }

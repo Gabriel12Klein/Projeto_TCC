@@ -225,6 +225,16 @@ export const api = {
       return request<CustomerOrder>('/cliente/pedidos', { method: 'POST', body });
     },
     removeOrder: (id: string) => request<void>(`/cliente/pedidos/${id}`, { method: 'DELETE' }),
+    removeOneOrderItemBottle: (orderId: string, itemId: string) =>
+      request<void>(
+        `/cliente/pedidos/${encodeURIComponent(orderId)}/itens/${encodeURIComponent(itemId)}/garrafas/uma`,
+        { method: 'DELETE' },
+      ),
+    removeAllOrderItemBottles: (orderId: string, itemId: string) =>
+      request<void>(
+        `/cliente/pedidos/${encodeURIComponent(orderId)}/itens/${encodeURIComponent(itemId)}/garrafas`,
+        { method: 'DELETE' },
+      ),
     updateOrderItem: (
       orderId: string,
       itemId: string,
@@ -258,6 +268,8 @@ export const api = {
       request<CellarBottle[]>(`/cliente/estoque/garrafas${status ? `?status=${status}` : ''}`),
     bottle: (bottleId: string) =>
       request<CellarBottle>(`/cliente/estoque/garrafas/${encodeURIComponent(bottleId)}`),
+    removeBottle: (bottleId: string) =>
+      request<void>(`/cliente/estoque/garrafas/${encodeURIComponent(bottleId)}`, { method: 'DELETE' }),
     openBottle: (bottleId: string, occurredAt: string) =>
       request<CellarBottle>(`/cliente/estoque/garrafas/${encodeURIComponent(bottleId)}/abrir`, {
         method: 'POST',

@@ -12,6 +12,7 @@ import BottlePhotoPicker from './BottlePhotoPicker';
 import BottleHistory from './BottleHistory';
 import { persistOrderDraft, readOrderDraft } from './orderDraft';
 import InventoryDashboard from './InventoryDashboard';
+import ConfirmDeleteDialog from '../../ui/ConfirmDeleteDialog';
 
 const input =
   'w-full rounded-xl border border-[#d9cbbd] bg-white px-4 py-3 text-[#321b1c] outline-none focus:border-[#8b2638]';
@@ -81,6 +82,13 @@ function Orders({ userId }: { userId: string }) {
   const [name, setName] = useState(restoredDraft?.name ?? '');
   const [qty, setQty] = useState(restoredDraft?.qty ?? '1');
   const [message, setMessage] = useState('');
+  const [deleting, setDeleting] = useState<{
+    orderId: string;
+    itemId: string;
+    name: string;
+    quantity: number;
+    mode: 'one' | 'all';
+  } | null>(null);
   const externalWinesQuery = useQuery({
     queryKey: ['customer-external-wines', winerySelection],
     queryFn: () => api.customer.externalWines(winerySelection),
@@ -151,6 +159,30 @@ function Orders({ userId }: { userId: string }) {
     onError: (e) => {
       feedback.fromApi(e);
       setMessage(e instanceof Error ? e.message : 'Não foi possível salvar o vinho. Tente novamente.');
+    },
+  });
+  const removeBottles = useMutation({
+    mutationFn: async (target: NonNullable<typeof deleting>) =>
+      target.mode === 'one'
+        ? api.customer.removeOneOrderItemBottle(target.orderId, target.itemId)
+        : api.customer.removeAllOrderItemBottles(target.orderId, target.itemId),
+    onSuccess: async (_data, target) => {
+      setDeleting(null);
+      setMessage(
+        target.mode === 'one'
+          ? 'Uma garrafa foi excluída permanentemente.'
+          : `${target.quantity} garrafas foram excluídas permanentemente.`,
+      );
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['customer-orders'] }),
+        qc.invalidateQueries({ queryKey: ['customer-inventory'] }),
+        qc.invalidateQueries({ queryKey: ['customer-cellar-bottles'] }),
+        qc.invalidateQueries({ queryKey: ['customer-inventory-dashboard'] }),
+      ]);
+    },
+    onError: (error) => {
+      setDeleting(null);
+      setMessage(error instanceof Error ? error.message : 'Não foi possível excluir as garrafas.');
     },
   });
   async function submit(e: FormEvent) {
@@ -519,7 +551,9 @@ function Orders({ userId }: { userId: string }) {
         <div className="border-b border-[#eadfd3] p-6 md:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6a2d]">Vinhos cadastrados</p>
           <h2 className="mt-1 font-playfair text-2xl text-[#5b0c1b]">Histórico da adega</h2>
-          <p className="mt-2 text-[#715f59]">Consulte os rótulos, quantidades, datas e origens.</p>
+          <p className="mt-2 text-[#715f59]">
+            Consulte os rótulos, quantidades, vinícolas e locais de compra.
+          </p>
         </div>
         <div className="client-empty-feedback px-6 md:px-8">
           <QueryFeedback
@@ -534,13 +568,14 @@ function Orders({ userId }: { userId: string }) {
         </div>
         {orders.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left">
+            <table className="w-full min-w-[980px] text-left">
               <thead className="bg-[#f8efe5] text-xs uppercase tracking-wider text-[#7d5b2b]">
                 <tr>
                   <th className="px-6 py-4">Nome do rótulo</th>
                   <th className="px-6 py-4">Quantidade</th>
                   <th className="px-6 py-4">Data da compra</th>
-                  <th className="px-6 py-4">Origem</th>
+                  <th className="px-6 py-4">Vinícola</th>
+                  <th className="px-6 py-4">Local de compra</th>
                   <th className="px-6 py-4 text-right">Ações</th>
                 </tr>
               </thead>
@@ -564,15 +599,13 @@ function Orders({ userId }: { userId: string }) {
                       <td className="px-6 py-5 text-[#715f59]">
                         {new Date(order.purchaseDate).toLocaleDateString('pt-BR')}
                       </td>
-                      <td className="px-6 py-5">
-                        <span className="whitespace-nowrap rounded-full bg-[#f1e4d1] px-3 py-1 text-xs font-semibold text-[#7d5b2b]">
-                          {order.source === 'VINICULA' ? 'Catálogo VINUM' : 'Outro local'}
-                        </span>
-                        {order.purchaseLocation && (
-                          <p className="mt-2 max-w-[200px] whitespace-normal break-words text-sm text-[#715f59]">
-                            {order.purchaseLocation}
-                          </p>
-                        )}
+                      <td className="px-6 py-5 text-[#715f59]">
+                        {item.wineryName ??
+                          item.externalWine?.externalWinery.name ??
+                          (item.wineId ? 'VINUM' : 'Não informada')}
+                      </td>
+                      <td className="px-6 py-5 text-[#715f59]">
+                        {order.purchaseLocationRef?.name ?? order.purchaseLocation ?? 'Não informado'}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex justify-end gap-2">
@@ -611,6 +644,21 @@ function Orders({ userId }: { userId: string }) {
                           >
                             Editar
                           </button>
+                          <button
+                            className="rounded-lg border border-[#7d1d2d] px-3 py-2 text-xs font-semibold text-[#7d1d2d]"
+                            disabled={removeBottles.isPending}
+                            onClick={() =>
+                              setDeleting({
+                                orderId: order.id,
+                                itemId: item.id,
+                                name: item.wineName,
+                                quantity: item.quantityBottles,
+                                mode: 'one',
+                              })
+                            }
+                          >
+                            Excluir
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -621,6 +669,25 @@ function Orders({ userId }: { userId: string }) {
           </div>
         ) : null}
       </section>
+      <ConfirmDeleteDialog
+        open={Boolean(deleting)}
+        title={deleting?.mode === 'all' ? 'Excluir todas as garrafas?' : 'Excluir garrafa?'}
+        description={
+          deleting?.mode === 'all'
+            ? `Você está prestes a excluir permanentemente ${deleting.quantity} garrafas deste registro e seus históricos relacionados.`
+            : `Você está prestes a excluir permanentemente uma unidade de ${deleting?.name ?? 'este registro'} e seu histórico de abertura/consumo. Para remover todo o registro, escolha a opção de excluir as ${deleting?.quantity ?? 0} garrafas.`
+        }
+        confirmLabel={deleting?.mode === 'all' ? `Excluir ${deleting.quantity} garrafas` : 'Excluir garrafa'}
+        alternativeLabel={
+          deleting?.mode === 'one' && deleting.quantity > 1
+            ? `Excluir todas as ${deleting.quantity} garrafas`
+            : undefined
+        }
+        pending={removeBottles.isPending}
+        onCancel={() => setDeleting(null)}
+        onConfirm={() => deleting && removeBottles.mutate(deleting)}
+        onAlternative={() => deleting && setDeleting({ ...deleting, mode: 'all' })}
+      />
       <BottleHistory />
     </Shell>
   );

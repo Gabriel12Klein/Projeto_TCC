@@ -113,6 +113,7 @@ export type CustomerOrderItem = {
 export type CustomerOrder = {
   purchaseLocation?: string | null;
   purchaseLocationId?: string | null;
+  purchaseLocationRef?: { id: string; name: string } | null;
   id: string;
   source: 'VINICULA' | 'OUTRO_LOCAL';
   purchaseDate: string;

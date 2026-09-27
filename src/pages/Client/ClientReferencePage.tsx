@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/api';
 import QueryFeedback from '../../ui/QueryFeedback';
 import type { EntityRecord, ExternalWine, ExternalWinery, PurchaseLocation } from '../../types';
+import ConfirmDeleteDialog from '../../ui/ConfirmDeleteDialog';
 
 const inputClass =
   'mt-1 w-full rounded-xl border border-[#d9cbbd] bg-white px-4 py-3 text-[#321b1c] outline-none focus:border-[#8b2638]';
@@ -97,6 +98,7 @@ function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
   const [editingId, setEditingId] = useState('');
   const [message, setMessage] = useState('');
   const [highlighted, setHighlighted] = useState(0);
+  const [deleteRecord, setDeleteRecord] = useState<ExternalWinery | PurchaseLocation | null>(null);
   const result = useRef<HTMLParagraphElement>(null);
   const qc = useQueryClient();
   const query = useQuery({
@@ -151,6 +153,7 @@ function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
     mutationFn: (id: string) =>
       winery ? api.customer.removeExternalWinery(id) : api.customer.removePurchaseLocation(id),
     onSuccess: async () => {
+      setDeleteRecord(null);
       setMessage(`${winery ? 'Vinícola' : 'Local de compra'} excluído com sucesso.`);
       await qc.invalidateQueries({ queryKey });
     },
@@ -309,9 +312,7 @@ function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
                   className="rounded-lg border border-[#7d1d2d] px-3 py-2 text-sm font-semibold text-[#7d1d2d] disabled:opacity-50"
                   disabled={remove.isPending}
                   type="button"
-                  onClick={() => {
-                    if (window.confirm(`Excluir ${record.name}?`)) remove.mutate(record.id);
-                  }}
+                  onClick={() => setDeleteRecord(record)}
                 >
                   Excluir
                 </button>
@@ -320,6 +321,19 @@ function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
           ))}
         </div>
       </section>
+      <ConfirmDeleteDialog
+        open={Boolean(deleteRecord)}
+        title={winery ? 'Excluir vinícola?' : 'Excluir local de compra?'}
+        description={
+          winery
+            ? `A vinícola ${deleteRecord?.name ?? ''} somente será excluída se não possuir vinhos relacionados.`
+            : `O local ${deleteRecord?.name ?? ''} somente será excluído se não estiver relacionado a uma compra.`
+        }
+        confirmLabel={winery ? 'Excluir vinícola' : 'Excluir local'}
+        pending={remove.isPending}
+        onCancel={() => setDeleteRecord(null)}
+        onConfirm={() => deleteRecord && remove.mutate(deleteRecord.id)}
+      />
     </PageShell>
   );
 }
@@ -349,6 +363,7 @@ function ExternalWines() {
   const [form, setForm] = useState<WineForm>(emptyWine);
   const [editingId, setEditingId] = useState('');
   const [message, setMessage] = useState('');
+  const [deleteWine, setDeleteWine] = useState<ExternalWine | null>(null);
   const result = useRef<HTMLParagraphElement>(null);
   const qc = useQueryClient();
   const wineries = useQuery({
@@ -387,6 +402,7 @@ function ExternalWines() {
   const remove = useMutation({
     mutationFn: api.customer.removeExternalWine,
     onSuccess: async () => {
+      setDeleteWine(null);
       setMessage('Vinho excluído com sucesso.');
       await qc.invalidateQueries({ queryKey: ['customer-external-wines'] });
     },
@@ -607,9 +623,7 @@ function ExternalWines() {
                   className="rounded-lg border border-[#7d1d2d] px-3 py-2 text-sm font-semibold text-[#7d1d2d] disabled:opacity-50"
                   disabled={remove.isPending}
                   type="button"
-                  onClick={() => {
-                    if (window.confirm(`Excluir ${wine.name}?`)) remove.mutate(wine.id);
-                  }}
+                  onClick={() => setDeleteWine(wine)}
                 >
                   Excluir
                 </button>
@@ -618,6 +632,15 @@ function ExternalWines() {
           ))}
         </div>
       </section>
+      <ConfirmDeleteDialog
+        open={Boolean(deleteWine)}
+        title="Excluir vinho externo?"
+        description={`O vinho ${deleteWine?.name ?? ''} somente será excluído se ainda não fizer parte da adega.`}
+        confirmLabel="Excluir vinho"
+        pending={remove.isPending}
+        onCancel={() => setDeleteWine(null)}
+        onConfirm={() => deleteWine && remove.mutate(deleteWine.id)}
+      />
     </PageShell>
   );
 }
