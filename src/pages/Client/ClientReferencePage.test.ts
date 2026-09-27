@@ -104,7 +104,7 @@ describe('cadastros privados do cliente', () => {
     expect(html).toContain('Supermercado Central');
     expect(html).toContain('Nome do local');
     expect(html).toContain('Ijuí');
-    expect(html).toContain('Ex.: RS');
+    expect(html).toContain('Ex.: RS ou Rio Grande do Sul');
     expect(html).toContain('Ex.: Brasil');
   });
 

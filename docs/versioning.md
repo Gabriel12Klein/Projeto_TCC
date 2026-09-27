@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.4.1**
+Versão atual: **2.4.2**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -38,3 +38,8 @@ vinícola no local de compra, sem criar vínculo permanente entre os registros.
 Adiciona exemplos aos campos dos cadastros privados e apresenta a seleção
 múltipla de uvas em um menu recolhível, mantendo os textos orientativos do
 cadastro administrativo de vinhos.
+
+## Versão 2.4.2
+
+Esclarece no cadastro de local de compra que Estado/Região aceita tanto a sigla
+quanto o nome completo, usando o exemplo `RS ou Rio Grande do Sul`.

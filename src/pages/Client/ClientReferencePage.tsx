@@ -46,7 +46,12 @@ function AddressFields({
         stateRegion: 'Ex.: Mendoza',
         country: 'Ex.: Argentina',
       }
-    : { neighborhood: 'Ex.: Centro', city: 'Ex.: Ijuí', stateRegion: 'Ex.: RS', country: 'Ex.: Brasil' };
+    : {
+        neighborhood: 'Ex.: Centro',
+        city: 'Ex.: Ijuí',
+        stateRegion: 'Ex.: RS ou Rio Grande do Sul',
+        country: 'Ex.: Brasil',
+      };
   return (
     <>
       {(Object.keys(labels) as Array<keyof typeof labels>).map((field) => (
