@@ -10,6 +10,7 @@ const password = `Privado1!${suffix}`;
 const emails = [`privado-a-${suffix}@test.invalid`, `privado-b-${suffix}@test.invalid`];
 let userA = '';
 let userB = '';
+let tokenA = '';
 let tokenB = '';
 let officialWineId = '';
 let grapeId = '';
@@ -27,6 +28,8 @@ beforeAll(async () => {
       .send({ name: 'Cliente privado B', email: emails[1], password })
       .expect(201)
   ).body.id;
+  tokenA = (await request(app).post('/api/auth/login').send({ email: emails[0], password }).expect(200)).body
+    .token;
   tokenB = (await request(app).post('/api/auth/login').send({ email: emails[1], password }).expect(200)).body
     .token;
   officialWineId = (
@@ -113,6 +116,36 @@ describe('Catálogo privado do cliente', () => {
       characteristics: 'Encorpado',
       aromas: 'Frutas vermelhas',
       tastingNotes: 'Final persistente',
+    });
+    const fullDetails = await request(app)
+      .get(`/api/cliente/vinhos-externos/${dvCatena.id}`)
+      .set('Authorization', `Bearer ${tokenA}`)
+      .expect(200);
+    expect(fullDetails.body).toMatchObject({
+      id: dvCatena.id,
+      name: 'DV Catena',
+      vintageYear: 2022,
+      externalWinery: { id: catena.id, name: 'Vinícola Catena Zapata' },
+      grapeLinks: [{ grape: { id: grapeId } }],
+      description: 'Vinho externo de teste',
+      characteristics: 'Encorpado',
+      aromas: 'Frutas vermelhas',
+      tastingNotes: 'Final persistente',
+      imagePath: null,
+    });
+    const sparseDetails = await request(app)
+      .get(`/api/cliente/vinhos-externos/${otherWine.id}`)
+      .set('Authorization', `Bearer ${tokenA}`)
+      .expect(200);
+    expect(sparseDetails.body).toMatchObject({
+      id: otherWine.id,
+      vintageYear: null,
+      description: null,
+      characteristics: null,
+      aromas: null,
+      tastingNotes: null,
+      imagePath: null,
+      grapeLinks: [],
     });
     await expect(customerService.getExternalWine(userB, dvCatena.id)).rejects.toThrow('não encontrado');
     await request(app)
@@ -225,6 +258,7 @@ describe('Catálogo privado do cliente', () => {
       orderItem: {
         externalWine: {
           id: dvCatena.id,
+          vintageYear: 2022,
           description: 'Vinho externo de teste',
           grapeLinks: [{ grape: { id: grapeId } }],
         },

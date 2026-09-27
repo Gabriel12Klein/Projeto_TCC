@@ -128,3 +128,15 @@ legado e evidências de validação estão documentados em
   para não ser confundido com as ações de abertura e finalização.
 - Não houve alteração no banco de dados, migration ou nas regras de ordenação e
   atualização visual da lista.
+
+### Correção da ficha externa — versão 2.8.1
+
+- O validador de respostas agora distingue a coleção
+  `GET /cliente/vinhos-externos` da ficha individual
+  `GET /cliente/vinhos-externos/:id`.
+- A safra do resumo e da ficha detalhada usa a mesma fonte para rótulos
+  externos: `ExternalWine.vintageYear`, persistido na coluna `vintageYear` de
+  `vinhos_externo`.
+- Safra, descrição, características, aromas, notas de degustação e imagem podem
+  ser nulos sem invalidar a ficha. Relações estruturais de vinícola e uvas
+  continuam validadas.

@@ -86,7 +86,7 @@ export default function ExternalWineDetailsDialog({ open, wine, loading, error, 
         )}
         {error && (
           <div className="my-6 rounded-xl border border-[#d9a4a4] bg-[#fffafa] p-4" role="alert">
-            <p>{error.message || 'Não foi possível carregar a ficha do vinho.'}</p>
+            <p>Não foi possível carregar a ficha deste vinho. {error.message || 'Tente novamente.'}</p>
             <button className="mt-3 font-semibold text-[#7d1d2d] underline" type="button" onClick={onRetry}>
               Tentar novamente
             </button>

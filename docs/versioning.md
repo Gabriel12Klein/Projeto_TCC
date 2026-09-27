@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.8.0**
+Versão atual: **2.8.1**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -84,3 +84,11 @@ fuso. Padroniza os detalhes de rótulos oficiais e externos em `Meus vinhos`,
 adiciona uma ficha acessível para o vinho externo com consulta privada por
 proprietário e diferencia visualmente a ação de excluir garrafa. Não houve
 alteração de schema nem migration.
+
+## Versão 2.8.1
+
+Corrige o contrato da consulta individual de vinho externo, que era validada
+incorretamente como uma lista, e passa a obter a safra resumida diretamente de
+`vinhos_externo.vintageYear`. Campos opcionais nulos permanecem válidos e o
+isolamento por cliente continua aplicado. Não houve alteração de banco ou
+migration.

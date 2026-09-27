@@ -41,4 +41,18 @@ describe('ficha do vinho externo', () => {
     expect(html).toContain('Notas de degustação');
     vi.unstubAllGlobals();
   });
+
+  it('mantém a causa original em uma mensagem contextual de falha', () => {
+    const html = renderToStaticMarkup(
+      createElement(ExternalWineDetailsDialog, {
+        open: true,
+        loading: false,
+        error: new Error('Falha de rede.'),
+        onClose: vi.fn(),
+        onRetry: vi.fn(),
+      }),
+    );
+    expect(html).toContain('Não foi possível carregar a ficha deste vinho.');
+    expect(html).toContain('Falha de rede.');
+  });
 });

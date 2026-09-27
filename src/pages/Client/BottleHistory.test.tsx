@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, localDateValue, replaceBottlePreservingOrder, today } from './BottleHistory';
+import {
+  bottleVintageYear,
+  formatDate,
+  localDateValue,
+  replaceBottlePreservingOrder,
+  today,
+} from './BottleHistory';
 import type { CellarBottle } from '../../types';
 
 describe('histórico individual da adega', () => {
@@ -17,5 +23,28 @@ describe('histórico individual da adega', () => {
       { ...updated, bottleNumber: 1 },
       second,
     ]);
+  });
+
+  it('usa a safra do cadastro privado para vinho externo e a do item para vinho oficial', () => {
+    const external = {
+      orderItem: {
+        externalWineId: 'external-a',
+        vintageYear: null,
+        externalWine: { vintageYear: 2022 },
+      },
+    } as CellarBottle;
+    const externalWithoutVintage = {
+      orderItem: {
+        externalWineId: 'external-b',
+        vintageYear: 1999,
+        externalWine: { vintageYear: null },
+      },
+    } as CellarBottle;
+    const official = {
+      orderItem: { externalWineId: null, vintageYear: 2021, externalWine: null },
+    } as CellarBottle;
+    expect(bottleVintageYear(external)).toBe(2022);
+    expect(bottleVintageYear(externalWithoutVintage)).toBeNull();
+    expect(bottleVintageYear(official)).toBe(2021);
   });
 });

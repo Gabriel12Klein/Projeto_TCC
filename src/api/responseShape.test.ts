@@ -29,6 +29,28 @@ it('rejeita sucesso malformado antes de renderizar listas', () => {
   ).toBe(true);
   expect(validResponse('/cliente/estoque/resumo', 'GET', { totals: {}, monthlyConsumption: [] })).toBe(false);
 });
+it('aceita ficha externa individual e campos opcionais nulos', () => {
+  const externalWine = {
+    id: 'wine-a',
+    name: 'DV Catena',
+    externalWinery: { id: 'winery-a', name: 'Catena Zapata' },
+    vintageYear: 2022,
+    grapeLinks: [{ grape: { id: 'grape-a', name: 'Malbec' } }],
+    description: null,
+    characteristics: null,
+    aromas: null,
+    tastingNotes: null,
+    imagePath: null,
+  };
+  expect(validResponse('/cliente/vinhos-externos/wine-a', 'GET', externalWine)).toBe(true);
+  expect(validResponse('/cliente/vinhos-externos', 'GET', [externalWine])).toBe(true);
+  expect(
+    validResponse('/cliente/vinhos-externos/wine-a', 'GET', {
+      ...externalWine,
+      externalWinery: 'winery-a',
+    }),
+  ).toBe(false);
+});
 it('preserva respostas vazias de exclusão e rejeita sessão inválida', () => {
   expect(validResponse('/cliente/pedidos/123', 'DELETE', null)).toBe(true);
   expect(validResponse('/auth/login', 'POST', { token: 'x', user: null })).toBe(false);

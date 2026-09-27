@@ -39,6 +39,23 @@ const inventoryDashboard = (value: unknown) =>
   value.monthlyConsumption.every(
     (point: unknown) => object(point) && Number.isInteger(point.month) && Number.isFinite(point.bottles),
   );
+const optionalText = (value: unknown) => value == null || typeof value === 'string';
+const externalWine = (value: unknown) =>
+  object(value) &&
+  typeof value.id === 'string' &&
+  typeof value.name === 'string' &&
+  object(value.externalWinery) &&
+  typeof value.externalWinery.id === 'string' &&
+  typeof value.externalWinery.name === 'string' &&
+  (value.vintageYear == null || Number.isInteger(value.vintageYear)) &&
+  ['description', 'characteristics', 'aromas', 'tastingNotes', 'imagePath'].every((key) =>
+    optionalText(value[key]),
+  ) &&
+  records(value.grapeLinks) &&
+  value.grapeLinks.every(
+    (link: any) =>
+      object(link.grape) && typeof link.grape.id === 'string' && typeof link.grape.name === 'string',
+  );
 
 /** Check structures consumed by the UI; never treat a malformed success as empty. */
 export function validResponse(path: string, method: string, value: unknown) {
@@ -71,6 +88,9 @@ export function validResponse(path: string, method: string, value: unknown) {
     );
   if (route === '/cliente/pedidos' && method === 'GET') return Array.isArray(value) && value.every(order);
   if (route.startsWith('/cliente/pedidos')) return order(value);
+  if (route === '/cliente/vinhos-externos' && method === 'GET')
+    return Array.isArray(value) && value.every(externalWine);
+  if (/^\/cliente\/vinhos-externos\/[^/]+$/.test(route) && method === 'GET') return externalWine(value);
   if (/^\/cliente\/(vinicolas-externas|vinhos-externos|locais-compra)(\/[^/]+)?$/.test(route)) {
     if (method === 'GET') return records(value);
     return object(value) && typeof value.id === 'string' && typeof value.name === 'string';

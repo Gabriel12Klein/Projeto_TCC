@@ -30,6 +30,11 @@ export function localDateValue(value: string) {
   return value.slice(0, 10);
 }
 
+export function bottleVintageYear(bottle: CellarBottle) {
+  if (bottle.orderItem?.externalWineId) return bottle.orderItem.externalWine?.vintageYear ?? null;
+  return bottle.orderItem?.vintageYear ?? null;
+}
+
 const statusLabel: Record<BottleStatus, string> = {
   DISPONIVEL: 'Disponível',
   ABERTA: 'Aberta',
@@ -202,7 +207,7 @@ function BottleRow({
           </div>
           <div>
             <dt className="text-[#715f59]">Safra</dt>
-            <dd>{bottle.orderItem?.vintageYear || 'Não informada'}</dd>
+            <dd>{bottleVintageYear(bottle) ?? 'Não informada'}</dd>
           </div>
           <div>
             <dt className="text-[#715f59]">Uvas</dt>
