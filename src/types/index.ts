@@ -123,6 +123,7 @@ export type CustomerOrder = {
 export type ExternalWinery = {
   id: string;
   name: string;
+  street: string | null;
   neighborhood: string | null;
   city: string | null;
   stateRegion: string | null;
@@ -149,6 +150,7 @@ export type ExternalWine = {
 export type PurchaseLocation = {
   id: string;
   name: string;
+  street: string | null;
   neighborhood: string | null;
   city: string | null;
   stateRegion: string | null;

@@ -44,6 +44,7 @@ describe('Catálogo privado do cliente', () => {
   it('cadastra referências, filtra por vinícola e bloqueia acesso cruzado', async () => {
     const catena = await customerService.createExternalWinery(userA, {
       name: 'Vinícola Catena Zapata',
+      street: 'Rua Cobos',
       neighborhood: 'Centro',
       city: 'Mendoza',
       stateRegion: 'Mendoza',
@@ -67,12 +68,14 @@ describe('Catálogo privado do cliente', () => {
     });
     const location = await customerService.createPurchaseLocation(userA, {
       name: 'Supermercado Central',
+      street: 'Rua do Comércio',
       city: 'Ijuí',
       stateRegion: 'RS',
       country: 'Brasil',
     });
     const wineryLocation = await customerService.createPurchaseLocation(userA, {
       name: catena.name,
+      street: catena.street,
       neighborhood: catena.neighborhood,
       city: catena.city,
       stateRegion: catena.stateRegion,
@@ -80,6 +83,7 @@ describe('Catálogo privado do cliente', () => {
     });
     const updatedCatena = await customerService.updateExternalWinery(userA, catena.id, {
       name: catena.name,
+      street: 'Rua Nova da Vinícola',
       neighborhood: catena.neighborhood,
       city: 'Luján de Cuyo',
       stateRegion: catena.stateRegion,
@@ -87,9 +91,13 @@ describe('Catálogo privado do cliente', () => {
     });
     expect(updatedCatena.id).toBe(catena.id);
     expect(updatedCatena.city).toBe('Luján de Cuyo');
+    expect(updatedCatena.street).toBe('Rua Nova da Vinícola');
     expect(
       (await customerService.listPurchaseLocations(userA)).find(({ id }) => id === wineryLocation.id)?.city,
     ).toBe('Mendoza');
+    expect(
+      (await customerService.listPurchaseLocations(userA)).find(({ id }) => id === wineryLocation.id)?.street,
+    ).toBe('Rua Cobos');
 
     const wineryB = await customerService.createExternalWinery(userB, { name: 'Vinícola privada B' });
     const wineB = await customerService.createExternalWine(userB, {

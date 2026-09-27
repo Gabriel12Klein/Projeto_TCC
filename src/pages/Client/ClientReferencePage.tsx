@@ -7,7 +7,7 @@ import type { EntityRecord, ExternalWine, ExternalWinery, PurchaseLocation } fro
 
 const inputClass =
   'mt-1 w-full rounded-xl border border-[#d9cbbd] bg-white px-4 py-3 text-[#321b1c] outline-none focus:border-[#8b2638]';
-const emptyAddress = { name: '', neighborhood: '', city: '', stateRegion: '', country: '' };
+const emptyAddress = { name: '', street: '', neighborhood: '', city: '', stateRegion: '', country: '' };
 type AddressForm = typeof emptyAddress;
 
 export function normalizeSearch(value: string) {
@@ -38,15 +38,23 @@ function AddressFields({
   setForm: (value: AddressForm) => void;
   winery: boolean;
 }) {
-  const labels = { neighborhood: 'Bairro', city: 'Cidade', stateRegion: 'Estado/Região', country: 'País' };
+  const labels = {
+    street: 'Rua',
+    neighborhood: 'Bairro',
+    city: 'Cidade',
+    stateRegion: 'Estado/Região',
+    country: 'País',
+  };
   const examples = winery
     ? {
+        street: 'Ex.: Rua Cobos',
         neighborhood: 'Ex.: Centro',
         city: 'Ex.: Mendoza',
         stateRegion: 'Ex.: Mendoza',
         country: 'Ex.: Argentina',
       }
     : {
+        street: 'Ex.: Rua do Comércio',
         neighborhood: 'Ex.: Centro',
         city: 'Ex.: Ijuí',
         stateRegion: 'Ex.: RS ou Rio Grande do Sul',
@@ -73,6 +81,7 @@ function AddressFields({
 function addressFrom(record: ExternalWinery | PurchaseLocation): AddressForm {
   return {
     name: record.name,
+    street: record.street ?? '',
     neighborhood: record.neighborhood ?? '',
     city: record.city ?? '',
     stateRegion: record.stateRegion ?? '',
@@ -107,6 +116,7 @@ function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
   useEffect(() => setHighlighted(0), [form.name]);
   const payload = {
     ...form,
+    street: form.street || null,
     neighborhood: form.neighborhood || null,
     city: form.city || null,
     stateRegion: form.stateRegion || null,
@@ -278,7 +288,7 @@ function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
               <div>
                 <strong className="block text-[#5b0c1b]">{record.name}</strong>
                 <span className="text-sm text-[#715f59]">
-                  {[record.neighborhood, record.city, record.stateRegion, record.country]
+                  {[record.street, record.neighborhood, record.city, record.stateRegion, record.country]
                     .filter(Boolean)
                     .join(' · ') || 'Endereço não informado'}
                 </span>

@@ -107,3 +107,11 @@ Os dados copiados continuam independentes: alterações posteriores na vinícola
 não modificam um local já salvo. Testes com duas contas validaram as rotas, a
 manipulação direta de IDs, o catálogo compartilhado de uvas e o isolamento de
 vinícolas, vinhos e locais.
+
+## Rua — versão 2.5.0
+
+A migration incremental `20260927053000_add_private_street` adicionou a coluna
+opcional `street` a `outras_vinicolas` e `locais_de_compra`. O campo Rua aparece
+nos dois formulários, é carregado na edição e é copiado pelo autocomplete junto
+com os demais dados. Como os registros continuam independentes, alterar a rua da
+vinícola depois da cópia não modifica um local já salvo.

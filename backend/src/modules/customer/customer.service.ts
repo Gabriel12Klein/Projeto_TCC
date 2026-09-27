@@ -49,6 +49,7 @@ const externalWineInclude = {
 
 const addressData = (input: PrivateAddressInput) => ({
   name: input.name,
+  street: input.street || null,
   neighborhood: input.neighborhood || null,
   city: input.city || null,
   stateRegion: input.stateRegion || null,

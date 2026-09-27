@@ -69,6 +69,7 @@ export const privateNameSchema = z.object({
 const optionalText = (maximum: number) => z.string().trim().max(maximum).optional().nullable();
 
 export const privateAddressSchema = privateNameSchema.extend({
+  street: optionalText(160),
   neighborhood: optionalText(120),
   city: optionalText(120),
   stateRegion: optionalText(120),

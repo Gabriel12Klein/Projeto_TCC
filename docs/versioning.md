@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.4.2**
+Versão atual: **2.5.0**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -43,3 +43,8 @@ cadastro administrativo de vinhos.
 
 Esclarece no cadastro de local de compra que Estado/Região aceita tanto a sigla
 quanto o nome completo, usando o exemplo `RS ou Rio Grande do Sul`.
+
+## Versão 2.5.0
+
+Adiciona o campo Rua às vinícolas externas e aos locais de compra, incluindo
+persistência no PostgreSQL e cópia independente pelo autocomplete.

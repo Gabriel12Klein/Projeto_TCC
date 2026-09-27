@@ -389,6 +389,7 @@ model ExternalWinery {
   userId       String
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   name         String
+  street       String?
   neighborhood String?
   city         String?
   stateRegion  String?
@@ -448,6 +449,7 @@ model PurchaseLocation {
   userId       String
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   name         String
+  street       String?
   neighborhood String?
   city         String?
   stateRegion  String?

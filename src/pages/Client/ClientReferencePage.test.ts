@@ -13,6 +13,7 @@ function render(kind: 'winery' | 'wine' | 'location') {
       {
         id: 'catena',
         name: 'Vinícola Catena Zapata',
+        street: 'Rua Cobos',
         neighborhood: 'Centro',
         city: 'Mendoza',
         stateRegion: 'Mendoza',
@@ -47,6 +48,7 @@ function render(kind: 'winery' | 'wine' | 'location') {
       {
         id: 'mercado',
         name: 'Supermercado Central',
+        street: 'Rua do Comércio',
         neighborhood: null,
         city: 'Ijuí',
         stateRegion: 'RS',
@@ -75,6 +77,8 @@ describe('cadastros privados do cliente', () => {
     expect(html).toContain('Nome da Vinícola');
     expect(html).toContain('Estado/Região');
     expect(html).toContain('Ex.: Centro');
+    expect(html).toContain('Ex.: Rua Cobos');
+    expect(html).toContain('Rua Cobos');
     expect(html).toContain('Ex.: Mendoza');
     expect(html).toContain('Ex.: Argentina');
     expect(html).toContain('Vinícola Catena Zapata');
@@ -105,6 +109,8 @@ describe('cadastros privados do cliente', () => {
     expect(html).toContain('Nome do local');
     expect(html).toContain('Ijuí');
     expect(html).toContain('Ex.: RS ou Rio Grande do Sul');
+    expect(html).toContain('Ex.: Rua do Comércio');
+    expect(html).toContain('Rua do Comércio');
     expect(html).toContain('Ex.: Brasil');
   });
 
