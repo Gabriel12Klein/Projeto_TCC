@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.6.2**
+Versão atual: **2.7.0**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -68,3 +68,10 @@ no banco de dados.
 Simplifica a seleção de uvas no cadastro de vinho externo: um seletor adiciona
 uma uva por vez e as escolhas aparecem como etiquetas removíveis, permitindo
 composição múltipla sem duplicações.
+
+## Versão 2.7.0
+
+Move o upload da foto para o cadastro do vinho externo. A imagem passa a
+pertencer ao rótulo privado, é reutilizada automaticamente ao registrar compras
+e continua protegida pelo cliente proprietário. Inclui migration incremental
+para `vinhos_externo.imagePath`, sem alterar ou apagar registros existentes.

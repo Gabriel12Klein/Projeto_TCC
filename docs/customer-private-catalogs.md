@@ -115,3 +115,23 @@ opcional `street` a `outras_vinicolas` e `locais_de_compra`. O campo Rua aparece
 nos dois formulários, é carregado na edição e é copiado pelo autocomplete junto
 com os demais dados. Como os registros continuam independentes, alterar a rua da
 vinícola depois da cópia não modifica um local já salvo.
+
+## Foto do vinho externo — versão 2.7.0
+
+A migration incremental `20260927060000_external_wine_image` adicionou a coluna
+opcional `imagePath` a `vinhos_externo`. O campo nullable preserva integralmente
+os vinhos externos anteriores.
+
+O upload da foto foi removido do registro de compra e passou para `Cadastrar
+vinho`. Novos vinhos externos exigem uma imagem JPG, PNG ou WebP de até 5 MB; na
+edição, a foto atual é mantida quando nenhuma substituta é escolhida. A imagem é
+privada, exige autenticação e só pode ser acessada pelo cliente proprietário.
+
+Ao registrar ou editar uma compra, o backend reutiliza automaticamente a foto
+do vinho oficial ou externo. A substituição da foto de um vinho externo também
+sincroniza os itens de pedido e de estoque vinculados. Fotos legadas já gravadas
+nas compras permanecem preservadas.
+
+O teste de integração cobre upload, persistência, isolamento entre dois
+clientes e reutilização da imagem em uma compra sem novo upload. A migration 22
+foi aplicada sem recriação de banco ou exclusão de volumes.
