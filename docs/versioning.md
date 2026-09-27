@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.5.0**
+Versão atual: **2.6.0**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -48,3 +48,10 @@ quanto o nome completo, usando o exemplo `RS ou Rio Grande do Sul`.
 
 Adiciona o campo Rua às vinícolas externas e aos locais de compra, incluindo
 persistência no PostgreSQL e cópia independente pelo autocomplete.
+
+## Versão 2.6.0
+
+Separa Vinícola e Local de compra no histórico da adega e adiciona exclusão
+permanente de uma unidade ou de todas as garrafas de uma compra. A remoção é
+transacional, limitada ao proprietário e recalcula pedidos, estoque e Dashboard
+sem excluir outras compras ou cadastros de catálogo.

@@ -86,3 +86,26 @@ privados por cliente e integram o registro de aquisições em `Meus vinhos`. O
 Dashboard não foi alterado nesta etapa. Modelagem, endpoints, preservação do
 legado e evidências de validação estão documentados em
 [`customer-private-catalogs.md`](customer-private-catalogs.md).
+
+## Histórico e exclusão real — versão 2.6.0
+
+- O histórico de `Meus vinhos` apresenta `Vinícola` e `Local de compra` em
+  colunas independentes. Vinhos oficiais identificam a Vinícola VINUM; vinhos
+  externos usam sua vinícola privada e a compra usa o local persistido.
+- A exclusão pode remover uma garrafa específica ou todas as unidades daquela
+  compra. Outras compras do mesmo vinho e os cadastros de catálogo permanecem
+  intactos.
+- Os endpoints `DELETE /api/cliente/pedidos/:id/itens/:itemId/garrafas/uma`,
+  `DELETE /api/cliente/pedidos/:id/itens/:itemId/garrafas` e
+  `DELETE /api/cliente/estoque/garrafas/:id` validam o proprietário e executam a
+  limpeza relacionada em transação.
+- A operação remove movimentos próprios das garrafas selecionadas e atualiza
+  `garrafa_adega`, `movimentacao_estoque`, `item_pedido`, `pedido` e
+  `estoque_item` conforme o saldo remanescente. Não houve alteração de schema ou
+  nova migration nesta versão.
+- As confirmações de exclusão usam modal do VINUM, com cancelamento por botão,
+  fundo ou tecla Escape. O histórico continua responsivo com rolagem horizontal
+  interna em larguras estreitas.
+- O teste de integração cobre redução de 5 para 4 unidades, exclusão total,
+  duas compras do mesmo vinho, garrafas abertas e consumidas, movimentos
+  dependentes, isolamento entre clientes e recálculo do Dashboard.
