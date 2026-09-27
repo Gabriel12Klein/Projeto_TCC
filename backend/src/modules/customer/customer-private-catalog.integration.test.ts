@@ -99,6 +99,20 @@ describe('Catálogo privado do cliente', () => {
     });
     const locationB = await customerService.createPurchaseLocation(userB, { name: 'Local privado B' });
 
+    const [wineriesB, winesB, locationsB, grapesB] = await Promise.all([
+      request(app)
+        .get('/api/cliente/vinicolas-externas')
+        .set('Authorization', `Bearer ${tokenB}`)
+        .expect(200),
+      request(app).get('/api/cliente/vinhos-externos').set('Authorization', `Bearer ${tokenB}`).expect(200),
+      request(app).get('/api/cliente/locais-compra').set('Authorization', `Bearer ${tokenB}`).expect(200),
+      request(app).get('/api/uvas').set('Authorization', `Bearer ${tokenB}`).expect(200),
+    ]);
+    expect(wineriesB.body.map(({ name }: { name: string }) => name)).toEqual(['Vinícola privada B']);
+    expect(winesB.body.map(({ name }: { name: string }) => name)).toEqual(['Vinho privado B']);
+    expect(locationsB.body.map(({ name }: { name: string }) => name)).toEqual(['Local privado B']);
+    expect(grapesB.body.some(({ id }: { id: string }) => id === grapeId)).toBe(true);
+
     expect((await customerService.listExternalWines(userA, catena.id)).map(({ name }) => name)).toEqual([
       'DV Catena',
     ]);
