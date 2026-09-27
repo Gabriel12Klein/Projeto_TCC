@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.4.0**
+Versão atual: **2.4.1**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -32,3 +32,9 @@ catálogo oficial e os dados legados.
 Amplia os catálogos privados com endereços independentes, safra de rótulo,
 descrições e composição por uvas oficiais. Também adiciona o autocomplete de
 vinícola no local de compra, sem criar vínculo permanente entre os registros.
+
+## Versão 2.4.1
+
+Adiciona exemplos aos campos dos cadastros privados e apresenta a seleção
+múltipla de uvas em um menu recolhível, mantendo os textos orientativos do
+cadastro administrativo de vinhos.

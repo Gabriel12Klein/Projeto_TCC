@@ -29,8 +29,24 @@ function PageShell({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
-function AddressFields({ form, setForm }: { form: AddressForm; setForm: (value: AddressForm) => void }) {
+function AddressFields({
+  form,
+  setForm,
+  winery,
+}: {
+  form: AddressForm;
+  setForm: (value: AddressForm) => void;
+  winery: boolean;
+}) {
   const labels = { neighborhood: 'Bairro', city: 'Cidade', stateRegion: 'Estado/Região', country: 'País' };
+  const examples = winery
+    ? {
+        neighborhood: 'Ex.: Centro',
+        city: 'Ex.: Mendoza',
+        stateRegion: 'Ex.: Mendoza',
+        country: 'Ex.: Argentina',
+      }
+    : { neighborhood: 'Ex.: Centro', city: 'Ex.: Ijuí', stateRegion: 'Ex.: RS', country: 'Ex.: Brasil' };
   return (
     <>
       {(Object.keys(labels) as Array<keyof typeof labels>).map((field) => (
@@ -40,6 +56,7 @@ function AddressFields({ form, setForm }: { form: AddressForm; setForm: (value: 
             className={inputClass}
             value={form[field]}
             maxLength={120}
+            placeholder={examples[field]}
             onChange={(event) => setForm({ ...form, [field]: event.target.value })}
           />
         </label>
@@ -203,7 +220,7 @@ function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
               </ul>
             )}
           </label>
-          <AddressFields form={form} setForm={setForm} />
+          <AddressFields form={form} setForm={setForm} winery={winery} />
           <div className="flex flex-wrap gap-3 md:col-span-2">
             <button
               className="rounded-xl bg-[#7d1d2d] px-5 py-3 font-semibold text-white disabled:opacity-50"
@@ -378,6 +395,9 @@ function ExternalWines() {
     });
     setMessage('');
   };
+  const selectedGrapes = (grapes.data ?? [])
+    .filter((grape: EntityRecord) => form.grapeIds.includes(grape.id))
+    .map((grape: EntityRecord) => String(grape.name));
   const dirty =
     editingId ||
     Object.values(form).some((value) => (Array.isArray(value) ? value.length > 0 : Boolean(value)));
@@ -443,42 +463,56 @@ function ExternalWines() {
               onChange={(event) => setForm({ ...form, vintageYear: event.target.value })}
             />
           </label>
-          <fieldset className="rounded-xl border border-[#d9cbbd] p-3">
-            <legend className="px-1 text-sm font-semibold text-[#5b0c1b]">Uvas utilizadas</legend>
-            <div className="max-h-36 overflow-auto">
-              {(grapes.data ?? []).map((grape: EntityRecord) => (
-                <label className="flex gap-2 py-1" key={grape.id}>
-                  <input
-                    type="checkbox"
-                    checked={form.grapeIds.includes(grape.id)}
-                    onChange={() =>
-                      setForm({
-                        ...form,
-                        grapeIds: form.grapeIds.includes(grape.id)
-                          ? form.grapeIds.filter((id) => id !== grape.id)
-                          : [...form.grapeIds, grape.id],
-                      })
-                    }
-                  />
-                  {String(grape.name)}
-                </label>
-              ))}
-            </div>
-          </fieldset>
+          <div className="text-sm font-semibold text-[#5b0c1b]">
+            <span>Uvas utilizadas</span>
+            <details className="group relative mt-1">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between rounded-xl border border-[#d9cbbd] bg-white px-4 py-3 font-normal text-[#321b1c] outline-none focus-visible:ring-2 focus-visible:ring-[#8b2638]">
+                <span>{selectedGrapes.length ? selectedGrapes.join(', ') : 'Selecione as uvas'}</span>
+                <span aria-hidden="true">⌄</span>
+              </summary>
+              <div className="absolute z-20 mt-1 max-h-52 w-full overflow-auto rounded-xl border border-[#d9cbbd] bg-white p-3 shadow-lg">
+                {(grapes.data ?? []).map((grape: EntityRecord) => (
+                  <label className="flex gap-2 py-1" key={grape.id}>
+                    <input
+                      type="checkbox"
+                      checked={form.grapeIds.includes(grape.id)}
+                      onChange={() =>
+                        setForm({
+                          ...form,
+                          grapeIds: form.grapeIds.includes(grape.id)
+                            ? form.grapeIds.filter((id) => id !== grape.id)
+                            : [...form.grapeIds, grape.id],
+                        })
+                      }
+                    />
+                    {String(grape.name)}
+                  </label>
+                ))}
+                {!grapes.isPending && !grapes.data?.length && (
+                  <p className="text-[#715f59]">Nenhuma uva disponível.</p>
+                )}
+              </div>
+            </details>
+          </div>
           {(
             [
-              ['description', 'Descrição do vinho'],
-              ['characteristics', 'Características'],
-              ['aromas', 'Aromas'],
-              ['tastingNotes', 'Notas de degustação'],
+              ['description', 'Descrição do vinho', 'Escreva uma apresentação geral do vinho.'],
+              [
+                'characteristics',
+                'Características',
+                'Ex.: corpo, cor, acidez, persistência e outras características.',
+              ],
+              ['aromas', 'Aromas', 'Descreva os aromas percebidos no vinho.'],
+              ['tastingNotes', 'Notas de degustação', 'Registre as notas e percepções da degustação.'],
             ] as const
-          ).map(([field, label]) => (
+          ).map(([field, label, placeholder]) => (
             <label className="text-sm font-semibold text-[#5b0c1b]" key={field}>
               {label}
               <textarea
                 className={`${inputClass} min-h-24`}
                 maxLength={5000}
                 value={form[field]}
+                placeholder={placeholder}
                 onChange={(event) => setForm({ ...form, [field]: event.target.value })}
               />
             </label>

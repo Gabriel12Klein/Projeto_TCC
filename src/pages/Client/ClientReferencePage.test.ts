@@ -74,6 +74,9 @@ describe('cadastros privados do cliente', () => {
     expect(html).toContain('NOVA VINÍCOLA');
     expect(html).toContain('Nome da Vinícola');
     expect(html).toContain('Estado/Região');
+    expect(html).toContain('Ex.: Centro');
+    expect(html).toContain('Ex.: Mendoza');
+    expect(html).toContain('Ex.: Argentina');
     expect(html).toContain('Vinícola Catena Zapata');
     expect(html).toContain('Mendoza');
     expect(html).toContain('Editar');
@@ -90,6 +93,9 @@ describe('cadastros privados do cliente', () => {
     expect(html).toContain('Selecione a vinícola');
     expect(html).toContain('Ano da safra');
     expect(html).toContain('Notas de degustação');
+    expect(html).toContain('Selecione as uvas');
+    expect(html).toContain('Escreva uma apresentação geral do vinho.');
+    expect(html).toContain('Descreva os aromas percebidos no vinho.');
   });
 
   it('apresenta o local de compra cadastrado', () => {
@@ -98,6 +104,8 @@ describe('cadastros privados do cliente', () => {
     expect(html).toContain('Supermercado Central');
     expect(html).toContain('Nome do local');
     expect(html).toContain('Ijuí');
+    expect(html).toContain('Ex.: RS');
+    expect(html).toContain('Ex.: Brasil');
   });
 
   it('normaliza busca parcial sem diferenciar caixa, acento ou espaços extras', () => {
