@@ -123,6 +123,10 @@ export type CustomerOrder = {
 export type ExternalWinery = {
   id: string;
   name: string;
+  neighborhood: string | null;
+  city: string | null;
+  stateRegion: string | null;
+  country: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -132,6 +136,12 @@ export type ExternalWine = {
   name: string;
   externalWineryId: string;
   externalWinery: { id: string; name: string };
+  vintageYear: number | null;
+  description: string | null;
+  characteristics: string | null;
+  aromas: string | null;
+  tastingNotes: string | null;
+  grapeLinks: { grape: { id: string; name: string } }[];
   createdAt: string;
   updatedAt: string;
 };
@@ -139,6 +149,10 @@ export type ExternalWine = {
 export type PurchaseLocation = {
   id: string;
   name: string;
+  neighborhood: string | null;
+  city: string | null;
+  stateRegion: string | null;
+  country: string | null;
   createdAt: string;
   updatedAt: string;
 };

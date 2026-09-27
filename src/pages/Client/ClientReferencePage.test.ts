@@ -3,13 +3,24 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
-import ClientReferencePage from './ClientReferencePage';
+import ClientReferencePage, { normalizeSearch } from './ClientReferencePage';
 
 function render(kind: 'winery' | 'wine' | 'location') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   client.setQueryData(
     ['customer-external-wineries'],
-    [{ id: 'catena', name: 'Catena Zapata', createdAt: '', updatedAt: '' }],
+    [
+      {
+        id: 'catena',
+        name: 'Vinícola Catena Zapata',
+        neighborhood: 'Centro',
+        city: 'Mendoza',
+        stateRegion: 'Mendoza',
+        country: 'Argentina',
+        createdAt: '',
+        updatedAt: '',
+      },
+    ],
   );
   client.setQueryData(
     ['customer-external-wines'],
@@ -18,7 +29,13 @@ function render(kind: 'winery' | 'wine' | 'location') {
         id: 'dv',
         name: 'DV Catena',
         externalWineryId: 'catena',
-        externalWinery: { id: 'catena', name: 'Catena Zapata' },
+        externalWinery: { id: 'catena', name: 'Vinícola Catena Zapata' },
+        vintageYear: 2022,
+        description: 'Descrição',
+        characteristics: 'Características',
+        aromas: 'Aromas',
+        tastingNotes: 'Notas',
+        grapeLinks: [{ grape: { id: 'malbec', name: 'Malbec' } }],
         createdAt: '',
         updatedAt: '',
       },
@@ -26,7 +43,18 @@ function render(kind: 'winery' | 'wine' | 'location') {
   );
   client.setQueryData(
     ['customer-purchase-locations'],
-    [{ id: 'mercado', name: 'Supermercado Central', createdAt: '', updatedAt: '' }],
+    [
+      {
+        id: 'mercado',
+        name: 'Supermercado Central',
+        neighborhood: null,
+        city: 'Ijuí',
+        stateRegion: 'RS',
+        country: 'Brasil',
+        createdAt: '',
+        updatedAt: '',
+      },
+    ],
   );
   const html = renderToStaticMarkup(
     createElement(
@@ -43,7 +71,11 @@ describe('cadastros privados do cliente', () => {
   it('apresenta a vinícola cadastrada com ações', () => {
     const html = render('winery');
     expect(html).toContain('Cadastrar vinícola');
-    expect(html).toContain('Catena Zapata');
+    expect(html).toContain('NOVA VINÍCOLA');
+    expect(html).toContain('Nome da Vinícola');
+    expect(html).toContain('Estado/Região');
+    expect(html).toContain('Vinícola Catena Zapata');
+    expect(html).toContain('Mendoza');
     expect(html).toContain('Editar');
     expect(html).toContain('Excluir');
   });
@@ -52,13 +84,26 @@ describe('cadastros privados do cliente', () => {
     const html = render('wine');
     expect(html).toContain('Cadastrar vinho');
     expect(html).toContain('DV Catena');
-    expect(html).toContain('Catena Zapata');
+    expect(html).toContain('Vinícola Catena Zapata');
+    expect(html).toContain('2022');
+    expect(html).toContain('Malbec');
     expect(html).toContain('Selecione a vinícola');
+    expect(html).toContain('Ano da safra');
+    expect(html).toContain('Notas de degustação');
   });
 
   it('apresenta o local de compra cadastrado', () => {
     const html = render('location');
     expect(html).toContain('Cadastrar local de compra');
     expect(html).toContain('Supermercado Central');
+    expect(html).toContain('Nome do local');
+    expect(html).toContain('Ijuí');
+  });
+
+  it('normaliza busca parcial sem diferenciar caixa, acento ou espaços extras', () => {
+    expect(normalizeSearch('  VINÍCOLA   Catena Zapata ')).toBe('vinicola catena zapata');
+    for (const term of ['cat', 'Cat', 'CAT', 'catena', 'ZAPATA', 'catena zap', 'vinícola cat']) {
+      expect(normalizeSearch('Vinícola Catena Zapata')).toContain(normalizeSearch(term));
+    }
   });
 });

@@ -146,15 +146,15 @@ export const api = {
   },
   customer: {
     externalWineries: () => request<ExternalWinery[]>('/cliente/vinicolas-externas'),
-    createExternalWinery: (name: string) =>
+    createExternalWinery: (payload: Omit<ExternalWinery, 'id' | 'createdAt' | 'updatedAt'>) =>
       request<ExternalWinery>('/cliente/vinicolas-externas', {
         method: 'POST',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify(payload),
       }),
-    updateExternalWinery: (id: string, name: string) =>
+    updateExternalWinery: (id: string, payload: Omit<ExternalWinery, 'id' | 'createdAt' | 'updatedAt'>) =>
       request<ExternalWinery>(`/cliente/vinicolas-externas/${encodeURIComponent(id)}`, {
         method: 'PUT',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify(payload),
       }),
     removeExternalWinery: (id: string) =>
       request<void>(`/cliente/vinicolas-externas/${encodeURIComponent(id)}`, { method: 'DELETE' }),
@@ -162,12 +162,21 @@ export const api = {
       request<ExternalWine[]>(
         `/cliente/vinhos-externos${wineryId ? `?wineryId=${encodeURIComponent(wineryId)}` : ''}`,
       ),
-    createExternalWine: (payload: { name: string; externalWineryId: string }) =>
+    createExternalWine: (
+      payload: Omit<ExternalWine, 'id' | 'externalWinery' | 'grapeLinks' | 'createdAt' | 'updatedAt'> & {
+        grapeIds: string[];
+      },
+    ) =>
       request<ExternalWine>('/cliente/vinhos-externos', {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
-    updateExternalWine: (id: string, payload: { name: string; externalWineryId: string }) =>
+    updateExternalWine: (
+      id: string,
+      payload: Omit<ExternalWine, 'id' | 'externalWinery' | 'grapeLinks' | 'createdAt' | 'updatedAt'> & {
+        grapeIds: string[];
+      },
+    ) =>
       request<ExternalWine>(`/cliente/vinhos-externos/${encodeURIComponent(id)}`, {
         method: 'PUT',
         body: JSON.stringify(payload),
@@ -175,15 +184,15 @@ export const api = {
     removeExternalWine: (id: string) =>
       request<void>(`/cliente/vinhos-externos/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     purchaseLocations: () => request<PurchaseLocation[]>('/cliente/locais-compra'),
-    createPurchaseLocation: (name: string) =>
+    createPurchaseLocation: (payload: Omit<PurchaseLocation, 'id' | 'createdAt' | 'updatedAt'>) =>
       request<PurchaseLocation>('/cliente/locais-compra', {
         method: 'POST',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify(payload),
       }),
-    updatePurchaseLocation: (id: string, name: string) =>
+    updatePurchaseLocation: (id: string, payload: Omit<PurchaseLocation, 'id' | 'createdAt' | 'updatedAt'>) =>
       request<PurchaseLocation>(`/cliente/locais-compra/${encodeURIComponent(id)}`, {
         method: 'PUT',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify(payload),
       }),
     removePurchaseLocation: (id: string) =>
       request<void>(`/cliente/locais-compra/${encodeURIComponent(id)}`, { method: 'DELETE' }),
