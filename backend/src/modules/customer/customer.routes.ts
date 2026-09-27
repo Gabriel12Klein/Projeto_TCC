@@ -6,7 +6,12 @@ import { ensureUploadDirectory } from '../../common/files.js';
 import { AppError } from '../../common/http.js';
 import { asyncRoute } from '../../common/http.js';
 import { requireAuth, requireRoles } from '../auth/auth.middleware.js';
-import { bottleEventSchema, orderSchema } from './customer.schema.js';
+import {
+  bottleEventSchema,
+  externalWineSchema,
+  orderSchema,
+  privateNameSchema,
+} from './customer.schema.js';
 import { customerService } from './customer.service.js';
 
 const router = Router();
@@ -27,6 +32,113 @@ const upload = multer({
   },
 });
 router.use(requireAuth, requireRoles('CUSTOMER'));
+
+router.get(
+  '/vinicolas-externas',
+  asyncRoute(async (_req, res) => {
+    res.json(await customerService.listExternalWineries(String(res.locals.user.id)));
+  }),
+);
+router.post(
+  '/vinicolas-externas',
+  asyncRoute(async (req, res) => {
+    res
+      .status(201)
+      .json(await customerService.createExternalWinery(String(res.locals.user.id), privateNameSchema.parse(req.body)));
+  }),
+);
+router.put(
+  '/vinicolas-externas/:id',
+  asyncRoute(async (req, res) => {
+    res.json(
+      await customerService.updateExternalWinery(
+        String(res.locals.user.id),
+        String(req.params.id),
+        privateNameSchema.parse(req.body),
+      ),
+    );
+  }),
+);
+router.delete(
+  '/vinicolas-externas/:id',
+  asyncRoute(async (req, res) => {
+    await customerService.removeExternalWinery(String(res.locals.user.id), String(req.params.id));
+    res.status(204).send();
+  }),
+);
+
+router.get(
+  '/vinhos-externos',
+  asyncRoute(async (req, res) => {
+    res.json(
+      await customerService.listExternalWines(
+        String(res.locals.user.id),
+        req.query.wineryId == null ? undefined : String(req.query.wineryId),
+      ),
+    );
+  }),
+);
+router.post(
+  '/vinhos-externos',
+  asyncRoute(async (req, res) => {
+    res
+      .status(201)
+      .json(await customerService.createExternalWine(String(res.locals.user.id), externalWineSchema.parse(req.body)));
+  }),
+);
+router.put(
+  '/vinhos-externos/:id',
+  asyncRoute(async (req, res) => {
+    res.json(
+      await customerService.updateExternalWine(
+        String(res.locals.user.id),
+        String(req.params.id),
+        externalWineSchema.parse(req.body),
+      ),
+    );
+  }),
+);
+router.delete(
+  '/vinhos-externos/:id',
+  asyncRoute(async (req, res) => {
+    await customerService.removeExternalWine(String(res.locals.user.id), String(req.params.id));
+    res.status(204).send();
+  }),
+);
+
+router.get(
+  '/locais-compra',
+  asyncRoute(async (_req, res) => {
+    res.json(await customerService.listPurchaseLocations(String(res.locals.user.id)));
+  }),
+);
+router.post(
+  '/locais-compra',
+  asyncRoute(async (req, res) => {
+    res
+      .status(201)
+      .json(await customerService.createPurchaseLocation(String(res.locals.user.id), privateNameSchema.parse(req.body)));
+  }),
+);
+router.put(
+  '/locais-compra/:id',
+  asyncRoute(async (req, res) => {
+    res.json(
+      await customerService.updatePurchaseLocation(
+        String(res.locals.user.id),
+        String(req.params.id),
+        privateNameSchema.parse(req.body),
+      ),
+    );
+  }),
+);
+router.delete(
+  '/locais-compra/:id',
+  asyncRoute(async (req, res) => {
+    await customerService.removePurchaseLocation(String(res.locals.user.id), String(req.params.id));
+    res.status(204).send();
+  }),
+);
 
 router.get(
   '/pedidos',

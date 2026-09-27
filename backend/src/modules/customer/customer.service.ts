@@ -1,6 +1,12 @@
 import { AppError } from '../../common/http.js';
 import { prisma } from '../../lib/prisma.js';
-import { orderSchema, type BottleEventInput, type OrderInput } from './customer.schema.js';
+import {
+  orderSchema,
+  type BottleEventInput,
+  type ExternalWineInput,
+  type OrderInput,
+  type PrivateNameInput,
+} from './customer.schema.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 
 // Serialize stock changes per owner, including first insertion of a label.
@@ -43,10 +49,142 @@ function assertBottleEventDate(date: Date, purchasedAt: Date, openedAt?: Date | 
 }
 
 export const customerService = {
+  async listExternalWineries(userId: string) {
+    return prisma.externalWinery.findMany({ where: { userId }, orderBy: { name: 'asc' } });
+  },
+
+  async createExternalWinery(userId: string, input: PrivateNameInput) {
+    const duplicate = await prisma.externalWinery.findFirst({
+      where: { userId, name: { equals: input.name, mode: 'insensitive' } },
+    });
+    if (duplicate) throw new AppError(409, 'Você já cadastrou uma vinícola com este nome.');
+    return prisma.externalWinery.create({ data: { userId, name: input.name } });
+  },
+
+  async updateExternalWinery(userId: string, id: string, input: PrivateNameInput) {
+    const record = await prisma.externalWinery.findFirst({ where: { id, userId } });
+    if (!record) throw new AppError(404, 'Vinícola não encontrada.');
+    const duplicate = await prisma.externalWinery.findFirst({
+      where: { userId, id: { not: id }, name: { equals: input.name, mode: 'insensitive' } },
+    });
+    if (duplicate) throw new AppError(409, 'Você já cadastrou uma vinícola com este nome.');
+    return prisma.externalWinery.update({ where: { id }, data: { name: input.name } });
+  },
+
+  async removeExternalWinery(userId: string, id: string) {
+    const record = await prisma.externalWinery.findFirst({
+      where: { id, userId },
+      include: { _count: { select: { wines: true } } },
+    });
+    if (!record) throw new AppError(404, 'Vinícola não encontrada.');
+    if (record._count.wines)
+      throw new AppError(409, 'Esta vinícola possui vinhos cadastrados e não pode ser excluída.');
+    await prisma.externalWinery.delete({ where: { id } });
+  },
+
+  async listExternalWines(userId: string, externalWineryId?: string) {
+    return prisma.externalWine.findMany({
+      where: { userId, ...(externalWineryId ? { externalWineryId } : {}) },
+      include: { externalWinery: { select: { id: true, name: true } } },
+      orderBy: [{ externalWinery: { name: 'asc' } }, { name: 'asc' }],
+    });
+  },
+
+  async createExternalWine(userId: string, input: ExternalWineInput) {
+    const winery = await prisma.externalWinery.findFirst({ where: { id: input.externalWineryId, userId } });
+    if (!winery) throw new AppError(400, 'Selecione uma vinícola cadastrada na sua conta.');
+    const duplicate = await prisma.externalWine.findFirst({
+      where: {
+        userId,
+        externalWineryId: winery.id,
+        name: { equals: input.name, mode: 'insensitive' },
+      },
+    });
+    if (duplicate) throw new AppError(409, 'Este vinho já está cadastrado para a vinícola selecionada.');
+    return prisma.externalWine.create({
+      data: { userId, externalWineryId: winery.id, name: input.name },
+      include: { externalWinery: { select: { id: true, name: true } } },
+    });
+  },
+
+  async updateExternalWine(userId: string, id: string, input: ExternalWineInput) {
+    const [record, winery] = await Promise.all([
+      prisma.externalWine.findFirst({ where: { id, userId } }),
+      prisma.externalWinery.findFirst({ where: { id: input.externalWineryId, userId } }),
+    ]);
+    if (!record) throw new AppError(404, 'Vinho externo não encontrado.');
+    if (!winery) throw new AppError(400, 'Selecione uma vinícola cadastrada na sua conta.');
+    const duplicate = await prisma.externalWine.findFirst({
+      where: {
+        userId,
+        id: { not: id },
+        externalWineryId: winery.id,
+        name: { equals: input.name, mode: 'insensitive' },
+      },
+    });
+    if (duplicate) throw new AppError(409, 'Este vinho já está cadastrado para a vinícola selecionada.');
+    return prisma.externalWine.update({
+      where: { id },
+      data: { externalWineryId: winery.id, name: input.name },
+      include: { externalWinery: { select: { id: true, name: true } } },
+    });
+  },
+
+  async removeExternalWine(userId: string, id: string) {
+    const record = await prisma.externalWine.findFirst({
+      where: { id, userId },
+      include: { _count: { select: { orderItems: true, inventory: true } } },
+    });
+    if (!record) throw new AppError(404, 'Vinho externo não encontrado.');
+    if (record._count.orderItems || record._count.inventory)
+      throw new AppError(409, 'Este vinho já faz parte da adega e não pode ser excluído.');
+    await prisma.externalWine.delete({ where: { id } });
+  },
+
+  async listPurchaseLocations(userId: string) {
+    return prisma.purchaseLocation.findMany({ where: { userId }, orderBy: { name: 'asc' } });
+  },
+
+  async createPurchaseLocation(userId: string, input: PrivateNameInput) {
+    const duplicate = await prisma.purchaseLocation.findFirst({
+      where: { userId, name: { equals: input.name, mode: 'insensitive' } },
+    });
+    if (duplicate) throw new AppError(409, 'Você já cadastrou um local de compra com este nome.');
+    return prisma.purchaseLocation.create({ data: { userId, name: input.name } });
+  },
+
+  async updatePurchaseLocation(userId: string, id: string, input: PrivateNameInput) {
+    const record = await prisma.purchaseLocation.findFirst({ where: { id, userId } });
+    if (!record) throw new AppError(404, 'Local de compra não encontrado.');
+    const duplicate = await prisma.purchaseLocation.findFirst({
+      where: { userId, id: { not: id }, name: { equals: input.name, mode: 'insensitive' } },
+    });
+    if (duplicate) throw new AppError(409, 'Você já cadastrou um local de compra com este nome.');
+    return prisma.purchaseLocation.update({ where: { id }, data: { name: input.name } });
+  },
+
+  async removePurchaseLocation(userId: string, id: string) {
+    const record = await prisma.purchaseLocation.findFirst({
+      where: { id, userId },
+      include: { _count: { select: { orders: true } } },
+    });
+    if (!record) throw new AppError(404, 'Local de compra não encontrado.');
+    if (record._count.orders)
+      throw new AppError(409, 'Este local já foi usado em uma compra e não pode ser excluído.');
+    await prisma.purchaseLocation.delete({ where: { id } });
+  },
+
   async listOrders(userId: string) {
     return prisma.customerOrder.findMany({
       where: { userId },
-      include: { items: { include: { wine: { select: { id: true, name: true, slug: true } } } } },
+      include: {
+        items: {
+          include: {
+            wine: { select: { id: true, name: true, slug: true } },
+            externalWine: { include: { externalWinery: { select: { id: true, name: true } } } },
+          },
+        },
+      },
       orderBy: { purchaseDate: 'desc' },
     });
   },
@@ -57,12 +195,22 @@ export const customerService = {
       throw new AppError(400, 'Envie a foto do rótulo externo.');
     return prisma.$transaction(async (transaction) => {
       await lockInventory(transaction, userId);
+      const purchaseLocation = input.purchaseLocationId
+        ? await transaction.purchaseLocation.findFirst({
+            where: { id: input.purchaseLocationId, userId },
+          })
+        : null;
+      if (input.purchaseLocationId && !purchaseLocation)
+        throw new AppError(400, 'Selecione um local de compra cadastrado na sua conta.');
+      const purchaseLocationName = purchaseLocation?.name ?? input.purchaseLocation;
+      if (!purchaseLocationName) throw new AppError(400, 'Selecione um local de compra.');
       const order = await transaction.customerOrder.create({
         data: {
           userId,
           source: input.source,
           purchaseDate: input.purchaseDate,
-          purchaseLocation: input.purchaseLocation || null,
+          purchaseLocationId: purchaseLocation?.id ?? null,
+          purchaseLocation: purchaseLocationName,
           notes: input.notes || null,
         },
       });
@@ -77,13 +225,32 @@ export const customerService = {
         if (item.wineId && !wine)
           throw new AppError(400, 'O vinho selecionado não foi encontrado no catálogo.');
 
-        const name = wine?.name ?? item.wineName;
+        const externalWine = item.externalWineId
+          ? await transaction.externalWine.findFirst({
+              where: {
+                id: item.externalWineId,
+                userId,
+                ...(item.externalWineryId ? { externalWineryId: item.externalWineryId } : {}),
+              },
+              include: { externalWinery: true },
+            })
+          : null;
+        if (item.externalWineId && !externalWine)
+          throw new AppError(400, 'O vinho externo não pertence à vinícola selecionada ou à sua conta.');
+
+        const name = wine?.name ?? externalWine?.name ?? item.wineName;
         if (!name) throw new AppError(400, 'Informe o nome do vinho comprado.');
         const itemPhotoPath = photoPath || wine?.image?.path || undefined;
 
         const inventory = wine
           ? await transaction.inventoryItem.findFirst({ where: { userId, wineId: wine.id } })
-          : await transaction.inventoryItem.findFirst({ where: { userId, wineId: null, name } });
+          : externalWine
+            ? await transaction.inventoryItem.findFirst({
+                where: { userId, externalWineId: externalWine.id },
+              })
+            : await transaction.inventoryItem.findFirst({
+                where: { userId, wineId: null, externalWineId: null, name },
+              });
         const inventoryItem = inventory
           ? await transaction.inventoryItem.update({
               where: { id: inventory.id },
@@ -97,8 +264,9 @@ export const customerService = {
               data: {
                 userId,
                 wineId: wine?.id ?? null,
+                externalWineId: externalWine?.id ?? null,
                 name,
-                wineryName: item.wineryName ?? wine?.winery?.name ?? null,
+                wineryName: item.wineryName ?? wine?.winery?.name ?? externalWine?.externalWinery.name ?? null,
                 quantityBottles: item.quantityBottles,
                 photoPath: itemPhotoPath,
               },
@@ -108,9 +276,10 @@ export const customerService = {
           data: {
             orderId: order.id,
             wineId: wine?.id ?? null,
+            externalWineId: externalWine?.id ?? null,
             wineName: name,
             photoPath: itemPhotoPath,
-            wineryName: item.wineryName ?? wine?.winery?.name ?? null,
+            wineryName: item.wineryName ?? wine?.winery?.name ?? externalWine?.externalWinery.name ?? null,
             vintageYear: item.vintageYear ?? null,
             quantityBottles: item.quantityBottles,
             volumeMl: item.volumeMl ?? null,
@@ -130,7 +299,7 @@ export const customerService = {
           data: {
             inventoryItemId: inventoryItem.id,
             orderId: order.id,
-            purchaseLocation: input.purchaseLocation || null,
+            purchaseLocation: purchaseLocationName,
             type: 'ENTRADA',
             quantityBottles: item.quantityBottles,
             reason: `Compra registrada no pedido ${order.id}`,
@@ -140,7 +309,11 @@ export const customerService = {
 
       return transaction.customerOrder.findUniqueOrThrow({
         where: { id: order.id },
-        include: { items: true },
+        include: {
+          items: {
+            include: { externalWine: { include: { externalWinery: { select: { id: true, name: true } } } } },
+          },
+        },
       });
     });
   },
@@ -166,6 +339,13 @@ export const customerService = {
         ? await transaction.inventoryItem.findFirst({ where: { id: old.inventoryItemId, userId } })
         : null;
       if (!previous) throw new AppError(409, 'O estoque vinculado a este pedido não foi encontrado.');
+      const purchaseLocation = input.purchaseLocationId
+        ? await transaction.purchaseLocation.findFirst({ where: { id: input.purchaseLocationId, userId } })
+        : null;
+      if (input.purchaseLocationId && !purchaseLocation)
+        throw new AppError(400, 'Selecione um local de compra cadastrado na sua conta.');
+      const purchaseLocationName = purchaseLocation?.name ?? input.purchaseLocation;
+      if (!purchaseLocationName) throw new AppError(400, 'Selecione um local de compra.');
       const item = input.items[0];
       const wine = item.wineId
         ? await transaction.wine.findUnique({
@@ -176,9 +356,24 @@ export const customerService = {
       if (item.wineId && !wine) throw new AppError(400, 'O vinho selecionado não foi encontrado.');
       if (wine && wine.id !== old.wineId && wine.status !== 'PUBLISHED')
         throw new AppError(400, 'Selecione um vinho publicado no catálogo.');
-      const name = wine?.name ?? item.wineName;
+      const externalWine = item.externalWineId
+        ? await transaction.externalWine.findFirst({
+            where: {
+              id: item.externalWineId,
+              userId,
+              ...(item.externalWineryId ? { externalWineryId: item.externalWineryId } : {}),
+            },
+            include: { externalWinery: true },
+          })
+        : null;
+      if (item.externalWineId && !externalWine)
+        throw new AppError(400, 'O vinho externo não pertence à vinícola selecionada ou à sua conta.');
+      const name = wine?.name ?? externalWine?.name ?? item.wineName;
       if (!name) throw new AppError(400, 'Informe o nome do rótulo.');
-      const sameWine = (wine?.id ?? null) === old.wineId && (Boolean(wine) || name === old.wineName);
+      const sameWine =
+        (wine?.id ?? null) === old.wineId &&
+        (externalWine?.id ?? null) === old.externalWineId &&
+        (Boolean(wine || externalWine) || name === old.wineName);
       const removedQuantity = sameWine ? old.quantityBottles - item.quantityBottles : old.quantityBottles;
       const editableBottles = await transaction.cellarBottle.findMany({
         where: { orderItemId: old.id, userId, status: 'DISPONIVEL' },
@@ -206,7 +401,11 @@ export const customerService = {
         );
       const image = photoPath ?? (sameWine ? old.photoPath : wine?.image?.path) ?? null;
       if (!wine && !image) throw new AppError(400, 'Envie a foto do rótulo externo.');
-      const wineryName = item.wineryName ?? wine?.winery?.name ?? (sameWine ? old.wineryName : null);
+      const wineryName =
+        item.wineryName ??
+        wine?.winery?.name ??
+        externalWine?.externalWinery.name ??
+        (sameWine ? old.wineryName : null);
       await transaction.inventoryItem.update({
         where: { id: previous.id },
         data: {
@@ -237,7 +436,8 @@ export const customerService = {
           where: {
             userId,
             wineId: wine?.id ?? null,
-            ...(wine ? {} : { name }),
+            externalWineId: externalWine?.id ?? null,
+            ...(wine || externalWine ? {} : { name }),
           },
         });
         const targetItem = target
@@ -254,6 +454,7 @@ export const customerService = {
               data: {
                 userId,
                 wineId: wine?.id ?? null,
+                externalWineId: externalWine?.id ?? null,
                 name,
                 wineryName,
                 photoPath: image,
@@ -276,6 +477,7 @@ export const customerService = {
         where: { id: itemId },
         data: {
           wineId: wine?.id ?? null,
+          externalWineId: externalWine?.id ?? null,
           wineName: name,
           wineryName,
           photoPath: image,
@@ -299,7 +501,7 @@ export const customerService = {
       }
       await transaction.inventoryMovement.updateMany({
         where: { orderId },
-        data: { purchaseLocation: input.purchaseLocation || null },
+        data: { purchaseLocation: purchaseLocationName },
       });
       await transaction.cellarBottle.updateMany({
         where: { orderItemId: old.id, userId },
@@ -310,10 +512,15 @@ export const customerService = {
         data: {
           source: input.source,
           purchaseDate: input.purchaseDate,
-          purchaseLocation: input.purchaseLocation || null,
+          purchaseLocationId: purchaseLocation?.id ?? null,
+          purchaseLocation: purchaseLocationName,
           notes: input.notes,
         },
-        include: { items: true },
+        include: {
+          items: {
+            include: { externalWine: { include: { externalWinery: { select: { id: true, name: true } } } } },
+          },
+        },
       });
     });
   },
