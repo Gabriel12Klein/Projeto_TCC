@@ -3,7 +3,11 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
-import ClientReferencePage, { normalizeSearch } from './ClientReferencePage';
+import ClientReferencePage, {
+  addGrapeSelection,
+  normalizeSearch,
+  removeGrapeSelection,
+} from './ClientReferencePage';
 
 function render(kind: 'winery' | 'wine' | 'location') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
@@ -58,6 +62,10 @@ function render(kind: 'winery' | 'wine' | 'location') {
       },
     ],
   );
+  client.setQueryData(['customer-grapes'], [
+    { id: 'malbec', name: 'Malbec' },
+    { id: 'merlot', name: 'Merlot' },
+  ]);
   const html = renderToStaticMarkup(
     createElement(
       QueryClientProvider,
@@ -97,7 +105,8 @@ describe('cadastros privados do cliente', () => {
     expect(html).toContain('Selecione a vinícola');
     expect(html).toContain('Ano da safra');
     expect(html).toContain('Notas de degustação');
-    expect(html).toContain('Selecione as uvas');
+    expect(html).toContain('Selecione uma uva para adicionar');
+    expect(html).toContain('Merlot');
     expect(html).toContain('Escreva uma apresentação geral do vinho.');
     expect(html).toContain('Descreva os aromas percebidos no vinho.');
   });
@@ -119,5 +128,11 @@ describe('cadastros privados do cliente', () => {
     for (const term of ['cat', 'Cat', 'CAT', 'catena', 'ZAPATA', 'catena zap', 'vinícola cat']) {
       expect(normalizeSearch('Vinícola Catena Zapata')).toContain(normalizeSearch(term));
     }
+  });
+
+  it('adiciona várias uvas sem duplicar e permite remover uma seleção', () => {
+    expect(addGrapeSelection(['malbec'], 'merlot')).toEqual(['malbec', 'merlot']);
+    expect(addGrapeSelection(['malbec'], 'malbec')).toEqual(['malbec']);
+    expect(removeGrapeSelection(['malbec', 'merlot'], 'malbec')).toEqual(['merlot']);
   });
 });

@@ -20,6 +20,14 @@ export function normalizeSearch(value: string) {
     .replace(/\s+/g, ' ');
 }
 
+export function addGrapeSelection(selected: string[], grapeId: string) {
+  return grapeId && !selected.includes(grapeId) ? [...selected, grapeId] : selected;
+}
+
+export function removeGrapeSelection(selected: string[], grapeId: string) {
+  return selected.filter((id) => id !== grapeId);
+}
+
 function PageShell({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <main className="client-section-page mx-auto max-w-6xl px-5 py-10 lg:px-10">
@@ -428,7 +436,7 @@ function ExternalWines() {
   };
   const selectedGrapes = (grapes.data ?? [])
     .filter((grape: EntityRecord) => form.grapeIds.includes(grape.id))
-    .map((grape: EntityRecord) => String(grape.name));
+    .map((grape: EntityRecord) => ({ id: grape.id, name: String(grape.name) }));
   const dirty =
     editingId ||
     Object.values(form).some((value) => (Array.isArray(value) ? value.length > 0 : Boolean(value)));
@@ -495,35 +503,52 @@ function ExternalWines() {
             />
           </label>
           <div className="text-sm font-semibold text-[#5b0c1b]">
-            <span>Uvas utilizadas</span>
-            <details className="group relative mt-1">
-              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between rounded-xl border border-[#d9cbbd] bg-white px-4 py-3 font-normal text-[#321b1c] outline-none focus-visible:ring-2 focus-visible:ring-[#8b2638]">
-                <span>{selectedGrapes.length ? selectedGrapes.join(', ') : 'Selecione as uvas'}</span>
-                <span aria-hidden="true">⌄</span>
-              </summary>
-              <div className="absolute z-20 mt-1 max-h-52 w-full overflow-auto rounded-xl border border-[#d9cbbd] bg-white p-3 shadow-lg">
-                {(grapes.data ?? []).map((grape: EntityRecord) => (
-                  <label className="flex gap-2 py-1" key={grape.id}>
-                    <input
-                      type="checkbox"
-                      checked={form.grapeIds.includes(grape.id)}
-                      onChange={() =>
-                        setForm({
-                          ...form,
-                          grapeIds: form.grapeIds.includes(grape.id)
-                            ? form.grapeIds.filter((id) => id !== grape.id)
-                            : [...form.grapeIds, grape.id],
-                        })
-                      }
-                    />
+            <label htmlFor="external-wine-grape">Uvas utilizadas</label>
+            <select
+              id="external-wine-grape"
+              className={`${inputClass} mt-1 font-normal`}
+              value=""
+              disabled={grapes.isPending || !(grapes.data ?? []).length}
+              onChange={(event) => {
+                const grapeId = event.target.value;
+                setForm({ ...form, grapeIds: addGrapeSelection(form.grapeIds, grapeId) });
+              }}
+            >
+              <option value="">
+                {grapes.isPending
+                  ? 'Carregando uvas...'
+                  : grapes.data?.length
+                    ? 'Selecione uma uva para adicionar'
+                    : 'Nenhuma uva disponível'}
+              </option>
+              {(grapes.data ?? [])
+                .filter((grape: EntityRecord) => !form.grapeIds.includes(grape.id))
+                .map((grape: EntityRecord) => (
+                  <option key={grape.id} value={grape.id}>
                     {String(grape.name)}
-                  </label>
+                  </option>
                 ))}
-                {!grapes.isPending && !grapes.data?.length && (
-                  <p className="text-[#715f59]">Nenhuma uva disponível.</p>
-                )}
+            </select>
+            {selectedGrapes.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2" aria-label="Uvas selecionadas">
+                {selectedGrapes.map((grape) => (
+                  <span
+                    className="inline-flex items-center gap-2 rounded-full border border-[#c9a66e] bg-[#fff4df] py-1 pl-3 pr-1.5 font-normal text-[#6a1424]"
+                    key={grape.id}
+                  >
+                    {grape.name}
+                    <button
+                      type="button"
+                      className="grid h-7 w-7 place-items-center rounded-full text-lg leading-none hover:bg-[#f1dcc0] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#8b2638]"
+                      aria-label={`Remover ${grape.name}`}
+                      onClick={() => setForm({ ...form, grapeIds: removeGrapeSelection(form.grapeIds, grape.id) })}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
               </div>
-            </details>
+            )}
           </div>
           {(
             [
