@@ -6,12 +6,7 @@ import { ensureUploadDirectory } from '../../common/files.js';
 import { AppError } from '../../common/http.js';
 import { asyncRoute } from '../../common/http.js';
 import { requireAuth, requireRoles } from '../auth/auth.middleware.js';
-import {
-  bottleEventSchema,
-  externalWineSchema,
-  orderSchema,
-  privateNameSchema,
-} from './customer.schema.js';
+import { bottleEventSchema, externalWineSchema, orderSchema, privateNameSchema } from './customer.schema.js';
 import { customerService } from './customer.service.js';
 
 const router = Router();
@@ -44,7 +39,12 @@ router.post(
   asyncRoute(async (req, res) => {
     res
       .status(201)
-      .json(await customerService.createExternalWinery(String(res.locals.user.id), privateNameSchema.parse(req.body)));
+      .json(
+        await customerService.createExternalWinery(
+          String(res.locals.user.id),
+          privateNameSchema.parse(req.body),
+        ),
+      );
   }),
 );
 router.put(
@@ -83,7 +83,12 @@ router.post(
   asyncRoute(async (req, res) => {
     res
       .status(201)
-      .json(await customerService.createExternalWine(String(res.locals.user.id), externalWineSchema.parse(req.body)));
+      .json(
+        await customerService.createExternalWine(
+          String(res.locals.user.id),
+          externalWineSchema.parse(req.body),
+        ),
+      );
   }),
 );
 router.put(
@@ -117,7 +122,12 @@ router.post(
   asyncRoute(async (req, res) => {
     res
       .status(201)
-      .json(await customerService.createPurchaseLocation(String(res.locals.user.id), privateNameSchema.parse(req.body)));
+      .json(
+        await customerService.createPurchaseLocation(
+          String(res.locals.user.id),
+          privateNameSchema.parse(req.body),
+        ),
+      );
   }),
 );
 router.put(

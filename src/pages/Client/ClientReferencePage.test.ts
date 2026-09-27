@@ -7,22 +7,27 @@ import ClientReferencePage from './ClientReferencePage';
 
 function render(kind: 'winery' | 'wine' | 'location') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
-  client.setQueryData(['customer-external-wineries'], [
-    { id: 'catena', name: 'Catena Zapata', createdAt: '', updatedAt: '' },
-  ]);
-  client.setQueryData(['customer-external-wines'], [
-    {
-      id: 'dv',
-      name: 'DV Catena',
-      externalWineryId: 'catena',
-      externalWinery: { id: 'catena', name: 'Catena Zapata' },
-      createdAt: '',
-      updatedAt: '',
-    },
-  ]);
-  client.setQueryData(['customer-purchase-locations'], [
-    { id: 'mercado', name: 'Supermercado Central', createdAt: '', updatedAt: '' },
-  ]);
+  client.setQueryData(
+    ['customer-external-wineries'],
+    [{ id: 'catena', name: 'Catena Zapata', createdAt: '', updatedAt: '' }],
+  );
+  client.setQueryData(
+    ['customer-external-wines'],
+    [
+      {
+        id: 'dv',
+        name: 'DV Catena',
+        externalWineryId: 'catena',
+        externalWinery: { id: 'catena', name: 'Catena Zapata' },
+        createdAt: '',
+        updatedAt: '',
+      },
+    ],
+  );
+  client.setQueryData(
+    ['customer-purchase-locations'],
+    [{ id: 'mercado', name: 'Supermercado Central', createdAt: '', updatedAt: '' }],
+  );
   const html = renderToStaticMarkup(
     createElement(
       QueryClientProvider,

@@ -71,9 +71,7 @@ export function validResponse(path: string, method: string, value: unknown) {
     );
   if (route === '/cliente/pedidos' && method === 'GET') return Array.isArray(value) && value.every(order);
   if (route.startsWith('/cliente/pedidos')) return order(value);
-  if (
-    /^\/cliente\/(vinicolas-externas|vinhos-externos|locais-compra)(\/[^/]+)?$/.test(route)
-  ) {
+  if (/^\/cliente\/(vinicolas-externas|vinhos-externos|locais-compra)(\/[^/]+)?$/.test(route)) {
     if (method === 'GET') return records(value);
     return object(value) && typeof value.id === 'string' && typeof value.name === 'string';
   }

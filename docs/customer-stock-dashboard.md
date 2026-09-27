@@ -78,3 +78,11 @@ Não foram encontrados arrays, mocks ou fallbacks de garrafas fora do PostgreSQL
 - A atualização em `Todos` continua preservando a posição visual da garrafa até uma troca de filtro ou nova carga.
 - Cadastrar ou editar um vinho agora também invalida a consulta da lista individual, mantendo cadastro e histórico sincronizados na mesma tela.
 - Não houve alteração de banco de dados, migration, endpoint ou regra de backend.
+
+## Catálogos privados — versão 2.3.0
+
+Vinícolas externas, vinhos externos e locais de compra agora possuem cadastros
+privados por cliente e integram o registro de aquisições em `Meus vinhos`. O
+Dashboard não foi alterado nesta etapa. Modelagem, endpoints, preservação do
+legado e evidências de validação estão documentados em
+[`customer-private-catalogs.md`](customer-private-catalogs.md).

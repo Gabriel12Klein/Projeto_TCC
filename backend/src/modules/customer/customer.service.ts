@@ -266,7 +266,8 @@ export const customerService = {
                 wineId: wine?.id ?? null,
                 externalWineId: externalWine?.id ?? null,
                 name,
-                wineryName: item.wineryName ?? wine?.winery?.name ?? externalWine?.externalWinery.name ?? null,
+                wineryName:
+                  item.wineryName ?? wine?.winery?.name ?? externalWine?.externalWinery.name ?? null,
                 quantityBottles: item.quantityBottles,
                 photoPath: itemPhotoPath,
               },

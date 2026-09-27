@@ -15,19 +15,16 @@ it.each([
   '/cadastros/vinhos',
   '/cadastros/vinicolas',
   '/cadastros/locais-compra',
-])(
-  'abre %s sem sessão sem falhar ao ler o ID do cliente',
-  (path) => {
-    vi.stubGlobal('sessionStorage', { getItem: () => null });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const html = renderToStaticMarkup(
-      createElement(
-        QueryClientProvider,
-        { client },
-        createElement(MemoryRouter, { initialEntries: [path] }, createElement(App)),
-      ),
-    );
-    if (path === '/') expect(html).toContain('A história de cada vinho');
-    client.clear();
-  },
-);
+])('abre %s sem sessão sem falhar ao ler o ID do cliente', (path) => {
+  vi.stubGlobal('sessionStorage', { getItem: () => null });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const html = renderToStaticMarkup(
+    createElement(
+      QueryClientProvider,
+      { client },
+      createElement(MemoryRouter, { initialEntries: [path] }, createElement(App)),
+    ),
+  );
+  if (path === '/') expect(html).toContain('A história de cada vinho');
+  client.clear();
+});

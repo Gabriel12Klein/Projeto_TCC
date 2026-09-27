@@ -42,12 +42,15 @@ function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
           ? api.customer.updatePurchaseLocation(editingId, name.trim())
           : api.customer.createPurchaseLocation(name.trim()),
     onSuccess: async () => {
-      setMessage(`${winery ? 'Vinícola' : 'Local de compra'} ${editingId ? 'atualizado' : 'cadastrado'} com sucesso.`);
+      setMessage(
+        `${winery ? 'Vinícola' : 'Local de compra'} ${editingId ? 'atualizado' : 'cadastrado'} com sucesso.`,
+      );
       setName('');
       setEditingId('');
       await qc.invalidateQueries({ queryKey });
     },
-    onError: (error) => setMessage(error instanceof Error ? error.message : `Não foi possível salvar o ${singular}.`),
+    onError: (error) =>
+      setMessage(error instanceof Error ? error.message : `Não foi possível salvar o ${singular}.`),
   });
   const remove = useMutation({
     mutationFn: (id: string) =>
@@ -56,7 +59,8 @@ function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
       setMessage(`${winery ? 'Vinícola' : 'Local de compra'} excluído com sucesso.`);
       await qc.invalidateQueries({ queryKey });
     },
-    onError: (error) => setMessage(error instanceof Error ? error.message : `Não foi possível excluir o ${singular}.`),
+    onError: (error) =>
+      setMessage(error instanceof Error ? error.message : `Não foi possível excluir o ${singular}.`),
   });
   useEffect(() => {
     if (message) window.requestAnimationFrame(() => result.current?.focus());
@@ -108,13 +112,20 @@ function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
           )}
         </form>
         {message && (
-          <p ref={result} tabIndex={-1} className="mt-4 rounded-xl border border-[#eadfd3] p-4" role={save.isError || remove.isError ? 'alert' : 'status'}>
+          <p
+            ref={result}
+            tabIndex={-1}
+            className="mt-4 rounded-xl border border-[#eadfd3] p-4"
+            role={save.isError || remove.isError ? 'alert' : 'status'}
+          >
             {message}
           </p>
         )}
       </section>
       <section className="mt-8 rounded-3xl bg-white p-6 shadow-sm md:p-8">
-        <h2 className="font-playfair text-2xl text-[#5b0c1b]">{winery ? 'Minhas vinícolas' : 'Meus locais de compra'}</h2>
+        <h2 className="font-playfair text-2xl text-[#5b0c1b]">
+          {winery ? 'Minhas vinícolas' : 'Meus locais de compra'}
+        </h2>
         <QueryFeedback
           loading={query.isPending}
           error={query.error}
@@ -126,7 +137,10 @@ function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
         />
         <div className="mt-4 grid gap-3">
           {records.map((record) => (
-            <article className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#eadfd3] p-4" key={record.id}>
+            <article
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#eadfd3] p-4"
+              key={record.id}
+            >
               <strong className="text-[#5b0c1b]">{record.name}</strong>
               <div className="flex gap-2">
                 <button
@@ -166,8 +180,14 @@ function ExternalWines() {
   const [message, setMessage] = useState('');
   const result = useRef<HTMLParagraphElement>(null);
   const qc = useQueryClient();
-  const wineries = useQuery({ queryKey: ['customer-external-wineries'], queryFn: api.customer.externalWineries });
-  const wines = useQuery({ queryKey: ['customer-external-wines'], queryFn: () => api.customer.externalWines() });
+  const wineries = useQuery({
+    queryKey: ['customer-external-wineries'],
+    queryFn: api.customer.externalWineries,
+  });
+  const wines = useQuery({
+    queryKey: ['customer-external-wines'],
+    queryFn: () => api.customer.externalWines(),
+  });
   const save = useMutation({
     mutationFn: () =>
       editingId
@@ -180,7 +200,8 @@ function ExternalWines() {
       setEditingId('');
       await qc.invalidateQueries({ queryKey: ['customer-external-wines'] });
     },
-    onError: (error) => setMessage(error instanceof Error ? error.message : 'Não foi possível salvar o vinho.'),
+    onError: (error) =>
+      setMessage(error instanceof Error ? error.message : 'Não foi possível salvar o vinho.'),
   });
   const remove = useMutation({
     mutationFn: api.customer.removeExternalWine,
@@ -188,7 +209,8 @@ function ExternalWines() {
       setMessage('Vinho excluído com sucesso.');
       await qc.invalidateQueries({ queryKey: ['customer-external-wines'] });
     },
-    onError: (error) => setMessage(error instanceof Error ? error.message : 'Não foi possível excluir o vinho.'),
+    onError: (error) =>
+      setMessage(error instanceof Error ? error.message : 'Não foi possível excluir o vinho.'),
   });
   useEffect(() => {
     if (message) window.requestAnimationFrame(() => result.current?.focus());
@@ -203,7 +225,9 @@ function ExternalWines() {
   return (
     <PageShell title="Cadastrar vinho">
       <section className="mt-8 rounded-3xl bg-white p-6 shadow-sm md:p-8">
-        <h2 className="font-playfair text-2xl text-[#5b0c1b]">{editingId ? 'Editar vinho externo' : 'Novo vinho externo'}</h2>
+        <h2 className="font-playfair text-2xl text-[#5b0c1b]">
+          {editingId ? 'Editar vinho externo' : 'Novo vinho externo'}
+        </h2>
         {!wineryId && !wineries.isPending && !wineries.data?.length && (
           <p className="mt-4 rounded-xl border border-[#eadfd3] p-4 text-[#715f59]">
             Cadastre uma vinícola antes de cadastrar o vinho.{' '}
@@ -215,34 +239,109 @@ function ExternalWines() {
         <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={submit}>
           <label className="text-sm font-semibold text-[#5b0c1b]">
             Vinícola *
-            <select className={inputClass} required value={wineryId} onChange={(event) => setWineryId(event.target.value)}>
+            <select
+              className={inputClass}
+              required
+              value={wineryId}
+              onChange={(event) => setWineryId(event.target.value)}
+            >
               <option value="">Selecione a vinícola</option>
-              {(wineries.data ?? []).map((record) => <option key={record.id} value={record.id}>{record.name}</option>)}
+              {(wineries.data ?? []).map((record) => (
+                <option key={record.id} value={record.id}>
+                  {record.name}
+                </option>
+              ))}
             </select>
           </label>
           <label className="text-sm font-semibold text-[#5b0c1b]">
             Nome do vinho *
-            <input className={inputClass} required maxLength={120} value={name} placeholder="Ex.: DV Catena" onChange={(event) => setName(event.target.value)} />
+            <input
+              className={inputClass}
+              required
+              maxLength={120}
+              value={name}
+              placeholder="Ex.: DV Catena"
+              onChange={(event) => setName(event.target.value)}
+            />
           </label>
           <div className="flex flex-wrap gap-3 md:col-span-2">
-            <button className="rounded-xl bg-[#7d1d2d] px-5 py-3 font-semibold text-white disabled:opacity-50" disabled={save.isPending || !wineries.data?.length} type="submit">
+            <button
+              className="rounded-xl bg-[#7d1d2d] px-5 py-3 font-semibold text-white disabled:opacity-50"
+              disabled={save.isPending || !wineries.data?.length}
+              type="submit"
+            >
               {save.isPending ? 'Salvando…' : editingId ? 'Salvar alteração' : 'Cadastrar'}
             </button>
-            {editingId && <button className="rounded-xl border border-[#7d1d2d] px-5 py-3 font-semibold text-[#7d1d2d]" type="button" onClick={() => { setEditingId(''); setName(''); setWineryId(''); }}>Cancelar</button>}
+            {editingId && (
+              <button
+                className="rounded-xl border border-[#7d1d2d] px-5 py-3 font-semibold text-[#7d1d2d]"
+                type="button"
+                onClick={() => {
+                  setEditingId('');
+                  setName('');
+                  setWineryId('');
+                }}
+              >
+                Cancelar
+              </button>
+            )}
           </div>
         </form>
-        {message && <p ref={result} tabIndex={-1} className="mt-4 rounded-xl border border-[#eadfd3] p-4" role={save.isError || remove.isError ? 'alert' : 'status'}>{message}</p>}
+        {message && (
+          <p
+            ref={result}
+            tabIndex={-1}
+            className="mt-4 rounded-xl border border-[#eadfd3] p-4"
+            role={save.isError || remove.isError ? 'alert' : 'status'}
+          >
+            {message}
+          </p>
+        )}
       </section>
       <section className="mt-8 rounded-3xl bg-white p-6 shadow-sm md:p-8">
         <h2 className="font-playfair text-2xl text-[#5b0c1b]">Meus vinhos externos</h2>
-        <QueryFeedback loading={wines.isPending} error={wines.error} fetching={wines.isFetching} empty={!wines.data?.length} emptyText="Nenhum vinho externo cadastrado." loadingText="Carregando vinhos…" retry={() => void wines.refetch()} />
+        <QueryFeedback
+          loading={wines.isPending}
+          error={wines.error}
+          fetching={wines.isFetching}
+          empty={!wines.data?.length}
+          emptyText="Nenhum vinho externo cadastrado."
+          loadingText="Carregando vinhos…"
+          retry={() => void wines.refetch()}
+        />
         <div className="mt-4 grid gap-3">
           {(wines.data ?? []).map((wine: ExternalWine) => (
-            <article className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#eadfd3] p-4" key={wine.id}>
-              <div><strong className="block text-[#5b0c1b]">{wine.name}</strong><span className="text-sm text-[#715f59]">{wine.externalWinery.name}</span></div>
+            <article
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#eadfd3] p-4"
+              key={wine.id}
+            >
+              <div>
+                <strong className="block text-[#5b0c1b]">{wine.name}</strong>
+                <span className="text-sm text-[#715f59]">{wine.externalWinery.name}</span>
+              </div>
               <div className="flex gap-2">
-                <button className="rounded-lg border border-[#9a6a2d] px-3 py-2 text-sm font-semibold text-[#7d5b2b]" type="button" onClick={() => { setEditingId(wine.id); setName(wine.name); setWineryId(wine.externalWineryId); setMessage(''); }}>Editar</button>
-                <button className="rounded-lg border border-[#7d1d2d] px-3 py-2 text-sm font-semibold text-[#7d1d2d] disabled:opacity-50" disabled={remove.isPending} type="button" onClick={() => { if (window.confirm(`Excluir ${wine.name}?`)) remove.mutate(wine.id); }}>Excluir</button>
+                <button
+                  className="rounded-lg border border-[#9a6a2d] px-3 py-2 text-sm font-semibold text-[#7d5b2b]"
+                  type="button"
+                  onClick={() => {
+                    setEditingId(wine.id);
+                    setName(wine.name);
+                    setWineryId(wine.externalWineryId);
+                    setMessage('');
+                  }}
+                >
+                  Editar
+                </button>
+                <button
+                  className="rounded-lg border border-[#7d1d2d] px-3 py-2 text-sm font-semibold text-[#7d1d2d] disabled:opacity-50"
+                  disabled={remove.isPending}
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`Excluir ${wine.name}?`)) remove.mutate(wine.id);
+                  }}
+                >
+                  Excluir
+                </button>
               </div>
             </article>
           ))}

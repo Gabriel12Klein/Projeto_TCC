@@ -105,13 +105,25 @@ describe('Catálogo privado do cliente', () => {
           source: 'OUTRO_LOCAL',
           purchaseDate: new Date('2026-09-26T12:00:00Z'),
           purchaseLocationId: locationB.id,
-          items: [
-            { externalWineId: wineB.id, externalWineryId: wineryB.id, quantityBottles: 1 },
-          ],
+          items: [{ externalWineId: wineB.id, externalWineryId: wineryB.id, quantityBottles: 1 }],
         },
         '/uploads/inventory/teste-privado.png',
       ),
     ).rejects.toThrow('local de compra');
+
+    await expect(
+      customerService.createOrder(
+        userA,
+        {
+          source: 'OUTRO_LOCAL',
+          purchaseDate: new Date('2026-09-26T12:00:00Z'),
+          purchaseLocationId: location.id,
+          items: [{ externalWineId: wineB.id, externalWineryId: wineryB.id, quantityBottles: 1 }],
+        },
+        '/uploads/inventory/teste-privado.png',
+      ),
+    ).rejects.toThrow('vinho externo');
+    await expect(customerService.removeExternalWine(userA, wineB.id)).rejects.toThrow('não encontrado');
 
     const externalOrder = await customerService.createOrder(
       userA,
@@ -119,9 +131,7 @@ describe('Catálogo privado do cliente', () => {
         source: 'OUTRO_LOCAL',
         purchaseDate: new Date('2026-09-26T12:00:00Z'),
         purchaseLocationId: location.id,
-        items: [
-          { externalWineId: dvCatena.id, externalWineryId: catena.id, quantityBottles: 1 },
-        ],
+        items: [{ externalWineId: dvCatena.id, externalWineryId: catena.id, quantityBottles: 1 }],
       },
       '/uploads/inventory/teste-privado.png',
     );
