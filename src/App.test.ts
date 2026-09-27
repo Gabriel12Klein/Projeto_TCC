@@ -7,7 +7,15 @@ import App from './App';
 
 afterEach(() => vi.unstubAllGlobals());
 
-it.each(['/', '/vinhos', '/pedidos', '/estoque'])(
+it.each([
+  '/',
+  '/vinhos',
+  '/pedidos',
+  '/estoque',
+  '/cadastros/vinhos',
+  '/cadastros/vinicolas',
+  '/cadastros/locais-compra',
+])(
   'abre %s sem sessão sem falhar ao ler o ID do cliente',
   (path) => {
     vi.stubGlobal('sessionStorage', { getItem: () => null });

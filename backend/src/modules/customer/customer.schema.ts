@@ -47,6 +47,12 @@ export const orderSchema = z
           path: ['items', index, 'externalWineId'],
           message: 'Selecione um vinho externo cadastrado.',
         });
+      if (input.source === 'OUTRO_LOCAL' && item.wineId)
+        ctx.addIssue({
+          code: 'custom',
+          path: ['items', index, 'wineId'],
+          message: 'O vinho oficial só pode ser usado com o Catálogo da VINUM.',
+        });
       if (item.externalWineId && !item.externalWineryId)
         ctx.addIssue({
           code: 'custom',

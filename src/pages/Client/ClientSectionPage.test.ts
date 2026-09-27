@@ -2,10 +2,18 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { afterAll, beforeAll, expect, it, vi } from 'vitest';
-import ClientSectionPage from './ClientSectionPage';
+import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
+import ClientSectionPage, { wineSelectionAfterWineryChange } from './ClientSectionPage';
 
-beforeAll(() => vi.stubGlobal('sessionStorage', { getItem: () => null }));
+let storedDraft: string | null = null;
+beforeAll(() =>
+  vi.stubGlobal('sessionStorage', {
+    getItem: (key: string) => (key.startsWith('vinum_form_draft:purchase:') ? storedDraft : null),
+  }),
+);
+beforeEach(() => {
+  storedDraft = null;
+});
 afterAll(() => vi.unstubAllGlobals());
 
 function render(title: string, loaded = false, withBottle = false) {
@@ -14,6 +22,29 @@ function render(title: string, loaded = false, withBottle = false) {
   });
   if (loaded && title === 'Meus vinhos') {
     client.setQueryData(['customer-orders'], []);
+    client.setQueryData(
+      ['customer-external-wineries'],
+      [
+        { id: 'catena', name: 'Catena Zapata', createdAt: '', updatedAt: '' },
+        { id: 'outra', name: 'Outra Vinícola', createdAt: '', updatedAt: '' },
+      ],
+    );
+    client.setQueryData(
+      ['customer-purchase-locations'],
+      [{ id: 'mercado', name: 'Supermercado Central', createdAt: '', updatedAt: '' }],
+    );
+    client.setQueryData(['public-wines'], [{ id: 'oficial', name: 'Vinho oficial VINUM', slug: 'oficial' }]);
+    client.setQueryData(
+      ['customer-external-wines', 'catena'],
+      [
+        {
+          id: 'dv-catena',
+          name: 'DV Catena',
+          externalWineryId: 'catena',
+          externalWinery: { id: 'catena', name: 'Catena Zapata' },
+        },
+      ],
+    );
     client.setQueryData(
       ['customer-cellar-bottles', ''],
       withBottle
@@ -87,4 +118,36 @@ it('exibe em Meus vinhos a lista individual e suas ações', () => {
   expect(html).toContain('Abrir garrafa');
   expect(html).toContain('Finalizar garrafa');
   expect(html).toContain('Ver detalhes da garrafa e do vinho');
+});
+it('limpa o vinho anterior ao trocar a vinícola', () => {
+  expect(wineSelectionAfterWineryChange('catena')).toEqual({
+    source: 'OUTRO_LOCAL',
+    wineId: '',
+    externalWineId: '',
+    name: '',
+  });
+  expect(wineSelectionAfterWineryChange('VINUM').source).toBe('VINICULA');
+});
+it('mostra somente os vinhos da vinícola externa selecionada e locais cadastrados', () => {
+  storedDraft = JSON.stringify({
+    open: true,
+    source: 'OUTRO_LOCAL',
+    winerySelection: 'catena',
+    wineId: '',
+    externalWineId: '',
+    name: '',
+    qty: '1',
+    purchaseLocationId: '',
+    purchaseLocation: '',
+    editing: null,
+    photoNeedsReselect: false,
+  });
+  const html = render('Meus vinhos', true);
+  expect(html).toContain('Catálogo da VINUM');
+  expect(html).toContain('Catena Zapata');
+  expect(html).toContain('Outra Vinícola');
+  expect(html).toContain('DV Catena');
+  expect(html).not.toContain('Outro vinho da segunda vinícola');
+  expect(html).not.toContain('Vinho oficial VINUM</option></select>');
+  expect(html).toContain('Supermercado Central');
 });

@@ -5,6 +5,7 @@ import { validatePurchase } from './formValidation';
 import PrivateImage from './PrivateImage';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { api } from '../../api/api';
 import type { CustomerOrder } from '../../types';
 import BottlePhotoPicker from './BottlePhotoPicker';
@@ -29,9 +30,24 @@ function Shell({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+export function wineSelectionAfterWineryChange(selected: string) {
+  return {
+    source: (selected === 'VINUM' ? 'VINICULA' : 'OUTRO_LOCAL') as 'VINICULA' | 'OUTRO_LOCAL',
+    wineId: '',
+    externalWineId: '',
+    name: '',
+  };
+}
+
 function Orders({ userId }: { userId: string }) {
   const [restoredDraft] = useState(() => readOrderDraft(userId));
-  const feedback = useFormFeedback('purchase', { quantityBottles: 'qty', wineName: 'name' });
+  const feedback = useFormFeedback('purchase', {
+    quantityBottles: 'qty',
+    wineName: 'name',
+    externalWineId: 'wineId',
+    externalWineryId: 'winerySelection',
+    purchaseLocationId: 'purchaseLocation',
+  });
   const sending = useRef(false);
   const sourceField = useRef<HTMLSelectElement>(null);
   const resultMessage = useRef<HTMLParagraphElement>(null);
@@ -41,6 +57,7 @@ function Orders({ userId }: { userId: string }) {
     date: string;
     photo?: string | null;
   } | null>(restoredDraft?.editing ?? null);
+  const [purchaseLocationId, setPurchaseLocationId] = useState(restoredDraft?.purchaseLocationId ?? '');
   const [purchaseLocation, setPurchaseLocation] = useState(restoredDraft?.purchaseLocation ?? '');
   const [purchasePhoto, setPurchasePhoto] = useState<File | null>(null);
   const [photoNeedsReselect, setPhotoNeedsReselect] = useState(restoredDraft?.photoNeedsReselect ?? false);
@@ -48,12 +65,27 @@ function Orders({ userId }: { userId: string }) {
   const qc = useQueryClient();
   const ordersQuery = useQuery({ queryKey: ['customer-orders'], queryFn: api.customer.orders });
   const winesQuery = useQuery({ queryKey: ['public-wines'], queryFn: () => api.catalog.list() });
+  const wineriesQuery = useQuery({
+    queryKey: ['customer-external-wineries'],
+    queryFn: api.customer.externalWineries,
+  });
+  const locationsQuery = useQuery({
+    queryKey: ['customer-purchase-locations'],
+    queryFn: api.customer.purchaseLocations,
+  });
   const [open, setOpen] = useState(restoredDraft?.open ?? false);
   const [source, setSource] = useState<'VINICULA' | 'OUTRO_LOCAL'>(restoredDraft?.source ?? 'VINICULA');
+  const [winerySelection, setWinerySelection] = useState(restoredDraft?.winerySelection ?? 'VINUM');
   const [wineId, setWineId] = useState(restoredDraft?.wineId ?? '');
+  const [externalWineId, setExternalWineId] = useState(restoredDraft?.externalWineId ?? '');
   const [name, setName] = useState(restoredDraft?.name ?? '');
   const [qty, setQty] = useState(restoredDraft?.qty ?? '1');
   const [message, setMessage] = useState('');
+  const externalWinesQuery = useQuery({
+    queryKey: ['customer-external-wines', winerySelection],
+    queryFn: () => api.customer.externalWines(winerySelection),
+    enabled: Boolean(winerySelection && winerySelection !== 'VINUM' && winerySelection !== 'LEGACY'),
+  });
   useEffect(() => {
     if (open) window.requestAnimationFrame(() => sourceField.current?.focus());
   }, [open]);
@@ -64,14 +96,31 @@ function Orders({ userId }: { userId: string }) {
     persistOrderDraft(userId, {
       open,
       source,
+      winerySelection,
       wineId,
+      externalWineId,
       name,
       qty,
+      purchaseLocationId,
       purchaseLocation,
       editing,
       photoNeedsReselect: Boolean(purchasePhoto || photoNeedsReselect),
     });
-  }, [userId, open, source, wineId, name, qty, purchaseLocation, editing, purchasePhoto, photoNeedsReselect]);
+  }, [
+    userId,
+    open,
+    source,
+    winerySelection,
+    wineId,
+    externalWineId,
+    name,
+    qty,
+    purchaseLocationId,
+    purchaseLocation,
+    editing,
+    purchasePhoto,
+    photoNeedsReselect,
+  ]);
   const orders = ordersQuery.data ?? [];
   const wines = winesQuery.data ?? [];
   const save = useMutation({
@@ -83,12 +132,16 @@ function Orders({ userId }: { userId: string }) {
       setMessage(editing ? 'Vinho atualizado e adega ajustada.' : 'Vinho salvo e adicionado à adega.');
       setEditing(null);
       setOpen(false);
+      setPurchaseLocationId('');
       setPurchaseLocation('');
       setPurchasePhoto(null);
       setPhotoNeedsReselect(false);
       setDraftRecovered(false);
       setName('');
       setWineId('');
+      setExternalWineId('');
+      setWinerySelection('VINUM');
+      setSource('VINICULA');
       setQty('1');
       await qc.invalidateQueries({ queryKey: ['customer-orders'] });
       await qc.invalidateQueries({ queryKey: ['customer-inventory'] });
@@ -107,10 +160,13 @@ function Orders({ userId }: { userId: string }) {
       ...feedback.nativeErrors(e.currentTarget as HTMLFormElement),
       ...validatePurchase({
         source,
+        winerySelection,
         wineId,
+        externalWineId,
         name,
         qty,
         purchaseLocation,
+        purchaseLocationId,
         photo: Boolean(purchasePhoto || editing?.photo),
       }),
     };
@@ -119,17 +175,25 @@ function Orders({ userId }: { userId: string }) {
       return setMessage('Confira os campos destacados. Seus dados foram mantidos.');
     if (source === 'VINICULA' && (winesQuery.isPending || winesQuery.isError))
       return setMessage('Aguarde o catálogo carregar ou tente carregá-lo novamente.');
+    if (source === 'OUTRO_LOCAL' && winerySelection !== 'LEGACY' && externalWinesQuery.isPending)
+      return setMessage('Aguarde os vinhos da vinícola carregar.');
     sending.current = true;
     setMessage('');
     try {
       await save.mutateAsync({
         source,
         purchaseDate: editing?.date ?? localTodayAtNoonUtc(),
-        purchaseLocation: purchaseLocation.trim(),
+        ...(purchaseLocationId === 'LEGACY'
+          ? { purchaseLocation: purchaseLocation.trim() }
+          : { purchaseLocationId }),
         photo: purchasePhoto || undefined,
         items: [
           {
-            ...(source === 'VINICULA' ? { wineId } : { wineName: name.trim() }),
+            ...(source === 'VINICULA'
+              ? { wineId }
+              : winerySelection === 'LEGACY'
+                ? { wineName: name.trim() }
+                : { externalWineId, externalWineryId: winerySelection }),
             quantityBottles: Number(qty),
           },
         ],
@@ -143,7 +207,7 @@ function Orders({ userId }: { userId: string }) {
   return (
     <Shell title="Meus vinhos">
       <section className="mt-8 rounded-3xl bg-[#5b0c1b] p-8 text-white">
-        <h2 className="font-playfair text-3xl">Cadastre seus vinhos</h2>
+        <h2 className="font-playfair text-3xl">Registre vinhos na adega</h2>
         <p className="mt-2 text-white">
           Cada vinho cadastrado entra automaticamente na sua adega e no resumo de consumo.
         </p>
@@ -152,24 +216,28 @@ function Orders({ userId }: { userId: string }) {
           disabled={save.isPending}
           onClick={() => {
             if (
-              (name || wineId || purchaseLocation || purchasePhoto) &&
+              (name || wineId || externalWineId || purchaseLocationId || purchaseLocation || purchasePhoto) &&
               !window.confirm('Descartar o preenchimento atual e cadastrar outro vinho?')
             )
               return;
             feedback.show({}, false);
             setEditing(null);
+            setPurchaseLocationId('');
             setPurchaseLocation('');
             setPurchasePhoto(null);
             setPhotoNeedsReselect(false);
             setDraftRecovered(false);
             setWineId('');
+            setExternalWineId('');
+            setWinerySelection('VINUM');
+            setSource('VINICULA');
             setName('');
             setQty('1');
             setMessage('');
             setOpen(true);
           }}
         >
-          + Cadastrar vinho
+          + Registrar vinho na adega
         </button>
       </section>
       {draftRecovered && (
@@ -177,15 +245,16 @@ function Orders({ userId }: { userId: string }) {
           Rascunho de vinho recuperado nesta aba. Confira os dados antes de salvar.
         </p>
       )}
-      {!open && (name || wineId || purchaseLocation || purchasePhoto) && (
-        <button
-          type="button"
-          className="mt-4 rounded-xl border border-[#7d1d2d] px-5 py-3 text-[#7d1d2d]"
-          onClick={() => setOpen(true)}
-        >
-          Continuar preenchimento
-        </button>
-      )}
+      {!open &&
+        (name || wineId || externalWineId || purchaseLocationId || purchaseLocation || purchasePhoto) && (
+          <button
+            type="button"
+            className="mt-4 rounded-xl border border-[#7d1d2d] px-5 py-3 text-[#7d1d2d]"
+            onClick={() => setOpen(true)}
+          >
+            Continuar preenchimento
+          </button>
+        )}
       {open && (
         <form
           className="mt-6 grid gap-4 rounded-3xl bg-white p-6 shadow-sm md:grid-cols-2"
@@ -195,20 +264,37 @@ function Orders({ userId }: { userId: string }) {
         >
           <fieldset disabled={save.isPending} className="contents">
             <label className="text-sm font-semibold text-[#5b0c1b]">
-              Tipo do rótulo *
+              Vinícola *
               <select
                 ref={sourceField}
                 className={input}
-                value={source}
-                onChange={(e) => setSource(e.target.value as typeof source)}
+                {...feedback.field('winerySelection')}
+                value={winerySelection}
+                onChange={(event) => {
+                  const selected = event.target.value;
+                  const cleared = wineSelectionAfterWineryChange(selected);
+                  setWinerySelection(selected);
+                  setSource(cleared.source);
+                  setWineId(cleared.wineId);
+                  setExternalWineId(cleared.externalWineId);
+                  setName(cleared.name);
+                  feedback.clear('winerySelection');
+                  feedback.clear('wineId');
+                }}
               >
-                <option value="VINICULA">Catálogo da VINUM</option>
-                <option value="OUTRO_LOCAL">Rótulo de outro local</option>
+                <option value="VINUM">Catálogo da VINUM</option>
+                {winerySelection === 'LEGACY' && <option value="LEGACY">Cadastro externo anterior</option>}
+                {(wineriesQuery.data ?? []).map((winery) => (
+                  <option key={winery.id} value={winery.id}>
+                    {winery.name}
+                  </option>
+                ))}
               </select>
+              <FieldError id="purchase-winerySelection-error" message={feedback.errors.winerySelection} />
             </label>
-            {source === 'VINICULA' ? (
+            {winerySelection === 'VINUM' ? (
               <label className="text-sm font-semibold text-[#5b0c1b]">
-                Vinho do catálogo *
+                Vinho *
                 <select
                   className={input}
                   {...feedback.field('wineId')}
@@ -227,30 +313,59 @@ function Orders({ userId }: { userId: string }) {
                 </select>
                 <FieldError id="purchase-wineId-error" message={feedback.errors.wineId} />
               </label>
+            ) : winerySelection === 'LEGACY' ? (
+              <label className="text-sm font-semibold text-[#5b0c1b]">
+                Vinho externo preservado *
+                <input className={input} value={name} readOnly />
+                <span className="mt-1 block text-xs font-normal text-[#715f59]">
+                  Registro anterior preservado sem associação automática.
+                </span>
+              </label>
             ) : (
               <label className="text-sm font-semibold text-[#5b0c1b]">
-                Nome do rótulo *
-                <input
+                Vinho *
+                <select
                   className={input}
-                  placeholder="Nome do rótulo"
-                  {...feedback.field('name')}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-                <FieldError id="purchase-name-error" message={feedback.errors.name} />
+                  {...feedback.field('wineId')}
+                  value={externalWineId}
+                  onChange={(event) => {
+                    setExternalWineId(event.target.value);
+                    feedback.clear('wineId');
+                  }}
+                  disabled={!winerySelection || externalWinesQuery.isPending}
+                >
+                  <option value="">Selecione o vinho</option>
+                  {(externalWinesQuery.data ?? []).map((wine) => (
+                    <option key={wine.id} value={wine.id}>
+                      {wine.name}
+                    </option>
+                  ))}
+                </select>
+                <FieldError id="purchase-wineId-error" message={feedback.errors.wineId} />
               </label>
             )}
             <label className="text-sm font-semibold text-[#5b0c1b]">
               Local da compra *
-              <input
+              <select
                 className={input}
                 {...feedback.field('purchaseLocation')}
-                value={purchaseLocation}
-                onChange={(e) => setPurchaseLocation(e.target.value)}
-                placeholder="Ex.: Supermercado Central, loja ou vinícola"
-                maxLength={200}
+                value={purchaseLocationId}
+                onChange={(event) => {
+                  setPurchaseLocationId(event.target.value);
+                  if (event.target.value !== 'LEGACY') setPurchaseLocation('');
+                }}
                 required
-              />
+              >
+                <option value="">Selecione o local</option>
+                {purchaseLocationId === 'LEGACY' && (
+                  <option value="LEGACY">{purchaseLocation} (registro anterior)</option>
+                )}
+                {(locationsQuery.data ?? []).map((location) => (
+                  <option key={location.id} value={location.id}>
+                    {location.name}
+                  </option>
+                ))}
+              </select>
               <FieldError id="purchase-purchaseLocation-error" message={feedback.errors.purchaseLocation} />
             </label>
             <label className="text-sm font-semibold text-[#5b0c1b]">
@@ -267,6 +382,58 @@ function Orders({ userId }: { userId: string }) {
               />
               <FieldError id="purchase-qty-error" message={feedback.errors.qty} />
             </label>
+            {(wineriesQuery.isPending || wineriesQuery.isError) && (
+              <div className="md:col-span-2">
+                <QueryFeedback
+                  loading={wineriesQuery.isPending}
+                  error={wineriesQuery.error}
+                  fetching={wineriesQuery.isFetching}
+                  loadingText="Carregando vinícolas…"
+                  retry={() => void wineriesQuery.refetch()}
+                />
+              </div>
+            )}
+            {(locationsQuery.isPending || locationsQuery.isError) && (
+              <div className="md:col-span-2">
+                <QueryFeedback
+                  loading={locationsQuery.isPending}
+                  error={locationsQuery.error}
+                  fetching={locationsQuery.isFetching}
+                  loadingText="Carregando locais de compra…"
+                  retry={() => void locationsQuery.refetch()}
+                />
+              </div>
+            )}
+            {winerySelection !== 'VINUM' && winerySelection !== 'LEGACY' && (
+              <div className="md:col-span-2">
+                <QueryFeedback
+                  loading={externalWinesQuery.isPending}
+                  error={externalWinesQuery.error}
+                  fetching={externalWinesQuery.isFetching}
+                  loadingText="Carregando vinhos da vinícola…"
+                  retry={() => void externalWinesQuery.refetch()}
+                />
+              </div>
+            )}
+            {!locationsQuery.isPending && !locationsQuery.data?.length && purchaseLocationId !== 'LEGACY' && (
+              <p className="rounded-xl border border-[#eadfd3] p-4 text-sm text-[#715f59] md:col-span-2">
+                Nenhum local de compra cadastrado.{' '}
+                <Link className="font-semibold text-[#7d1d2d]" to="/cadastros/locais-compra">
+                  Cadastrar local de compra
+                </Link>
+              </p>
+            )}
+            {winerySelection !== 'VINUM' &&
+              winerySelection !== 'LEGACY' &&
+              !externalWinesQuery.isPending &&
+              !externalWinesQuery.data?.length && (
+                <p className="rounded-xl border border-[#eadfd3] p-4 text-sm text-[#715f59] md:col-span-2">
+                  Nenhum vinho cadastrado para esta vinícola.{' '}
+                  <Link className="font-semibold text-[#7d1d2d]" to="/cadastros/vinhos">
+                    Cadastrar vinho
+                  </Link>
+                </p>
+              )}
             {editing?.photo && !purchasePhoto && (
               <div className="md:col-span-2 flex items-center gap-3">
                 <PrivateImage
@@ -426,12 +593,17 @@ function Orders({ userId }: { userId: string }) {
                                 photo: item.photoPath,
                               });
                               setMessage('');
+                              setPurchaseLocationId(order.purchaseLocationId ?? 'LEGACY');
                               setPurchaseLocation(order.purchaseLocation ?? '');
                               setPurchasePhoto(null);
                               setPhotoNeedsReselect(false);
                               setDraftRecovered(false);
                               setSource(order.source);
                               setWineId(item.wineId ?? '');
+                              setExternalWineId(item.externalWineId ?? '');
+                              setWinerySelection(
+                                item.wineId ? 'VINUM' : (item.externalWine?.externalWinery.id ?? 'LEGACY'),
+                              );
                               setName(item.wineName);
                               setQty(String(item.quantityBottles));
                               setOpen(true);

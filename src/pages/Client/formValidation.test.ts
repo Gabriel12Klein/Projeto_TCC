@@ -10,10 +10,13 @@ it.each(['0', '-1', '1.5', '', 'abc', '9007199254740992'])(
     expect(
       validatePurchase({
         source: 'VINICULA',
+        winerySelection: 'VINUM',
         wineId: 'vinho',
+        externalWineId: '',
         name: '',
         qty,
-        purchaseLocation: 'Loja',
+        purchaseLocationId: 'local',
+        purchaseLocation: '',
         photo: false,
       }),
     ).toHaveProperty('qty');
@@ -28,19 +31,37 @@ it('impede consumo superior ao saldo e data futura', () => {
 it('usa foto do catálogo mas exige foto do rótulo externo e local da compra', () => {
   const data = {
     source: 'VINICULA',
+    winerySelection: 'VINUM',
     wineId: 'vinho',
+    externalWineId: '',
     name: '',
     qty: '2',
-    purchaseLocation: 'Loja',
+    purchaseLocationId: 'local',
+    purchaseLocation: '',
     photo: false,
   };
   expect(validatePurchase(data)).toEqual({});
-  expect(validatePurchase({ ...data, source: 'OUTRO_LOCAL', purchaseLocation: '' })).toEqual({
-    name: 'Informe o nome do rótulo.',
-    purchaseLocation: 'Informe o local onde o vinho foi comprado.',
+  expect(
+    validatePurchase({
+      ...data,
+      source: 'OUTRO_LOCAL',
+      winerySelection: 'catena',
+      wineId: '',
+      purchaseLocationId: '',
+    }),
+  ).toEqual({
+    wineId: 'Selecione um vinho cadastrado para esta vinícola.',
+    purchaseLocation: 'Selecione o local onde o vinho foi comprado.',
     photo: 'Adicione uma foto do rótulo comprado.',
   });
-  expect(validatePurchase({ ...data, source: 'OUTRO_LOCAL', name: 'Rótulo externo', photo: true })).toEqual(
-    {},
-  );
+  expect(
+    validatePurchase({
+      ...data,
+      source: 'OUTRO_LOCAL',
+      winerySelection: 'catena',
+      wineId: '',
+      externalWineId: 'dv-catena',
+      photo: true,
+    }),
+  ).toEqual({});
 });

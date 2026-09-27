@@ -1,9 +1,12 @@
 export type OrderDraft = {
   open: boolean;
   source: 'VINICULA' | 'OUTRO_LOCAL';
+  winerySelection: string;
   wineId: string;
+  externalWineId: string;
   name: string;
   qty: string;
+  purchaseLocationId: string;
   purchaseLocation: string;
   editing: {
     orderId: string;
@@ -27,7 +30,8 @@ export function parseOrderDraft(value: unknown): OrderDraft | null {
     typeof draft.qty !== 'string' ||
     typeof draft.purchaseLocation !== 'string' ||
     typeof draft.photoNeedsReselect !== 'boolean'
-  ) return null;
+  )
+    return null;
   let editing: OrderDraft['editing'] = null;
   if (draft.editing != null) {
     if (typeof draft.editing !== 'object') return null;
@@ -37,7 +41,8 @@ export function parseOrderDraft(value: unknown): OrderDraft | null {
       typeof candidate.itemId !== 'string' ||
       typeof candidate.date !== 'string' ||
       (candidate.photo != null && typeof candidate.photo !== 'string')
-    ) return null;
+    )
+      return null;
     editing = {
       orderId: candidate.orderId,
       itemId: candidate.itemId,
@@ -48,9 +53,17 @@ export function parseOrderDraft(value: unknown): OrderDraft | null {
   return {
     open: draft.open,
     source: draft.source,
+    winerySelection:
+      typeof draft.winerySelection === 'string'
+        ? draft.winerySelection
+        : draft.source === 'VINICULA'
+          ? 'VINUM'
+          : 'LEGACY',
     wineId: draft.wineId,
+    externalWineId: typeof draft.externalWineId === 'string' ? draft.externalWineId : '',
     name: draft.name,
     qty: draft.qty,
+    purchaseLocationId: typeof draft.purchaseLocationId === 'string' ? draft.purchaseLocationId : '',
     purchaseLocation: draft.purchaseLocation,
     editing,
     photoNeedsReselect: draft.photoNeedsReselect,
@@ -69,8 +82,14 @@ export function readOrderDraft(userId: string): OrderDraft | null {
 export function persistOrderDraft(userId: string, draft: OrderDraft) {
   try {
     const hasContent = Boolean(
-      draft.editing || draft.wineId || draft.name || draft.purchaseLocation ||
-      draft.qty !== '1' || draft.photoNeedsReselect,
+      draft.editing ||
+      draft.wineId ||
+      draft.externalWineId ||
+      draft.name ||
+      draft.purchaseLocationId ||
+      draft.purchaseLocation ||
+      draft.qty !== '1' ||
+      draft.photoNeedsReselect,
     );
     if (hasContent) sessionStorage.setItem(draftKey(userId), JSON.stringify(draft));
     else sessionStorage.removeItem(draftKey(userId));

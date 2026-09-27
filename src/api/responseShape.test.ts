@@ -6,6 +6,8 @@ it('rejeita sucesso malformado antes de renderizar listas', () => {
     expect(validResponse('/catalog/wines', 'GET', value)).toBe(false);
   expect(validResponse('/catalog/wines', 'GET', [])).toBe(true);
   expect(validResponse('/cliente/pedidos', 'GET', [{ id: 'x', items: null }])).toBe(false);
+  expect(validResponse('/cliente/vinicolas-externas', 'GET', [{ id: 'x', name: 'Catena' }])).toBe(true);
+  expect(validResponse('/cliente/vinhos-externos?wineryId=x', 'GET', [null])).toBe(false);
   expect(
     validResponse('/cliente/estoque', 'GET', [
       { id: 'x', name: 'Vinho', quantityBottles: '2', movements: [] },

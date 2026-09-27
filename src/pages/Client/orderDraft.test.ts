@@ -5,10 +5,13 @@ import { clearSession } from '../../api/api';
 const draft: OrderDraft = {
   open: true,
   source: 'VINICULA',
+  winerySelection: 'VINUM',
   wineId: 'vinho-teste',
+  externalWineId: '',
   name: '',
   qty: '2',
-  purchaseLocation: 'Rascunho não salvo',
+  purchaseLocationId: 'local-teste',
+  purchaseLocation: '',
   editing: null,
   photoNeedsReselect: false,
 };
@@ -37,7 +40,12 @@ it('remove o rascunho quando os campos são limpos', () => {
   useMemoryStorage();
   persistOrderDraft('cliente-a', draft);
   persistOrderDraft('cliente-a', {
-    ...draft, open: false, wineId: '', qty: '1', purchaseLocation: '',
+    ...draft,
+    open: false,
+    wineId: '',
+    purchaseLocationId: '',
+    qty: '1',
+    purchaseLocation: '',
   });
   expect(readOrderDraft('cliente-a')).toBeNull();
 });
