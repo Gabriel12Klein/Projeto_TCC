@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.8.1**
+Versão atual: **2.9.0**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -92,3 +92,12 @@ incorretamente como uma lista, e passa a obter a safra resumida diretamente de
 `vinhos_externo.vintageYear`. Campos opcionais nulos permanecem válidos e o
 isolamento por cliente continua aplicado. Não houve alteração de banco ou
 migration.
+
+## Versão 2.9.0
+
+Vincula a safra oficial ao registro de compra. O formulário carrega as safras
+do vinho VINUM, seleciona automaticamente a única opção e exige escolha quando
+há mais de uma. O backend valida que o ano pertence ao vinho e persiste o
+snapshot em `item_pedido.vintageYear`. Uma migration incremental preenche
+compras antigas somente quando existe um único ano possível, preservando casos
+ambíguos.

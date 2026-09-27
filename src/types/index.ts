@@ -220,6 +220,7 @@ export type CellarBottle = {
       winery: { name: string } | null;
       image: { path: string } | null;
       grapeLinks: { grape: { id: string; name: string } }[];
+      vintages: { year: number }[];
     } | null;
   };
   orderItem: {

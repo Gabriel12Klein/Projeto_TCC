@@ -32,7 +32,9 @@ export function localDateValue(value: string) {
 
 export function bottleVintageYear(bottle: CellarBottle) {
   if (bottle.orderItem?.externalWineId) return bottle.orderItem.externalWine?.vintageYear ?? null;
-  return bottle.orderItem?.vintageYear ?? null;
+  if (bottle.orderItem?.vintageYear != null) return bottle.orderItem.vintageYear;
+  const years = [...new Set(bottle.inventoryItem.wine?.vintages.map(({ year }) => year) ?? [])];
+  return years.length === 1 ? years[0] : null;
 }
 
 const statusLabel: Record<BottleStatus, string> = {

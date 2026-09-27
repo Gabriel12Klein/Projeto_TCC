@@ -2,6 +2,8 @@ export function validatePurchase(data: {
   source: string;
   winerySelection: string;
   wineId: string;
+  vintageYear?: string;
+  vintageRequired?: boolean;
   externalWineId: string;
   name: string;
   qty: string;
@@ -11,6 +13,8 @@ export function validatePurchase(data: {
   const errors: Record<string, string> = {};
   if (!data.winerySelection) errors.winerySelection = 'Selecione uma vinícola.';
   if (data.source === 'VINICULA' && !data.wineId) errors.wineId = 'Selecione um vinho do catálogo da VINUM.';
+  if (data.source === 'VINICULA' && data.vintageRequired && !data.vintageYear)
+    errors.vintageYear = 'Selecione a safra do vinho oficial.';
   if (data.source !== 'VINICULA' && data.winerySelection !== 'LEGACY' && !data.externalWineId)
     errors.wineId = 'Selecione um vinho cadastrado para esta vinícola.';
   if (data.winerySelection === 'LEGACY' && !data.name.trim()) errors.name = 'Informe o nome do rótulo.';

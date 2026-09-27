@@ -43,8 +43,18 @@ describe('histórico individual da adega', () => {
     const official = {
       orderItem: { externalWineId: null, vintageYear: 2021, externalWine: null },
     } as CellarBottle;
+    const unambiguousLegacyOfficial = {
+      orderItem: { externalWineId: null, vintageYear: null, externalWine: null },
+      inventoryItem: { wine: { vintages: [{ year: 2024 }] } },
+    } as CellarBottle;
+    const ambiguousLegacyOfficial = {
+      orderItem: { externalWineId: null, vintageYear: null, externalWine: null },
+      inventoryItem: { wine: { vintages: [{ year: 2024 }, { year: 2022 }] } },
+    } as CellarBottle;
     expect(bottleVintageYear(external)).toBe(2022);
     expect(bottleVintageYear(externalWithoutVintage)).toBeNull();
     expect(bottleVintageYear(official)).toBe(2021);
+    expect(bottleVintageYear(unambiguousLegacyOfficial)).toBe(2024);
+    expect(bottleVintageYear(ambiguousLegacyOfficial)).toBeNull();
   });
 });

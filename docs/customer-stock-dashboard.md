@@ -140,3 +140,17 @@ legado e evidências de validação estão documentados em
 - Safra, descrição, características, aromas, notas de degustação e imagem podem
   ser nulos sem invalidar a ficha. Relações estruturais de vinícola e uvas
   continuam validadas.
+
+## Vínculo da safra oficial — versão 2.9.0
+
+- Ao selecionar um vinho do catálogo VINUM, `Meus vinhos` carrega suas safras.
+  Uma única opção é selecionada automaticamente; múltiplas opções exigem uma
+  escolha explícita.
+- O backend confere se `vintageYear` pertence ao vinho oficial antes de gravar
+  o snapshot no item da compra. Anos de outro vinho são rejeitados.
+- A migration incremental
+  `20260927170000_link_unambiguous_official_vintages` preenche compras antigas
+  apenas quando o vinho possui um único ano de safra distinto. Nenhuma compra
+  ambígua é alterada.
+- Para compatibilidade durante a leitura, garrafas oficiais antigas sem snapshot
+  também exibem a safra quando há exatamente um ano oficial possível.

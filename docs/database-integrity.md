@@ -58,3 +58,11 @@ Nenhum cadastro operacional existente foi excluído.
 
 Esta revisão valida a instalação atual e os fluxos cobertos pelos testes. Não certifica ausência
 de todo possível defeito nem uma implantação vazia com o histórico antigo de migrações de demonstração.
+
+## Vínculo de safra em compras oficiais — 27/09/2026
+
+A migration `20260927170000_link_unambiguous_official_vintages` preenche
+`item_pedido.vintageYear` somente quando o vinho oficial possui exatamente um
+ano distinto em `safra`. Registros com múltiplos anos permanecem inalterados e
+passam a exigir seleção explícita no fluxo de compra. Nenhuma tabela, volume ou
+registro operacional foi removido.

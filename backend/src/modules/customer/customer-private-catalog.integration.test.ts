@@ -13,6 +13,7 @@ let userB = '';
 let tokenA = '';
 let tokenB = '';
 let officialWineId = '';
+let officialVintageYear = 0;
 let grapeId = '';
 
 beforeAll(async () => {
@@ -32,9 +33,16 @@ beforeAll(async () => {
     .token;
   tokenB = (await request(app).post('/api/auth/login').send({ email: emails[1], password }).expect(200)).body
     .token;
-  officialWineId = (
-    await prisma.wine.findFirstOrThrow({ where: { status: 'PUBLISHED' }, select: { id: true } })
-  ).id;
+  const officialWines = await prisma.wine.findMany({
+    where: { status: 'PUBLISHED' },
+    select: { id: true, vintages: { select: { year: true } } },
+  });
+  const officialWine = officialWines.find(
+    ({ vintages }) => new Set(vintages.map(({ year }) => year)).size === 1,
+  );
+  if (!officialWine) throw new Error('O teste requer um vinho oficial com uma única safra.');
+  officialWineId = officialWine.id;
+  officialVintageYear = officialWine.vintages[0].year;
   grapeId = (await prisma.grape.findFirstOrThrow({ where: { active: true }, select: { id: true } })).id;
 });
 
@@ -265,12 +273,41 @@ describe('Catálogo privado do cliente', () => {
       },
     });
 
-    await customerService.createOrder(userA, {
+    await expect(
+      customerService.createOrder(userA, {
+        source: 'VINICULA',
+        purchaseDate: new Date('2026-09-26T12:00:00Z'),
+        purchaseLocationId: location.id,
+        items: [{ wineId: officialWineId, vintageYear: officialVintageYear + 100, quantityBottles: 1 }],
+      }),
+    ).rejects.toThrow('pertencente ao vinho oficial');
+    const officialOrder = await customerService.createOrder(userA, {
       source: 'VINICULA',
       purchaseDate: new Date('2026-09-26T12:00:00Z'),
       purchaseLocationId: location.id,
       items: [{ wineId: officialWineId, quantityBottles: 1 }],
     });
+    expect(officialOrder.items[0].vintageYear).toBe(officialVintageYear);
+    const additionalVintage = await prisma.vintage.create({
+      data: {
+        wineId: officialWineId,
+        identifier: `safra-adicional-${suffix}`,
+        year: officialVintageYear + 1,
+        status: 'Teste',
+      },
+    });
+    try {
+      await expect(
+        customerService.createOrder(userA, {
+          source: 'VINICULA',
+          purchaseDate: new Date('2026-09-26T12:00:00Z'),
+          purchaseLocationId: location.id,
+          items: [{ wineId: officialWineId, quantityBottles: 1 }],
+        }),
+      ).rejects.toThrow('Selecione a safra');
+    } finally {
+      await prisma.vintage.delete({ where: { id: additionalVintage.id } });
+    }
     expect(await prisma.customerOrder.count({ where: { userId: userA } })).toBe(2);
     expect(otherWine.externalWineryId).toBe(secondWinery.id);
 

@@ -47,6 +47,7 @@ function Orders({ userId }: { userId: string }) {
     wineName: 'name',
     externalWineId: 'wineId',
     externalWineryId: 'winerySelection',
+    vintageYear: 'vintageYear',
     purchaseLocationId: 'purchaseLocation',
   });
   const sending = useRef(false);
@@ -75,6 +76,7 @@ function Orders({ userId }: { userId: string }) {
   const [source, setSource] = useState<'VINICULA' | 'OUTRO_LOCAL'>(restoredDraft?.source ?? 'VINICULA');
   const [winerySelection, setWinerySelection] = useState(restoredDraft?.winerySelection ?? 'VINUM');
   const [wineId, setWineId] = useState(restoredDraft?.wineId ?? '');
+  const [vintageYear, setVintageYear] = useState(restoredDraft?.vintageYear ?? '');
   const [externalWineId, setExternalWineId] = useState(restoredDraft?.externalWineId ?? '');
   const [name, setName] = useState(restoredDraft?.name ?? '');
   const [qty, setQty] = useState(restoredDraft?.qty ?? '1');
@@ -101,6 +103,7 @@ function Orders({ userId }: { userId: string }) {
     setPurchaseLocation('');
     setDraftRecovered(false);
     setWineId('');
+    setVintageYear('');
     setExternalWineId('');
     setWinerySelection('VINUM');
     setSource('VINICULA');
@@ -119,6 +122,7 @@ function Orders({ userId }: { userId: string }) {
     setDraftRecovered(false);
     setSource(order.source);
     setWineId(item.wineId ?? '');
+    setVintageYear(item.vintageYear?.toString() ?? '');
     setExternalWineId(item.externalWineId ?? '');
     setWinerySelection(item.wineId ? 'VINUM' : (item.externalWine?.externalWinery.id ?? 'LEGACY'));
     setName(item.wineName);
@@ -130,6 +134,13 @@ function Orders({ userId }: { userId: string }) {
     queryFn: () => api.customer.externalWines(winerySelection),
     enabled: Boolean(winerySelection && winerySelection !== 'VINUM' && winerySelection !== 'LEGACY'),
   });
+  const wines = winesQuery.data ?? [];
+  const selectedOfficialWine = wines.find((wine) => wine.id === wineId);
+  const officialWineQuery = useQuery({
+    queryKey: ['public-wine-detail', selectedOfficialWine?.slug],
+    queryFn: () => api.catalog.detail(selectedOfficialWine!.slug),
+    enabled: source === 'VINICULA' && Boolean(selectedOfficialWine?.slug),
+  });
   useEffect(() => {
     if (open) window.requestAnimationFrame(() => sourceField.current?.focus());
   }, [open]);
@@ -137,11 +148,17 @@ function Orders({ userId }: { userId: string }) {
     if (message && !open) window.requestAnimationFrame(() => resultMessage.current?.focus());
   }, [message, open]);
   useEffect(() => {
+    const vintages = officialWineQuery.data?.vintages ?? [];
+    if (source === 'VINICULA' && !vintageYear && vintages.length === 1)
+      setVintageYear(String(vintages[0].year));
+  }, [officialWineQuery.data, source, vintageYear]);
+  useEffect(() => {
     persistOrderDraft(userId, {
       open,
       source,
       winerySelection,
       wineId,
+      vintageYear,
       externalWineId,
       name,
       qty,
@@ -155,6 +172,7 @@ function Orders({ userId }: { userId: string }) {
     source,
     winerySelection,
     wineId,
+    vintageYear,
     externalWineId,
     name,
     qty,
@@ -163,7 +181,6 @@ function Orders({ userId }: { userId: string }) {
     editing,
   ]);
   const orders = ordersQuery.data ?? [];
-  const wines = winesQuery.data ?? [];
   const save = useMutation({
     mutationFn: (payload: Parameters<typeof api.customer.createOrder>[0]) =>
       editing
@@ -178,6 +195,7 @@ function Orders({ userId }: { userId: string }) {
       setDraftRecovered(false);
       setName('');
       setWineId('');
+      setVintageYear('');
       setExternalWineId('');
       setWinerySelection('VINUM');
       setSource('VINICULA');
@@ -225,6 +243,8 @@ function Orders({ userId }: { userId: string }) {
         source,
         winerySelection,
         wineId,
+        vintageYear,
+        vintageRequired: Boolean(officialWineQuery.data?.vintages.length),
         externalWineId,
         name,
         qty,
@@ -237,6 +257,8 @@ function Orders({ userId }: { userId: string }) {
       return setMessage('Confira os campos destacados. Seus dados foram mantidos.');
     if (source === 'VINICULA' && (winesQuery.isPending || winesQuery.isError))
       return setMessage('Aguarde o catálogo carregar ou tente carregá-lo novamente.');
+    if (source === 'VINICULA' && wineId && (officialWineQuery.isPending || officialWineQuery.isError))
+      return setMessage('Aguarde as safras do vinho carregar ou tente novamente.');
     if (source === 'OUTRO_LOCAL' && winerySelection !== 'LEGACY' && externalWinesQuery.isPending)
       return setMessage('Aguarde os vinhos da vinícola carregar.');
     sending.current = true;
@@ -251,7 +273,7 @@ function Orders({ userId }: { userId: string }) {
         items: [
           {
             ...(source === 'VINICULA'
-              ? { wineId }
+              ? { wineId, ...(vintageYear ? { vintageYear: Number(vintageYear) } : {}) }
               : winerySelection === 'LEGACY'
                 ? { wineName: name.trim() }
                 : { externalWineId, externalWineryId: winerySelection }),
@@ -295,16 +317,15 @@ function Orders({ userId }: { userId: string }) {
           Rascunho de vinho recuperado nesta aba. Confira os dados antes de salvar.
         </p>
       )}
-      {!open &&
-        (name || wineId || externalWineId || purchaseLocationId || purchaseLocation) && (
-          <button
-            type="button"
-            className="mt-4 rounded-xl border border-[#7d1d2d] px-5 py-3 text-[#7d1d2d]"
-            onClick={() => setOpen(true)}
-          >
-            Continuar preenchimento
-          </button>
-        )}
+      {!open && (name || wineId || externalWineId || purchaseLocationId || purchaseLocation) && (
+        <button
+          type="button"
+          className="mt-4 rounded-xl border border-[#7d1d2d] px-5 py-3 text-[#7d1d2d]"
+          onClick={() => setOpen(true)}
+        >
+          Continuar preenchimento
+        </button>
+      )}
       {open && (
         <form
           className="mt-6 grid gap-4 rounded-3xl bg-white p-6 shadow-sm md:grid-cols-2"
@@ -326,6 +347,7 @@ function Orders({ userId }: { userId: string }) {
                   setWinerySelection(selected);
                   setSource(cleared.source);
                   setWineId(cleared.wineId);
+                  setVintageYear('');
                   setExternalWineId(cleared.externalWineId);
                   setName(cleared.name);
                   feedback.clear('winerySelection');
@@ -349,7 +371,12 @@ function Orders({ userId }: { userId: string }) {
                   className={input}
                   {...feedback.field('wineId')}
                   value={wineId}
-                  onChange={(e) => setWineId(e.target.value)}
+                  onChange={(e) => {
+                    setWineId(e.target.value);
+                    setVintageYear('');
+                    feedback.clear('wineId');
+                    feedback.clear('vintageYear');
+                  }}
                 >
                   <option value="">Selecione o vinho</option>
                   {editing && wineId && !wines.some((wine) => wine.id === wineId) && (
@@ -392,6 +419,35 @@ function Orders({ userId }: { userId: string }) {
                   ))}
                 </select>
                 <FieldError id="purchase-wineId-error" message={feedback.errors.wineId} />
+              </label>
+            )}
+            {winerySelection === 'VINUM' && wineId && (
+              <label className="text-sm font-semibold text-[#5b0c1b]">
+                Safra{officialWineQuery.data?.vintages.length ? ' *' : ''}
+                <select
+                  className={input}
+                  {...feedback.field('vintageYear')}
+                  value={vintageYear}
+                  onChange={(event) => {
+                    setVintageYear(event.target.value);
+                    feedback.clear('vintageYear');
+                  }}
+                  disabled={officialWineQuery.isPending || officialWineQuery.isError}
+                >
+                  <option value="">
+                    {officialWineQuery.isPending
+                      ? 'Carregando safras...'
+                      : officialWineQuery.data?.vintages.length
+                        ? 'Selecione a safra'
+                        : 'Nenhuma safra cadastrada'}
+                  </option>
+                  {(officialWineQuery.data?.vintages ?? []).map((vintage) => (
+                    <option key={vintage.id} value={vintage.year}>
+                      {vintage.year} · {vintage.identifier}
+                    </option>
+                  ))}
+                </select>
+                <FieldError id="purchase-vintageYear-error" message={feedback.errors.vintageYear} />
               </label>
             )}
             <label className="text-sm font-semibold text-[#5b0c1b]">
@@ -494,6 +550,16 @@ function Orders({ userId }: { userId: string }) {
                 loadingText="Carregando catálogo…"
                 retry={() => void winesQuery.refetch()}
               />
+            )}
+            {source === 'VINICULA' && wineId && officialWineQuery.isError && (
+              <div className="md:col-span-2">
+                <QueryFeedback
+                  loading={false}
+                  error={officialWineQuery.error}
+                  fetching={officialWineQuery.isFetching}
+                  retry={() => void officialWineQuery.refetch()}
+                />
+              </div>
             )}
             <div className="flex flex-wrap gap-3 md:col-span-2">
               <button

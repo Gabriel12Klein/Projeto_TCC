@@ -40,6 +40,7 @@ const bottleInclude = {
           winery: { select: { name: true } },
           image: { select: { path: true } },
           grapeLinks: { include: { grape: { select: { id: true, name: true } } } },
+          vintages: { select: { year: true }, orderBy: { year: 'desc' as const } },
         },
       },
     },
@@ -75,6 +76,19 @@ function assertBottleEventDate(date: Date, purchasedAt: Date, openedAt?: Date | 
   if (eventDate > todayCivilDate()) throw new AppError(400, 'A data informada não pode estar no futuro.');
   if (eventDate < minimum)
     throw new AppError(400, 'A data não pode ser anterior à compra ou à abertura da garrafa.');
+}
+
+function resolveOfficialVintageYear(wine: { vintages: { year: number }[] } | null, requestedYear?: number) {
+  if (!wine) return requestedYear ?? null;
+  const years = [...new Set(wine.vintages.map(({ year }) => year))];
+  if (requestedYear != null) {
+    if (!years.includes(requestedYear))
+      throw new AppError(400, 'Selecione uma safra pertencente ao vinho oficial escolhido.');
+    return requestedYear;
+  }
+  if (years.length === 1) return years[0];
+  if (years.length > 1) throw new AppError(400, 'Selecione a safra do vinho oficial comprado.');
+  return null;
 }
 
 export const customerService = {
@@ -305,7 +319,13 @@ export const customerService = {
         const wine = item.wineId
           ? await transaction.wine.findFirst({
               where: { id: item.wineId, status: 'PUBLISHED' },
-              select: { id: true, name: true, winery: true, image: { select: { path: true } } },
+              select: {
+                id: true,
+                name: true,
+                winery: true,
+                image: { select: { path: true } },
+                vintages: { select: { year: true } },
+              },
             })
           : null;
         if (item.wineId && !wine)
@@ -361,6 +381,7 @@ export const customerService = {
               },
             });
 
+        const officialVintageYear = resolveOfficialVintageYear(wine, item.vintageYear);
         const orderItem = await transaction.customerOrderItem.create({
           data: {
             orderId: order.id,
@@ -369,7 +390,7 @@ export const customerService = {
             wineName: name,
             photoPath: itemPhotoPath,
             wineryName: item.wineryName ?? wine?.winery?.name ?? externalWine?.externalWinery.name ?? null,
-            vintageYear: item.vintageYear ?? null,
+            vintageYear: officialVintageYear,
             quantityBottles: item.quantityBottles,
             volumeMl: item.volumeMl ?? null,
             unitPrice: item.unitPrice ?? null,
@@ -439,7 +460,7 @@ export const customerService = {
       const wine = item.wineId
         ? await transaction.wine.findUnique({
             where: { id: item.wineId },
-            include: { winery: true, image: true },
+            include: { winery: true, image: true, vintages: { select: { year: true } } },
           })
         : null;
       if (item.wineId && !wine) throw new AppError(400, 'O vinho selecionado não foi encontrado.');
@@ -463,6 +484,7 @@ export const customerService = {
         (wine?.id ?? null) === old.wineId &&
         (externalWine?.id ?? null) === old.externalWineId &&
         (Boolean(wine || externalWine) || name === old.wineName);
+      const officialVintageYear = resolveOfficialVintageYear(wine, item.vintageYear);
       const removedQuantity = sameWine ? old.quantityBottles - item.quantityBottles : old.quantityBottles;
       const editableBottles = await transaction.cellarBottle.findMany({
         where: { orderItemId: old.id, userId, status: 'DISPONIVEL' },
@@ -572,7 +594,7 @@ export const customerService = {
           photoPath: image,
           quantityBottles: item.quantityBottles,
           inventoryItemId: targetId,
-          vintageYear: item.vintageYear,
+          vintageYear: officialVintageYear,
           volumeMl: item.volumeMl,
           unitPrice: item.unitPrice,
         },

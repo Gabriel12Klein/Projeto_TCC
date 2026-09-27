@@ -3,6 +3,7 @@ export type OrderDraft = {
   source: 'VINICULA' | 'OUTRO_LOCAL';
   winerySelection: string;
   wineId: string;
+  vintageYear: string;
   externalWineId: string;
   name: string;
   qty: string;
@@ -55,6 +56,7 @@ export function parseOrderDraft(value: unknown): OrderDraft | null {
           ? 'VINUM'
           : 'LEGACY',
     wineId: draft.wineId,
+    vintageYear: typeof draft.vintageYear === 'string' ? draft.vintageYear : '',
     externalWineId: typeof draft.externalWineId === 'string' ? draft.externalWineId : '',
     name: draft.name,
     qty: draft.qty,
@@ -78,6 +80,7 @@ export function persistOrderDraft(userId: string, draft: OrderDraft) {
     const hasContent = Boolean(
       draft.editing ||
       draft.wineId ||
+      draft.vintageYear ||
       draft.externalWineId ||
       draft.name ||
       draft.purchaseLocationId ||

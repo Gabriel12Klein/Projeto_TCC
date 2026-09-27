@@ -61,3 +61,21 @@ it('valida o rótulo e o local sem exigir foto no registro da compra', () => {
     }),
   ).toEqual({});
 });
+it('exige a safra quando o vinho oficial possui safras cadastradas', () => {
+  const data = {
+    source: 'VINICULA',
+    winerySelection: 'VINUM',
+    wineId: 'vinho',
+    vintageYear: '',
+    vintageRequired: true,
+    externalWineId: '',
+    name: '',
+    qty: '1',
+    purchaseLocationId: 'local',
+    purchaseLocation: '',
+  };
+  expect(validatePurchase(data)).toEqual({
+    vintageYear: 'Selecione a safra do vinho oficial.',
+  });
+  expect(validatePurchase({ ...data, vintageYear: '2024' })).toEqual({});
+});

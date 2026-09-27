@@ -34,6 +34,12 @@ function render(title: string, loaded = false, withBottle = false) {
       [{ id: 'mercado', name: 'Supermercado Central', createdAt: '', updatedAt: '' }],
     );
     client.setQueryData(['public-wines'], [{ id: 'oficial', name: 'Vinho oficial VINUM', slug: 'oficial' }]);
+    client.setQueryData(['public-wine-detail', 'oficial'], {
+      id: 'oficial',
+      name: 'Vinho oficial VINUM',
+      slug: 'oficial',
+      vintages: [{ id: 'safra-2024', identifier: 'SF24', year: 2024, grapes: [], batches: [] }],
+    });
     client.setQueryData(
       ['customer-external-wines', 'catena'],
       [
@@ -150,4 +156,22 @@ it('mostra somente os vinhos da vinícola externa selecionada e locais cadastrad
   expect(html).not.toContain('Vinho oficial VINUM</option></select>');
   expect(html).toContain('Supermercado Central');
   expect(html).not.toContain('Foto da garrafa');
+});
+it('mostra as safras do vinho oficial selecionado', () => {
+  storedDraft = JSON.stringify({
+    open: true,
+    source: 'VINICULA',
+    winerySelection: 'VINUM',
+    wineId: 'oficial',
+    vintageYear: '',
+    externalWineId: '',
+    name: '',
+    qty: '1',
+    purchaseLocationId: 'mercado',
+    purchaseLocation: '',
+    editing: null,
+  });
+  const html = render('Meus vinhos', true);
+  expect(html).toContain('Safra');
+  expect(html).toContain('2024 · SF24');
 });

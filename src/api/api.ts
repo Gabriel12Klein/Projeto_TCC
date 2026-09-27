@@ -270,6 +270,7 @@ export const api = {
           externalWineId?: string;
           externalWineryId?: string;
           wineName?: string;
+          vintageYear?: number;
           quantityBottles: number;
         }>;
       },

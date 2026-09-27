@@ -220,7 +220,7 @@ describe('Integridade real no PostgreSQL', () => {
           source: 'VINICULA',
           purchaseDate: new Date(),
           purchaseLocation: 'Supermercado',
-          items: [{ wineId: wineIds[0], quantityBottles: 2 }],
+          items: [{ wineId: wineIds[0], vintageYear: 2099, quantityBottles: 2 }],
         }),
       ),
     );
