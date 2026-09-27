@@ -1,4 +1,5 @@
-import { confirmLeave } from '../../../ui/confirmLeave';
+import { needsLeaveConfirmation } from '../../../ui/confirmLeave';
+import ConfirmDialog from '../../../ui/ConfirmDialog';
 import { updateMaskedInput } from '../../../ui/maskedInput';
 import { formatPhone, phoneSchema, maskCnpj, cnpjSchema } from '../../../../shared/contact';
 import { useFormFeedback } from '../../../ui/useFormFeedback';
@@ -22,6 +23,7 @@ export default function AdminAccountMenu({ user, onUserUpdate, onOpenModule }: P
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [panel, setPanel] = useState<Panel | null>(null);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -39,8 +41,20 @@ export default function AdminAccountMenu({ user, onUserUpdate, onOpenModule }: P
   useEffect(() => {
     if (panel && !dialog.current?.open) dialog.current?.showModal();
   }, [panel]);
-  function close() { if (!confirmLeave(busy, dirty, message => window.confirm(message))) return false; dialog.current?.close(); setPanel(null); setDirty(false); trigger.current?.focus(); return true; }
-  function choose(next: Panel) { if (next === panel) { setOpen(false); return; } if (!confirmLeave(busy, dirty, message => window.confirm(message))) return; setDirty(false); setOpen(false); setPanel(next); }
+  function finishClose() { dialog.current?.close(); setPanel(null); setDirty(false); trigger.current?.focus(); }
+  function requestAction(action: () => void) {
+    if (busy) return;
+    if (needsLeaveConfirmation(busy, dirty)) {
+      setPendingAction(() => action);
+      return;
+    }
+    action();
+  }
+  function close() { requestAction(finishClose); }
+  function choose(next: Panel) {
+    if (next === panel) { setOpen(false); return; }
+    requestAction(() => { setDirty(false); setOpen(false); setPanel(next); });
+  }
   return <div className="admin-account" ref={menuRef}>
     <button ref={trigger} type="button" className="admin-account__trigger" aria-expanded={open} aria-controls={menuId} onClick={() => setOpen(!open)}>
       <img src={profileIcon} alt="" />
@@ -65,10 +79,24 @@ export default function AdminAccountMenu({ user, onUserUpdate, onOpenModule }: P
             {query.isPending && <p role="status">Carregando cadastro...</p>}
             {query.isError && <div role="alert"><p>{query.error.message}</p><button type="button" onClick={() => void query.refetch()}>Tentar novamente</button></div>}
             {query.data && <AccountForm key={query.data.winery.id} data={query.data} onUserUpdate={onUserUpdate} onCancel={close} onDirtyChange={setDirty} onBusyChange={setBusy} />}
-          </> : <RegistrationSummary onOpenModule={module => { if (close()) onOpenModule(module); }} />}
+          </> : <RegistrationSummary onOpenModule={module => requestAction(() => { finishClose(); onOpenModule(module); })} />}
         </div>
       </>}
     </dialog>
+    <ConfirmDialog
+      open={Boolean(pendingAction)}
+      title="Descartar alterações?"
+      description="Existem alterações não salvas. Elas serão descartadas ao sair deste cadastro."
+      cancelLabel="Continuar editando"
+      confirmLabel="Descartar alterações"
+      variant="destructive"
+      onCancel={() => setPendingAction(null)}
+      onConfirm={() => {
+        const action = pendingAction;
+        setPendingAction(null);
+        action?.();
+      }}
+    />
   </div>;
 }
 

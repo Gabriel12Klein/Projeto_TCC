@@ -8,6 +8,7 @@ import viewIcon from '../../../assets/admin/common/view.png';
 import editIcon from '../../../assets/admin/common/edit.png';
 import deleteIcon from '../../../assets/admin/common/delete.png';
 import dividerLarge from '../../../assets/admin/common/divider-large.png';
+import ConfirmDialog from '../../../ui/ConfirmDialog';
 
 const statusClasses = {
   ativa: 'bg-[#e7f3e2] text-[#2d772d]',
@@ -32,13 +33,14 @@ export default function ModuleRecords({ config, refreshKey, onEdit, onNew }) {
   const [status, setStatus] = useState('');
   const [sort, setSort] = useState('');
   const [selected, setSelected] = useState<Record<string, unknown> | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Record<string, any> | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState(false);
   const deletingRef = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const detailTrigger = useRef<HTMLButtonElement | null>(null);
   useEffect(() => { if (selected) dialog.current?.showModal(); }, [selected]);
-  useEffect(() => { setQuery(''); setStatus(''); setSort(''); setPage(1); setActionMessage(''); setSelected(null); dialog.current?.close(); }, [config.key]);
+  useEffect(() => { setQuery(''); setStatus(''); setSort(''); setPage(1); setActionMessage(''); setSelected(null); setPendingDelete(null); dialog.current?.close(); }, [config.key]);
   function closeDetails() { dialog.current?.close(); setSelected(null); detailTrigger.current?.focus(); }
   const pageSize=5;
   const { data: items = [], isLoading, error, refetch, isFetching } = useQuery({
@@ -50,12 +52,10 @@ export default function ModuleRecords({ config, refreshKey, onEdit, onNew }) {
   const currentPage = Math.min(page, pages);
   const visible=filtered.slice((currentPage-1)*pageSize,currentPage*pageSize);
 
-  async function remove(event,item){
-    event.preventDefault();
-    event.stopPropagation();
+  async function remove(item){
     if (deletingRef.current) return;
-    if(!confirm(`Excluir ${config.singular} “${item.name || item.code || item.identifier}”? Esta ação não pode ser desfeita. Registros com vínculos protegidos não poderão ser excluídos.`)) return;
     deletingRef.current = true; setDeleting(true); setActionError(false);
+    setPendingDelete(null);
     setActionMessage('');
     try {
       await api.remove(config.key,item.id);
@@ -120,7 +120,7 @@ export default function ModuleRecords({ config, refreshKey, onEdit, onNew }) {
     <div className="w-full max-w-full border border-[#e4ded9] rounded-[9px] overflow-auto bg-white [scrollbar-width:thin] [scrollbar-color:#998c87_#f1eeeb] [&::-webkit-scrollbar]:w-[9px] [&::-webkit-scrollbar]:h-[9px] [&::-webkit-scrollbar-thumb]:bg-[#998c87] [&::-webkit-scrollbar-thumb]:rounded-lg [&::-webkit-scrollbar-track]:bg-[#f1eeeb]">
       <table className="w-full border-collapse min-w-[980px] text-[clamp(11px,0.82vw,12.5px)]">
         <thead><tr>{config.columns.map(([,label])=><th className="h-11 text-left px-[clamp(8px,0.8vw,12px)] text-[#4a272d] font-bold bg-[#fffdfa] border-b border-[#e7e0dc] whitespace-nowrap" key={label}>{label}</th>)}<th className="h-11 text-left px-[clamp(8px,0.8vw,12px)] text-[#4a272d] font-bold bg-[#fffdfa] border-b border-[#e7e0dc] whitespace-nowrap">Ações</th></tr></thead>
-        <tbody>{visible.map(item=><tr key={item.id} className="[&:last-child>td]:border-b-0">{config.columns.map(([col])=><td className="h-14 py-[7px] px-[clamp(8px,0.8vw,12px)] border-b border-[#ece6e2] text-[#453b38] max-w-[190px] align-middle" key={col}>{display(col,item[col])}</td>)}<td className="h-14 py-[7px] px-[clamp(8px,0.8vw,12px)] border-b border-[#ece6e2] text-[#453b38] align-middle"><div className="flex gap-1.5 whitespace-nowrap"><button type="button" className={actionButton} title="Visualizar" onClick={event=>{ detailTrigger.current = event.currentTarget; setSelected(item); }}><img className="w-full h-full object-contain transition-transform duration-150 group-hover:scale-[1.08]" src={viewIcon} alt="Visualizar"/></button><button type="button" className={actionButton} title="Editar" disabled={deleting} onClick={()=>onEdit(item)}><img className="w-full h-full object-contain" src={editIcon} alt="Editar"/></button><button type="button" className={`${actionButton} border-[#db6a6e] hover:bg-[#fff0f0] hover:border-[#c9343d]`} title="Excluir" disabled={deleting} onClick={(event)=>remove(event,item)}><img className="w-full h-full object-contain" src={deleteIcon} alt="Excluir"/></button></div></td></tr>)}</tbody>
+        <tbody>{visible.map(item=><tr key={item.id} className="[&:last-child>td]:border-b-0">{config.columns.map(([col])=><td className="h-14 py-[7px] px-[clamp(8px,0.8vw,12px)] border-b border-[#ece6e2] text-[#453b38] max-w-[190px] align-middle" key={col}>{display(col,item[col])}</td>)}<td className="h-14 py-[7px] px-[clamp(8px,0.8vw,12px)] border-b border-[#ece6e2] text-[#453b38] align-middle"><div className="flex gap-1.5 whitespace-nowrap"><button type="button" className={actionButton} title="Visualizar" onClick={event=>{ detailTrigger.current = event.currentTarget; setSelected(item); }}><img className="w-full h-full object-contain transition-transform duration-150 group-hover:scale-[1.08]" src={viewIcon} alt="Visualizar"/></button><button type="button" className={actionButton} title="Editar" disabled={deleting} onClick={()=>onEdit(item)}><img className="w-full h-full object-contain" src={editIcon} alt="Editar"/></button><button type="button" className={`${actionButton} border-[#db6a6e] hover:bg-[#fff0f0] hover:border-[#c9343d]`} title="Excluir" disabled={deleting} onClick={()=>setPendingDelete(item)}><img className="w-full h-full object-contain" src={deleteIcon} alt="Excluir"/></button></div></td></tr>)}</tbody>
       </table>
     </div>
 
@@ -138,5 +138,17 @@ export default function ModuleRecords({ config, refreshKey, onEdit, onNew }) {
       {selected && <dl className="mt-5 grid gap-4 sm:grid-cols-2">{recordDetails(config, selected).map(({key,label,value}) => <div key={key} className={value.length > 100 ? 'sm:col-span-2' : ''}><dt className="font-semibold">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words">{value}</dd></div>)}</dl>}
       <button type="button" onClick={closeDetails} className="mt-6 rounded-lg border border-[#851329] px-4 py-2">Fechar</button>
     </dialog>
+    <ConfirmDialog
+      open={Boolean(pendingDelete)}
+      title={`Excluir ${config.singular}?`}
+      description={`O registro “${pendingDelete?.name || pendingDelete?.code || pendingDelete?.identifier || ''}” será excluído permanentemente. Registros com vínculos protegidos não poderão ser excluídos.`}
+      cancelLabel="Manter registro"
+      confirmLabel={`Excluir ${config.singular}`}
+      pending={deleting}
+      pendingLabel="Excluindo…"
+      variant="destructive"
+      onCancel={() => setPendingDelete(null)}
+      onConfirm={() => pendingDelete && void remove(pendingDelete)}
+    />
   </section>;
 }

@@ -13,6 +13,7 @@ import BottleHistory from './BottleHistory';
 import { persistOrderDraft, readOrderDraft } from './orderDraft';
 import InventoryDashboard from './InventoryDashboard';
 import ConfirmDeleteDialog from '../../ui/ConfirmDeleteDialog';
+import ConfirmDialog from '../../ui/ConfirmDialog';
 
 const input =
   'w-full rounded-xl border border-[#d9cbbd] bg-white px-4 py-3 text-[#321b1c] outline-none focus:border-[#8b2638]';
@@ -82,6 +83,13 @@ function Orders({ userId }: { userId: string }) {
   const [name, setName] = useState(restoredDraft?.name ?? '');
   const [qty, setQty] = useState(restoredDraft?.qty ?? '1');
   const [message, setMessage] = useState('');
+  const [confirmation, setConfirmation] = useState<{
+    title: string;
+    description: string;
+    confirmLabel: string;
+    cancelLabel: string;
+    action: () => void;
+  } | null>(null);
   const [deleting, setDeleting] = useState<{
     orderId: string;
     itemId: string;
@@ -89,6 +97,42 @@ function Orders({ userId }: { userId: string }) {
     quantity: number;
     mode: 'one' | 'all';
   } | null>(null);
+
+  function prepareNewWine() {
+    feedback.show({}, false);
+    setEditing(null);
+    setPurchaseLocationId('');
+    setPurchaseLocation('');
+    setPurchasePhoto(null);
+    setPhotoNeedsReselect(false);
+    setDraftRecovered(false);
+    setWineId('');
+    setExternalWineId('');
+    setWinerySelection('VINUM');
+    setSource('VINICULA');
+    setName('');
+    setQty('1');
+    setMessage('');
+    setOpen(true);
+  }
+
+  function prepareEdit(order: CustomerOrder, item: CustomerOrder['items'][number]) {
+    feedback.show({}, false);
+    setEditing({ orderId: order.id, itemId: item.id, date: order.purchaseDate, photo: item.photoPath });
+    setMessage('');
+    setPurchaseLocationId(order.purchaseLocationId ?? 'LEGACY');
+    setPurchaseLocation(order.purchaseLocation ?? '');
+    setPurchasePhoto(null);
+    setPhotoNeedsReselect(false);
+    setDraftRecovered(false);
+    setSource(order.source);
+    setWineId(item.wineId ?? '');
+    setExternalWineId(item.externalWineId ?? '');
+    setWinerySelection(item.wineId ? 'VINUM' : (item.externalWine?.externalWinery.id ?? 'LEGACY'));
+    setName(item.wineName);
+    setQty(String(item.quantityBottles));
+    setOpen(true);
+  }
   const externalWinesQuery = useQuery({
     queryKey: ['customer-external-wines', winerySelection],
     queryFn: () => api.customer.externalWines(winerySelection),
@@ -247,26 +291,15 @@ function Orders({ userId }: { userId: string }) {
           className="mt-5 rounded-xl bg-[#d0a565] px-5 py-3 font-semibold text-[#4c151c]"
           disabled={save.isPending}
           onClick={() => {
-            if (
-              (name || wineId || externalWineId || purchaseLocationId || purchaseLocation || purchasePhoto) &&
-              !window.confirm('Descartar o preenchimento atual e cadastrar outro vinho?')
-            )
-              return;
-            feedback.show({}, false);
-            setEditing(null);
-            setPurchaseLocationId('');
-            setPurchaseLocation('');
-            setPurchasePhoto(null);
-            setPhotoNeedsReselect(false);
-            setDraftRecovered(false);
-            setWineId('');
-            setExternalWineId('');
-            setWinerySelection('VINUM');
-            setSource('VINICULA');
-            setName('');
-            setQty('1');
-            setMessage('');
-            setOpen(true);
+            if (name || wineId || externalWineId || purchaseLocationId || purchaseLocation || purchasePhoto) {
+              setConfirmation({
+                title: 'Cadastrar outro vinho?',
+                description: 'O preenchimento atual será descartado para iniciar um novo cadastro.',
+                cancelLabel: 'Continuar editando',
+                confirmLabel: 'Cadastrar outro vinho',
+                action: prepareNewWine,
+              });
+            } else prepareNewWine();
           }}
         >
           + Registrar vinho na adega
@@ -521,14 +554,16 @@ function Orders({ userId }: { userId: string }) {
                 type="button"
                 className="rounded-xl border border-[#7d1d2d] px-5 py-3 font-semibold text-[#7d1d2d]"
                 disabled={save.isPending}
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      'Fechar este formulário? O rascunho ficará disponível nesta sessão até você salvar ou cadastrar outro vinho.',
-                    )
-                  )
-                    setOpen(false);
-                }}
+                onClick={() =>
+                  setConfirmation({
+                    title: 'Fechar formulário?',
+                    description:
+                      'O rascunho ficará disponível nesta sessão até você salvar ou cadastrar outro vinho.',
+                    cancelLabel: 'Continuar editando',
+                    confirmLabel: 'Fechar formulário',
+                    action: () => setOpen(false),
+                  })
+                }
               >
                 Cancelar
               </button>
@@ -613,33 +648,16 @@ function Orders({ userId }: { userId: string }) {
                             className="rounded-lg border border-[#9a6a2d] px-3 py-2 text-xs font-semibold text-[#7d5b2b]"
                             disabled={save.isPending}
                             onClick={() => {
-                              if (
-                                open &&
-                                !window.confirm('Abrir outro vinho e descartar o preenchimento atual?')
-                              )
-                                return;
-                              feedback.show({}, false);
-                              setEditing({
-                                orderId: order.id,
-                                itemId: item.id,
-                                date: order.purchaseDate,
-                                photo: item.photoPath,
-                              });
-                              setMessage('');
-                              setPurchaseLocationId(order.purchaseLocationId ?? 'LEGACY');
-                              setPurchaseLocation(order.purchaseLocation ?? '');
-                              setPurchasePhoto(null);
-                              setPhotoNeedsReselect(false);
-                              setDraftRecovered(false);
-                              setSource(order.source);
-                              setWineId(item.wineId ?? '');
-                              setExternalWineId(item.externalWineId ?? '');
-                              setWinerySelection(
-                                item.wineId ? 'VINUM' : (item.externalWine?.externalWinery.id ?? 'LEGACY'),
-                              );
-                              setName(item.wineName);
-                              setQty(String(item.quantityBottles));
-                              setOpen(true);
+                              if (open) {
+                                setConfirmation({
+                                  title: 'Abrir outro vinho?',
+                                  description:
+                                    'O preenchimento atual será descartado antes de abrir o vinho selecionado.',
+                                  cancelLabel: 'Continuar editando',
+                                  confirmLabel: 'Abrir outro vinho',
+                                  action: () => prepareEdit(order, item),
+                                });
+                              } else prepareEdit(order, item);
                             }}
                           >
                             Editar
@@ -669,6 +687,19 @@ function Orders({ userId }: { userId: string }) {
           </div>
         ) : null}
       </section>
+      <ConfirmDialog
+        open={Boolean(confirmation)}
+        title={confirmation?.title ?? ''}
+        description={confirmation?.description ?? ''}
+        cancelLabel={confirmation?.cancelLabel}
+        confirmLabel={confirmation?.confirmLabel ?? 'Confirmar'}
+        variant="warning"
+        onCancel={() => setConfirmation(null)}
+        onConfirm={() => {
+          confirmation?.action();
+          setConfirmation(null);
+        }}
+      />
       <ConfirmDeleteDialog
         open={Boolean(deleting)}
         title={deleting?.mode === 'all' ? 'Excluir todas as garrafas?' : 'Excluir garrafa?'}

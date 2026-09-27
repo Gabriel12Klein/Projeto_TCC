@@ -3,26 +3,71 @@ import { updateMaskedInput } from '../../ui/maskedInput';
 import { useFormFeedback } from '../../ui/useFormFeedback';
 import FieldError from '../../ui/FieldError';
 import PasswordInput, { PasswordChecklist } from '../../ui/PasswordInput';
+import ConfirmDialog from '../../ui/ConfirmDialog';
 import { passwordSchema } from '../../../shared/password';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/api';
 import type { User } from '../../types';
 import { ageFromBirthDate } from '../../../shared/profile';
 
-
-
 const stateCodes = new Set([
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
-  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+  'AC',
+  'AL',
+  'AP',
+  'AM',
+  'BA',
+  'CE',
+  'DF',
+  'ES',
+  'GO',
+  'MA',
+  'MT',
+  'MS',
+  'MG',
+  'PA',
+  'PB',
+  'PR',
+  'PE',
+  'PI',
+  'RJ',
+  'RN',
+  'RS',
+  'RO',
+  'RR',
+  'SC',
+  'SP',
+  'SE',
+  'TO',
 ]);
 
 const stateNames: Record<string, string> = {
-  ACRE: 'AC', ALAGOAS: 'AL', AMAPA: 'AP', AMAZONAS: 'AM', BAHIA: 'BA', CEARA: 'CE',
-  'DISTRITO FEDERAL': 'DF', 'ESPIRITO SANTO': 'ES', GOIAS: 'GO', MARANHAO: 'MA',
-  'MATO GROSSO': 'MT', 'MATO GROSSO DO SUL': 'MS', 'MINAS GERAIS': 'MG', PARA: 'PA',
-  PARAIBA: 'PB', PARANA: 'PR', PERNAMBUCO: 'PE', PIAUI: 'PI', 'RIO DE JANEIRO': 'RJ',
-  'RIO GRANDE DO NORTE': 'RN', 'RIO GRANDE DO SUL': 'RS', RONDONIA: 'RO', RORAIMA: 'RR',
-  'SANTA CATARINA': 'SC', 'SAO PAULO': 'SP', SERGIPE: 'SE', TOCANTINS: 'TO',
+  ACRE: 'AC',
+  ALAGOAS: 'AL',
+  AMAPA: 'AP',
+  AMAZONAS: 'AM',
+  BAHIA: 'BA',
+  CEARA: 'CE',
+  'DISTRITO FEDERAL': 'DF',
+  'ESPIRITO SANTO': 'ES',
+  GOIAS: 'GO',
+  MARANHAO: 'MA',
+  'MATO GROSSO': 'MT',
+  'MATO GROSSO DO SUL': 'MS',
+  'MINAS GERAIS': 'MG',
+  PARA: 'PA',
+  PARAIBA: 'PB',
+  PARANA: 'PR',
+  PERNAMBUCO: 'PE',
+  PIAUI: 'PI',
+  'RIO DE JANEIRO': 'RJ',
+  'RIO GRANDE DO NORTE': 'RN',
+  'RIO GRANDE DO SUL': 'RS',
+  RONDONIA: 'RO',
+  RORAIMA: 'RR',
+  'SANTA CATARINA': 'SC',
+  'SAO PAULO': 'SP',
+  SERGIPE: 'SE',
+  TOCANTINS: 'TO',
 };
 
 function normalizeState(value: string) {
@@ -78,10 +123,14 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
   const [editing, setEditing] = useState(false);
   const feedback = useFormFeedback('profile');
   const sending = useRef(false);
-  const [form, setForm] = useState(() => ({ ...profileFormFromUser(user), ...(readProfileDraft(user) ?? {}) }));
+  const [form, setForm] = useState(() => ({
+    ...profileFormFromUser(user),
+    ...(readProfileDraft(user) ?? {}),
+  }));
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
   const [saving, setSaving] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const skipNextDraftPersist = useRef(false);
   useEffect(() => {
     if (skipNextDraftPersist.current) {
@@ -107,9 +156,7 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
     { label: 'Telefone', ok: !form.phone || phoneSchema.safeParse(form.phone).success },
     {
       label: 'Nova senha',
-      ok: !form.newPassword || (
-        passwordSchema.safeParse(form.newPassword).success
-      ),
+      ok: !form.newPassword || passwordSchema.safeParse(form.newPassword).success,
     },
   ];
   async function save(event: React.FormEvent) {
@@ -118,18 +165,30 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
     const issues = feedback.nativeErrors(event.currentTarget as HTMLFormElement);
     const phone = phoneSchema.safeParse(form.phone);
     if (!phone.success) issues.phone = phone.error.issues[0].message;
-    if (form.newPassword) { const password = passwordSchema.safeParse(form.newPassword); if (!password.success) issues.newPassword = password.error.issues[0].message; }
+    if (form.newPassword) {
+      const password = passwordSchema.safeParse(form.newPassword);
+      if (!password.success) issues.newPassword = password.error.issues[0].message;
+    }
     if (form.state && !normalizeState(form.state)) issues.state = 'Informe uma UF ou nome de estado válido.';
-    if (form.birthDate && ageFromBirthDate(form.birthDate) === null) issues.birthDate = 'Informe uma data de nascimento válida, não futura.';
+    if (form.birthDate && ageFromBirthDate(form.birthDate) === null)
+      issues.birthDate = 'Informe uma data de nascimento válida, não futura.';
     feedback.show(issues);
-    if (Object.keys(issues).length) { setMessageType('error'); setMessage('Confira os campos destacados. Seus dados foram mantidos.'); return; }
+    if (Object.keys(issues).length) {
+      setMessageType('error');
+      setMessage('Confira os campos destacados. Seus dados foram mantidos.');
+      return;
+    }
     sending.current = true;
     setSaving(true);
     setMessage('');
     try {
       if (form.newPassword) {
         const checked = passwordSchema.safeParse(form.newPassword);
-        if (!checked.success) { setMessageType('error'); setMessage(checked.error.issues[0].message); return; }
+        if (!checked.success) {
+          setMessageType('error');
+          setMessage(checked.error.issues[0].message);
+          return;
+        }
       }
       const normalizedState = normalizeState(form.state);
       if (form.addressNumber && !/^\d+$/.test(form.addressNumber)) {
@@ -238,9 +297,17 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
       <div className="mb-8">
         <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#9a6a2d]">Minha conta</p>
         <h1 className="mt-2 font-playfair text-4xl font-semibold text-[#5b0c1b]">Editar informações</h1>
-        <p className="mt-3 text-[#715f59]">Nome e e-mail são obrigatórios. Os demais dados são opcionais; a idade é calculada pela data de nascimento.</p>
+        <p className="mt-3 text-[#715f59]">
+          Nome e e-mail são obrigatórios. Os demais dados são opcionais; a idade é calculada pela data de
+          nascimento.
+        </p>
       </div>
-      <form noValidate aria-busy={saving} onSubmit={save} className="rounded-3xl border border-[#dfd0bd] bg-white p-6 shadow-sm md:p-9">
+      <form
+        noValidate
+        aria-busy={saving}
+        onSubmit={save}
+        className="rounded-3xl border border-[#dfd0bd] bg-white p-6 shadow-sm md:p-9"
+      >
         <div className="grid gap-6 md:grid-cols-2">
           <label className="font-semibold" htmlFor="profile-name">
             Nome completo
@@ -249,15 +316,25 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
               minLength={3}
               maxLength={120}
               autoComplete="name"
-              {...feedback.field('name')} value={form.name}
+              {...feedback.field('name')}
+              value={form.name}
               onChange={(event) => setField('name', event.target.value)}
               required
             />
-          <FieldError id="profile-name-error" message={feedback.errors.name} /></label>
+            <FieldError id="profile-name-error" message={feedback.errors.name} />
+          </label>
           <label className="font-semibold" htmlFor="profile-email">
             E-mail
-            <input className={inputClass} type="email" {...feedback.field('email')} value={form.email} onChange={(event) => setField('email', event.target.value)} required />
-          <FieldError id="profile-email-error" message={feedback.errors.email} /></label>
+            <input
+              className={inputClass}
+              type="email"
+              {...feedback.field('email')}
+              value={form.email}
+              onChange={(event) => setField('email', event.target.value)}
+              required
+            />
+            <FieldError id="profile-email-error" message={feedback.errors.email} />
+          </label>
           <label className="font-semibold">
             Idade
             <input
@@ -274,10 +351,12 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
             <input
               className={inputClass}
               type="date"
-              {...feedback.field('birthDate')} value={form.birthDate}
+              {...feedback.field('birthDate')}
+              value={form.birthDate}
               onChange={(event) => setField('birthDate', event.target.value)}
             />
-          <FieldError id="profile-birthDate-error" message={feedback.errors.birthDate} /></label>
+            <FieldError id="profile-birthDate-error" message={feedback.errors.birthDate} />
+          </label>
           <label className="font-semibold" htmlFor="profile-phone">
             Telefone
             <input
@@ -285,42 +364,51 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
               type="tel"
               autoComplete="tel"
               placeholder="(55) 99935-4038"
-              {...feedback.field('phone')} value={form.phone}
-              onChange={(event) => updateMaskedInput(event, formatPhone, value => setField('phone', value))}
+              {...feedback.field('phone')}
+              value={form.phone}
+              onChange={(event) => updateMaskedInput(event, formatPhone, (value) => setField('phone', value))}
             />
-          <FieldError id="profile-phone-error" message={feedback.errors.phone} /></label>
+            <FieldError id="profile-phone-error" message={feedback.errors.phone} />
+          </label>
           <label className="font-semibold" htmlFor="profile-street">
             Rua
             <input
               className={inputClass}
-              {...feedback.field('street')} value={form.street}
+              {...feedback.field('street')}
+              value={form.street}
               onChange={(event) => setField('street', event.target.value)}
             />
-          <FieldError id="profile-street-error" message={feedback.errors.street} /></label>
+            <FieldError id="profile-street-error" message={feedback.errors.street} />
+          </label>
           <label className="font-semibold" htmlFor="profile-addressNumber">
             Número
             <input
               className={inputClass}
-              {...feedback.field('addressNumber')} value={form.addressNumber}
+              {...feedback.field('addressNumber')}
+              value={form.addressNumber}
               inputMode="numeric"
               pattern="[0-9]*"
               maxLength={20}
               onChange={(event) => setField('addressNumber', event.target.value.replace(/\D/g, ''))}
             />
-          <FieldError id="profile-addressNumber-error" message={feedback.errors.addressNumber} /></label>
+            <FieldError id="profile-addressNumber-error" message={feedback.errors.addressNumber} />
+          </label>
           <label className="font-semibold" htmlFor="profile-city">
             Cidade
             <input
               className={inputClass}
-              {...feedback.field('city')} value={form.city}
+              {...feedback.field('city')}
+              value={form.city}
               onChange={(event) => setField('city', event.target.value)}
             />
-          <FieldError id="profile-city-error" message={feedback.errors.city} /></label>
+            <FieldError id="profile-city-error" message={feedback.errors.city} />
+          </label>
           <label className="font-semibold" htmlFor="profile-state">
             Estado
             <input
               className={inputClass}
-              {...feedback.field('state')} value={form.state}
+              {...feedback.field('state')}
+              value={form.state}
               onChange={(event) => setField('state', event.target.value)}
               onBlur={() => {
                 const normalized = normalizeState(form.state);
@@ -329,25 +417,40 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
               placeholder="Ex.: RS ou Rio Grande do Sul"
               maxLength={60}
             />
-          <FieldError id="profile-state-error" message={feedback.errors.state} /></label>
+            <FieldError id="profile-state-error" message={feedback.errors.state} />
+          </label>
           <label className="font-semibold" htmlFor="profile-country">
             País
             <input
               className={inputClass}
-              {...feedback.field('country')} value={form.country}
+              {...feedback.field('country')}
+              value={form.country}
               onChange={(event) => setField('country', event.target.value)}
             />
-          <FieldError id="profile-country-error" message={feedback.errors.country} /></label>
+            <FieldError id="profile-country-error" message={feedback.errors.country} />
+          </label>
         </div>
         <div className="my-8 h-px bg-[#eee3d5]" />
-        <section className="mb-8 rounded-2xl border border-[#eadcca] bg-[#fffaf3] p-5" aria-label="Checklist do perfil">
+        <section
+          className="mb-8 rounded-2xl border border-[#eadcca] bg-[#fffaf3] p-5"
+          aria-label="Checklist do perfil"
+        >
           <h2 className="font-playfair text-2xl font-semibold text-[#5b0c1b]">Checklist do perfil</h2>
-          <p className="mt-1 text-sm text-[#715f59]">Confira os campos preenchidos corretamente antes de salvar.</p>
+          <p className="mt-1 text-sm text-[#715f59]">
+            Confira os campos preenchidos corretamente antes de salvar.
+          </p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {profileChecklist.map((item) => (
-              <div key={item.label} className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${item.ok ? 'bg-[#eaf5e6] text-[#2d772d]' : 'bg-[#fff0d8] text-[#9a6200]'}`}>
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white font-bold">{item.ok ? '✓' : '!'}</span>
-                <span>{item.label}: {item.ok ? 'correto' : 'verificar'}</span>
+              <div
+                key={item.label}
+                className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${item.ok ? 'bg-[#eaf5e6] text-[#2d772d]' : 'bg-[#fff0d8] text-[#9a6200]'}`}
+              >
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white font-bold">
+                  {item.ok ? '✓' : '!'}
+                </span>
+                <span>
+                  {item.label}: {item.ok ? 'correto' : 'verificar'}
+                </span>
               </div>
             ))}
           </div>
@@ -362,15 +465,30 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
             className={inputClass}
             type="password"
             minLength={8}
-            {...feedback.field('newPassword')} value={form.newPassword}
+            {...feedback.field('newPassword')}
+            value={form.newPassword}
             onChange={(event) => setField('newPassword', event.target.value)}
           />
-        <FieldError id="profile-newPassword-error" message={feedback.errors.newPassword} /></label>
+          <FieldError id="profile-newPassword-error" message={feedback.errors.newPassword} />
+        </label>
         <PasswordChecklist value={form.newPassword} />
         <div className="mt-8 flex flex-wrap gap-3">
-          {(form.email.trim().toLowerCase() !== user.email || form.newPassword) && <label htmlFor="profile-currentPassword">Senha atual
-            <PasswordInput visibilityLabel="senha atual" className={inputClass} type="password" autoComplete="current-password" {...feedback.field('currentPassword')} value={form.currentPassword} onChange={(event) => setField('currentPassword', event.target.value)} required />
-          <FieldError id="profile-currentPassword-error" message={feedback.errors.currentPassword} /></label>}
+          {(form.email.trim().toLowerCase() !== user.email || form.newPassword) && (
+            <label htmlFor="profile-currentPassword">
+              Senha atual
+              <PasswordInput
+                visibilityLabel="senha atual"
+                className={inputClass}
+                type="password"
+                autoComplete="current-password"
+                {...feedback.field('currentPassword')}
+                value={form.currentPassword}
+                onChange={(event) => setField('currentPassword', event.target.value)}
+                required
+              />
+              <FieldError id="profile-currentPassword-error" message={feedback.errors.currentPassword} />
+            </label>
+          )}
           <button
             disabled={saving}
             className="rounded-xl bg-[#5b0c1b] px-7 py-3 font-semibold text-[#f4d58e] disabled:opacity-60"
@@ -381,24 +499,36 @@ export default function ProfilePage({ user, onUpdate }: { user: User; onUpdate: 
           <button
             className="rounded-xl border border-[#cdbbaf] px-7 py-3 font-semibold text-[#5b0c1b]"
             type="button"
-            onClick={() => {
-              if (saving) return;
-              if (!window.confirm('Descartar as alterações não salvas do perfil?')) return;
-              clearProfileDraft(user);
-              setForm(profileFormFromUser(user));
-              setEditing(false);
-              setMessage('');
-            }}
+            onClick={() => !saving && setConfirmDiscard(true)}
           >
             Cancelar
           </button>
         </div>
         {message ? (
-          <p className={`mt-4 text-sm ${messageType === 'success' ? 'text-[#2d772d]' : 'text-[#7d1d2d]'}`} aria-live="polite">
+          <p
+            className={`mt-4 text-sm ${messageType === 'success' ? 'text-[#2d772d]' : 'text-[#7d1d2d]'}`}
+            aria-live="polite"
+          >
             {message}
           </p>
         ) : null}
       </form>
+      <ConfirmDialog
+        open={confirmDiscard}
+        title="Descartar alterações do perfil?"
+        description="As alterações não salvas serão descartadas e o perfil voltará aos dados salvos anteriormente."
+        cancelLabel="Continuar editando"
+        confirmLabel="Descartar alterações"
+        variant="destructive"
+        onCancel={() => setConfirmDiscard(false)}
+        onConfirm={() => {
+          clearProfileDraft(user);
+          setForm(profileFormFromUser(user));
+          setEditing(false);
+          setMessage('');
+          setConfirmDiscard(false);
+        }}
+      />
     </main>
   );
 }

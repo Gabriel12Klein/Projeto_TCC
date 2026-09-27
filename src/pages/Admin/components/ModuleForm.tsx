@@ -11,6 +11,7 @@ import qrIcon from '../../../assets/admin/lote/qrcode.png';
 import dividerLarge from '../../../assets/admin/common/divider-large.png';
 import { api } from '../../../api/api';
 import { selectVintage } from '../modules/Lote/selection';
+import ConfirmDialog from '../../../ui/ConfirmDialog';
 
 const draftFiles = new Map();
 
@@ -157,6 +158,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitted, setSubmitted] = useState(false);
   const [hydratedDraftKey, setHydratedDraftKey] = useState('');
+  const [pendingConfirmation, setPendingConfirmation] = useState<'cancel' | 'clear' | null>(null);
   const draftKey = `vinum_form_draft:${draftScope}:${initialData?.id ? String(initialData.id) : 'new'}`;
   useEffect(()=>{
     if (hydratedDraftKey === draftKey) return;
@@ -224,13 +226,23 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
   };
   function cancelForm() {
     const hasChanges = Object.entries(form).some(([name, value]) => value instanceof File || String(value ?? '') !== String(initialData?.[name] ?? ''));
-    if (confirmOnCancel && hasChanges && !window.confirm('Existem dados preenchidos. Deseja sair sem salvar?')) return;
+    if (confirmOnCancel && hasChanges) {
+      setPendingConfirmation('cancel');
+      return;
+    }
+    performCancel();
+  }
+
+  function performCancel() {
     clearDraft(draftKey);
     onCancel?.();
   }
 
   function clearForm() {
-    if (!window.confirm(form.__savedId ? 'O vinho já foi salvo. Limpar o formulário não exclui o cadastro; o envio da foto ficará pendente. Continuar?' : 'Limpar todos os campos e descartar este rascunho?')) return;
+    setPendingConfirmation('clear');
+  }
+
+  function performClear() {
     clearDraft(draftKey);
     setForm({});
     setTouched({});
@@ -356,5 +368,25 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
       <button type="button" className={secondaryButton} onClick={cancelForm}><img className="w-[25px] h-[25px] object-contain" src={cancelIcon} alt=""/>Cancelar</button>
     </div>}
     </fieldset>
+    <ConfirmDialog
+      open={pendingConfirmation !== null}
+      title={pendingConfirmation === 'cancel' ? 'Sair sem salvar?' : 'Limpar formulário?'}
+      description={
+        pendingConfirmation === 'cancel'
+          ? 'Existem dados preenchidos. O rascunho será descartado ao sair deste cadastro.'
+          : form.__savedId
+            ? 'O vinho já foi salvo. Limpar o formulário não exclui o cadastro; o envio da foto ficará pendente.'
+            : 'Todos os campos preenchidos e este rascunho serão descartados.'
+      }
+      cancelLabel="Continuar editando"
+      confirmLabel={pendingConfirmation === 'cancel' ? 'Sair sem salvar' : 'Limpar formulário'}
+      variant="destructive"
+      onCancel={() => setPendingConfirmation(null)}
+      onConfirm={() => {
+        if (pendingConfirmation === 'cancel') performCancel();
+        else if (pendingConfirmation === 'clear') performClear();
+        setPendingConfirmation(null);
+      }}
+    />
   </form>;
 }
