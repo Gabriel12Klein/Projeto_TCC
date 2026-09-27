@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CellarBottle } from '../../types';
-import { replaceBottlePreservingOrder } from './InventoryDashboard';
+import { replaceBottlePreservingOrder } from './BottleHistory';
 
 function bottle(id: string, status: CellarBottle['status'], bottleNumber: number) {
   return { id, status, bottleNumber } as CellarBottle;

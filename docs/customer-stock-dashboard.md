@@ -70,3 +70,11 @@ Não foram encontrados arrays, mocks ou fallbacks de garrafas fora do PostgreSQL
 ### Correção de espaçamento — versão 2.2.2
 
 - O estado vazio de `Meus vinhos` passou a usar o mesmo recuo horizontal do cabeçalho do card: 24 px em telas pequenas e 32 px a partir de telas médias.
+
+### Organização entre Dashboard e Meus vinhos — versão 2.2.3
+
+- O Dashboard mantém somente o resumo da adega, os quatro indicadores e o gráfico de consumo mensal.
+- A seção `Minhas garrafas` foi extraída sem recriação e passou a aparecer em `Meus vinhos`, preservando imagem, filtros, datas, detalhes e ações individuais.
+- A atualização em `Todos` continua preservando a posição visual da garrafa até uma troca de filtro ou nova carga.
+- Cadastrar ou editar um vinho agora também invalida a consulta da lista individual, mantendo cadastro e histórico sincronizados na mesma tela.
+- Não houve alteração de banco de dados, migration, endpoint ou regra de backend.

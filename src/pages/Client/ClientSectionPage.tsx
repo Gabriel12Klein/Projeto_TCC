@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/api';
 import type { CustomerOrder } from '../../types';
 import BottlePhotoPicker from './BottlePhotoPicker';
+import BottleHistory from './BottleHistory';
 import { persistOrderDraft, readOrderDraft } from './orderDraft';
 import InventoryDashboard from './InventoryDashboard';
 
@@ -91,6 +92,7 @@ function Orders({ userId }: { userId: string }) {
       setQty('1');
       await qc.invalidateQueries({ queryKey: ['customer-orders'] });
       await qc.invalidateQueries({ queryKey: ['customer-inventory'] });
+      await qc.invalidateQueries({ queryKey: ['customer-cellar-bottles'] });
       await qc.invalidateQueries({ queryKey: ['customer-inventory-dashboard'] });
     },
     onError: (e) => {
@@ -447,6 +449,7 @@ function Orders({ userId }: { userId: string }) {
           </div>
         ) : null}
       </section>
+      <BottleHistory />
     </Shell>
   );
 }
