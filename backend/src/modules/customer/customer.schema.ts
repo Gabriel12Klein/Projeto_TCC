@@ -86,10 +86,33 @@ export const externalWineSchema = privateNameSchema.extend({
   tastingNotes: optionalText(5000),
 });
 
+const civilDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+export function civilDateKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+export function todayCivilDate(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const value = Object.fromEntries(parts.map(({ type, value: part }) => [type, part]));
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
+function normalizeCivilDate(value: unknown) {
+  if (typeof value !== 'string' || !civilDatePattern.test(value)) return value;
+  const parsed = new Date(`${value}T12:00:00.000Z`);
+  return civilDateKey(parsed) === value ? parsed : new Date(Number.NaN);
+}
+
 export const bottleEventSchema = z.object({
-  occurredAt: z.coerce
-    .date()
-    .refine((date) => date <= new Date(), 'A data informada não pode estar no futuro.'),
+  occurredAt: z
+    .preprocess(normalizeCivilDate, z.coerce.date())
+    .refine((date) => civilDateKey(date) <= todayCivilDate(), 'A data informada não pode estar no futuro.'),
 });
 
 export type OrderInput = z.infer<typeof orderSchema>;

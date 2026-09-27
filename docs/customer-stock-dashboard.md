@@ -109,3 +109,22 @@ legado e evidências de validação estão documentados em
 - O teste de integração cobre redução de 5 para 4 unidades, exclusão total,
   duas compras do mesmo vinho, garrafas abertas e consumidas, movimentos
   dependentes, isolamento entre clientes e recálculo do Dashboard.
+
+## Datas e ficha individual — versão 2.8.0
+
+- Compra, abertura e consumo são comparados por dia civil, sem converter o
+  valor escolhido em um horário local. Abertura e finalização aceitam o mesmo
+  dia da compra; a finalização aceita o mesmo dia da abertura; datas futuras e
+  anteriores ao evento mínimo continuam bloqueadas no backend.
+- Os detalhes de cada unidade apresentam Vinícola, Local da compra, Safra,
+  Uvas e Descrição tanto para rótulos oficiais quanto externos, sem misturar os
+  dois catálogos e sem exibir volume ausente como `— ml`.
+- A ficha do vinho oficial continua apontando para o catálogo VINUM. A ficha do
+  vinho externo abre em diálogo responsivo e acessível, com foto, vinícola,
+  safra, uvas, descrição, características, aromas e notas de degustação.
+- A consulta individual do vinho externo exige autenticação e filtra o registro
+  pelo cliente proprietário; acesso por ID de outra conta retorna 404.
+- O botão `Excluir garrafa` foi reduzido e recebeu tratamento destrutivo próprio
+  para não ser confundido com as ações de abertura e finalização.
+- Não houve alteração no banco de dados, migration ou nas regras de ordenação e
+  atualização visual da lista.

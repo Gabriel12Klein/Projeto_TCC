@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { app } from '../../app.js';
 import { prisma } from '../../lib/prisma.js';
 import { customerService } from './customer.service.js';
+import { civilDateKey, todayCivilDate } from './customer.schema.js';
 
 const suffix = randomUUID();
 const emailA = `dashboard-a-${suffix}@test.invalid`;
@@ -288,5 +289,60 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
       month: 9,
       bottles: 1,
     });
+  });
+
+  it('aplica as regras por dia civil sem bloquear a data atual', async () => {
+    const currentKey = todayCivilDate();
+    const current = new Date(`${currentKey}T12:00:00.000Z`);
+    const previous = new Date(current);
+    previous.setUTCDate(previous.getUTCDate() - 1);
+    const next = new Date(current);
+    next.setUTCDate(next.getUTCDate() + 1);
+
+    const order = await customerService.createOrder(userB, {
+      source: 'VINICULA',
+      purchaseDate: previous,
+      purchaseLocation: 'Teste de datas civis',
+      items: [{ wineId: wineB, quantityBottles: 3 }],
+    });
+    const bottles = await prisma.cellarBottle.findMany({
+      where: { orderItemId: order.items[0].id },
+      orderBy: { id: 'asc' },
+    });
+
+    const openedOnPurchase = await customerService.openBottle(userB, bottles[0].id, {
+      occurredAt: previous,
+    });
+    expect(civilDateKey(openedOnPurchase.openedAt!)).toBe(civilDateKey(previous));
+    const finishedOnPurchase = await customerService.finishBottle(userB, bottles[0].id, {
+      occurredAt: previous,
+    });
+    expect(civilDateKey(finishedOnPurchase.finishedAt!)).toBe(civilDateKey(previous));
+
+    await customerService.openBottle(userB, bottles[1].id, { occurredAt: current });
+    await expect(
+      customerService.finishBottle(userB, bottles[1].id, { occurredAt: previous }),
+    ).rejects.toThrow('anterior à compra ou à abertura');
+    const finishedToday = await customerService.finishBottle(userB, bottles[1].id, {
+      occurredAt: current,
+    });
+    expect(civilDateKey(finishedToday.finishedAt!)).toBe(currentKey);
+
+    await expect(customerService.openBottle(userB, bottles[2].id, { occurredAt: next })).rejects.toThrow(
+      'não pode estar no futuro',
+    );
+
+    const oldOrder = await customerService.createOrder(userB, {
+      source: 'VINICULA',
+      purchaseDate: new Date('2000-01-01T12:00:00.000Z'),
+      purchaseLocation: 'Teste sem intervalo máximo',
+      items: [{ wineId: wineB, quantityBottles: 1 }],
+    });
+    const oldBottle = await prisma.cellarBottle.findFirstOrThrow({
+      where: { orderItemId: oldOrder.items[0].id },
+    });
+    await expect(
+      customerService.openBottle(userB, oldBottle.id, { occurredAt: current }),
+    ).resolves.toMatchObject({ status: 'ABERTA' });
   });
 });

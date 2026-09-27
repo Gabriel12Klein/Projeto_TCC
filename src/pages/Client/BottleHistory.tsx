@@ -7,19 +7,27 @@ import type { BottleStatus, CellarBottle } from '../../types';
 import PrivateImage from './PrivateImage';
 import wineIcon from '../../assets/admin/sidebar/vinho.png';
 import ConfirmDeleteDialog from '../../ui/ConfirmDeleteDialog';
+import ExternalWineDetailsDialog from './ExternalWineDetailsDialog';
 
-function today() {
-  const now = new Date();
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+export function today(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const value = Object.fromEntries(parts.map(({ type, value: part }) => [type, part]));
+  return `${value.year}-${value.month}-${value.day}`;
 }
 
-function formatDate(value: string | null) {
-  return value ? new Date(value).toLocaleDateString('pt-BR') : '—';
+export function formatDate(value: string | null) {
+  if (!value) return '—';
+  const [year, month, day] = value.slice(0, 10).split('-');
+  return `${day}/${month}/${year}`;
 }
 
-function localDateValue(value: string) {
-  const date = new Date(value);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+export function localDateValue(value: string) {
+  return value.slice(0, 10);
 }
 
 const statusLabel: Record<BottleStatus, string> = {
@@ -44,11 +52,13 @@ function BottleRow({
   pending,
   onEvent,
   onDelete,
+  onOpenExternalWine,
 }: {
   bottle: CellarBottle;
   pending: boolean;
   onEvent: (id: string, action: 'open' | 'finish', date: string) => Promise<boolean>;
   onDelete: (bottle: CellarBottle) => void;
+  onOpenExternalWine: (id: string) => void;
 }) {
   const [action, setAction] = useState<'open' | 'finish' | null>(null);
   const [date, setDate] = useState(today());
@@ -62,7 +72,7 @@ function BottleRow({
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!action) return;
-    const saved = await onEvent(bottle.id, action, `${date}T12:00:00.000Z`);
+    const saved = await onEvent(bottle.id, action, date);
     if (saved) setAction(null);
   }
   return (
@@ -129,7 +139,7 @@ function BottleRow({
           )}
           <button
             type="button"
-            className="rounded-lg border border-[#7d1d2d] px-3 py-2 text-sm font-semibold text-[#7d1d2d]"
+            className="self-center rounded-full border-2 border-[#9f1f32] bg-[#fff0f1] px-2.5 py-1.5 text-xs font-bold text-[#8f1f2c] shadow-sm transition hover:bg-[#f7dede]"
             disabled={pending}
             onClick={() => onDelete(bottle)}
           >
@@ -178,6 +188,15 @@ function BottleRow({
         </summary>
         <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
+            <dt className="text-[#715f59]">Vinícola</dt>
+            <dd>
+              {bottle.inventoryItem.wine?.winery?.name ||
+                bottle.orderItem?.externalWine?.externalWinery.name ||
+                bottle.inventoryItem.wineryName ||
+                'Não informada'}
+            </dd>
+          </div>
+          <div>
             <dt className="text-[#715f59]">Local da compra</dt>
             <dd>{location || 'Não informado'}</dd>
           </div>
@@ -186,18 +205,30 @@ function BottleRow({
             <dd>{bottle.orderItem?.vintageYear || 'Não informada'}</dd>
           </div>
           <div>
-            <dt className="text-[#715f59]">Volume</dt>
-            <dd>{bottle.orderItem?.volumeMl || bottle.inventoryItem.wine?.volumeMl || '—'} ml</dd>
-          </div>
-          <div>
-            <dt className="text-[#715f59]">Origem</dt>
+            <dt className="text-[#715f59]">Uvas</dt>
             <dd>
-              {bottle.orderItem?.order.source === 'OUTRO_LOCAL' ? 'Rótulo externo privado' : 'Catálogo VINUM'}
+              {(bottle.inventoryItem.wine?.grapeLinks || bottle.orderItem?.externalWine?.grapeLinks)
+                ?.map(({ grape }) => grape.name)
+                .join(', ') || 'Não informadas'}
             </dd>
           </div>
         </dl>
-        {bottle.inventoryItem.wine?.description && (
-          <p className="mt-3 text-[#715f59]">{bottle.inventoryItem.wine.description}</p>
+        {(bottle.inventoryItem.wine?.description || bottle.orderItem?.externalWine?.description) && (
+          <div className="mt-3">
+            <p className="font-semibold text-[#715f59]">Descrição</p>
+            <p className="mt-1 text-[#715f59]">
+              {bottle.inventoryItem.wine?.description || bottle.orderItem?.externalWine?.description}
+            </p>
+          </div>
+        )}
+        {bottle.orderItem?.externalWineId && (
+          <button
+            className="mt-3 font-semibold text-[#7d1d2d] underline underline-offset-4"
+            type="button"
+            onClick={() => onOpenExternalWine(bottle.orderItem!.externalWineId!)}
+          >
+            Ver ficha do vinho →
+          </button>
         )}
         {bottle.inventoryItem.wine?.slug && (
           <Link
@@ -216,11 +247,17 @@ export default function BottleHistory() {
   const [status, setStatus] = useState('');
   const [message, setMessage] = useState('');
   const [deleting, setDeleting] = useState<CellarBottle | null>(null);
+  const [externalWineId, setExternalWineId] = useState<string | null>(null);
   const resultMessage = useRef<HTMLParagraphElement>(null);
   const qc = useQueryClient();
   const bottles = useQuery({
     queryKey: ['customer-cellar-bottles', status],
     queryFn: () => api.customer.bottles(status || undefined),
+  });
+  const externalWine = useQuery({
+    queryKey: ['customer-external-wine-details', externalWineId],
+    queryFn: () => api.customer.externalWine(externalWineId!),
+    enabled: Boolean(externalWineId),
   });
   const mutation = useMutation({
     mutationFn: ({
@@ -297,6 +334,7 @@ export default function BottleHistory() {
             bottle={bottle}
             pending={mutation.isPending || remove.isPending}
             onDelete={setDeleting}
+            onOpenExternalWine={setExternalWineId}
             onEvent={async (id, action, occurredAt) => {
               setMessage('');
               try {
@@ -336,6 +374,14 @@ export default function BottleHistory() {
         pending={remove.isPending}
         onCancel={() => setDeleting(null)}
         onConfirm={() => deleting && remove.mutate(deleting.id)}
+      />
+      <ExternalWineDetailsDialog
+        open={Boolean(externalWineId)}
+        wine={externalWine.data}
+        loading={externalWine.isPending}
+        error={externalWine.error}
+        onClose={() => setExternalWineId(null)}
+        onRetry={() => void externalWine.refetch()}
       />
     </section>
   );

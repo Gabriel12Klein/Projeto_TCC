@@ -107,6 +107,19 @@ describe('Catálogo privado do cliente', () => {
     });
     const locationB = await customerService.createPurchaseLocation(userB, { name: 'Local privado B' });
 
+    expect(await customerService.getExternalWine(userA, dvCatena.id)).toMatchObject({
+      id: dvCatena.id,
+      description: 'Vinho externo de teste',
+      characteristics: 'Encorpado',
+      aromas: 'Frutas vermelhas',
+      tastingNotes: 'Final persistente',
+    });
+    await expect(customerService.getExternalWine(userB, dvCatena.id)).rejects.toThrow('não encontrado');
+    await request(app)
+      .get(`/api/cliente/vinhos-externos/${dvCatena.id}`)
+      .set('Authorization', `Bearer ${tokenB}`)
+      .expect(404);
+
     const [wineriesB, winesB, locationsB, grapesB] = await Promise.all([
       request(app)
         .get('/api/cliente/vinicolas-externas')
@@ -209,6 +222,13 @@ describe('Catálogo privado do cliente', () => {
     expect(externalOrder.items[0].externalWineId).toBe(dvCatena.id);
     expect((await customerService.listBottles(userA))[0]).toMatchObject({
       inventoryItem: { name: 'DV Catena', wineryName: 'Vinícola Catena Zapata' },
+      orderItem: {
+        externalWine: {
+          id: dvCatena.id,
+          description: 'Vinho externo de teste',
+          grapeLinks: [{ grape: { id: grapeId } }],
+        },
+      },
     });
 
     await customerService.createOrder(userA, {

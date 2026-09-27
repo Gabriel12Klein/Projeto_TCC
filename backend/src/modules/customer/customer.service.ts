@@ -2,6 +2,8 @@ import { AppError } from '../../common/http.js';
 import { prisma } from '../../lib/prisma.js';
 import {
   orderSchema,
+  civilDateKey,
+  todayCivilDate,
   type BottleEventInput,
   type ExternalWineInput,
   type OrderInput,
@@ -20,6 +22,11 @@ const itemInclude = {
   movements: { orderBy: { occurredAt: 'desc' as const } },
 };
 
+const externalWineInclude = {
+  externalWinery: { select: { id: true, name: true } },
+  grapeLinks: { include: { grape: { select: { id: true, name: true } } } },
+};
+
 const bottleInclude = {
   inventoryItem: {
     include: {
@@ -32,19 +39,18 @@ const bottleInclude = {
           volumeMl: true,
           winery: { select: { name: true } },
           image: { select: { path: true } },
+          grapeLinks: { include: { grape: { select: { id: true, name: true } } } },
         },
       },
     },
   },
   orderItem: {
-    include: { order: { select: { id: true, purchaseDate: true, purchaseLocation: true, source: true } } },
+    include: {
+      order: { select: { id: true, purchaseDate: true, purchaseLocation: true, source: true } },
+      externalWine: { include: externalWineInclude },
+    },
   },
   movements: { orderBy: { occurredAt: 'asc' as const } },
-};
-
-const externalWineInclude = {
-  externalWinery: { select: { id: true, name: true } },
-  grapeLinks: { include: { grape: { select: { id: true, name: true } } } },
 };
 
 const addressData = (input: PrivateAddressInput) => ({
@@ -64,8 +70,10 @@ async function assertGrapes(grapeIds: string[]) {
 }
 
 function assertBottleEventDate(date: Date, purchasedAt: Date, openedAt?: Date | null) {
-  const minimum = openedAt ?? purchasedAt;
-  if (date < minimum)
+  const eventDate = civilDateKey(date);
+  const minimum = civilDateKey(openedAt ?? purchasedAt);
+  if (eventDate > todayCivilDate()) throw new AppError(400, 'A data informada não pode estar no futuro.');
+  if (eventDate < minimum)
     throw new AppError(400, 'A data não pode ser anterior à compra ou à abertura da garrafa.');
 }
 
@@ -109,6 +117,15 @@ export const customerService = {
       include: externalWineInclude,
       orderBy: [{ externalWinery: { name: 'asc' } }, { name: 'asc' }],
     });
+  },
+
+  async getExternalWine(userId: string, id: string) {
+    const wine = await prisma.externalWine.findFirst({
+      where: { id, userId },
+      include: externalWineInclude,
+    });
+    if (!wine) throw new AppError(404, 'Vinho externo não encontrado.');
+    return wine;
   },
 
   async createExternalWine(userId: string, input: ExternalWineInput, imagePath?: string) {
@@ -176,7 +193,10 @@ export const customerService = {
       });
       if (imagePath) {
         await Promise.all([
-          transaction.inventoryItem.updateMany({ where: { userId, externalWineId: id }, data: { photoPath: imagePath } }),
+          transaction.inventoryItem.updateMany({
+            where: { userId, externalWineId: id },
+            data: { photoPath: imagePath },
+          }),
           transaction.customerOrderItem.updateMany({
             where: { externalWineId: id, order: { userId } },
             data: { photoPath: imagePath },
@@ -200,7 +220,10 @@ export const customerService = {
   },
 
   async getExternalWineImagePath(userId: string, id: string) {
-    const record = await prisma.externalWine.findFirst({ where: { id, userId }, select: { imagePath: true } });
+    const record = await prisma.externalWine.findFirst({
+      where: { id, userId },
+      select: { imagePath: true },
+    });
     if (!record) throw new AppError(404, 'Vinho externo não encontrado.');
     return record.imagePath;
   },
@@ -466,7 +489,7 @@ export const customerService = {
           'A alteração retiraria garrafas já consumidas. Confira o saldo antes de reduzir ou trocar o rótulo.',
         );
       const catalogImage = wine?.image?.path ?? externalWine?.imagePath;
-      const image = photoPath ?? (sameWine ? old.photoPath ?? catalogImage : catalogImage) ?? null;
+      const image = photoPath ?? (sameWine ? (old.photoPath ?? catalogImage) : catalogImage) ?? null;
       const wineryName =
         item.wineryName ??
         wine?.winery?.name ??

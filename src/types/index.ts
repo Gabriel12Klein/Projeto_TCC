@@ -219,11 +219,14 @@ export type CellarBottle = {
       volumeMl: number;
       winery: { name: string } | null;
       image: { path: string } | null;
+      grapeLinks: { grape: { id: string; name: string } }[];
     } | null;
   };
   orderItem: {
     vintageYear: number | null;
     volumeMl: number | null;
+    externalWineId: string | null;
+    externalWine: ExternalWine | null;
     order: {
       id: string;
       purchaseDate: string;

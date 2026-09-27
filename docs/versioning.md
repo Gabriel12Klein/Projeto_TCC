@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.7.0**
+Versão atual: **2.8.0**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -75,3 +75,12 @@ Move o upload da foto para o cadastro do vinho externo. A imagem passa a
 pertencer ao rótulo privado, é reutilizada automaticamente ao registrar compras
 e continua protegida pelo cliente proprietário. Inclui migration incremental
 para `vinhos_externo.imagePath`, sem alterar ou apagar registros existentes.
+
+## Versão 2.8.0
+
+Corrige o ciclo das garrafas para tratar compra, abertura e consumo como datas
+civis de São Paulo, aceitando o dia atual e datas iguais sem deslocamento de
+fuso. Padroniza os detalhes de rótulos oficiais e externos em `Meus vinhos`,
+adiciona uma ficha acessível para o vinho externo com consulta privada por
+proprietário e diferencia visualmente a ação de excluir garrafa. Não houve
+alteração de schema nem migration.

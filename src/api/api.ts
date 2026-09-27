@@ -162,6 +162,7 @@ export const api = {
       request<ExternalWine[]>(
         `/cliente/vinhos-externos${wineryId ? `?wineryId=${encodeURIComponent(wineryId)}` : ''}`,
       ),
+    externalWine: (id: string) => request<ExternalWine>(`/cliente/vinhos-externos/${encodeURIComponent(id)}`),
     createExternalWine: (
       payload: Omit<
         ExternalWine,
