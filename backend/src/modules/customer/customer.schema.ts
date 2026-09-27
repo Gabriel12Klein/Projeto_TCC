@@ -66,8 +66,23 @@ export const privateNameSchema = z.object({
   name: z.string().trim().min(2, 'Informe um nome com pelo menos 2 caracteres.').max(120),
 });
 
+const optionalText = (maximum: number) => z.string().trim().max(maximum).optional().nullable();
+
+export const privateAddressSchema = privateNameSchema.extend({
+  neighborhood: optionalText(120),
+  city: optionalText(120),
+  stateRegion: optionalText(120),
+  country: optionalText(120),
+});
+
 export const externalWineSchema = privateNameSchema.extend({
   externalWineryId: z.string().trim().min(1, 'Selecione uma vinícola.'),
+  vintageYear: z.coerce.number().int().min(1000).max(9999).optional().nullable(),
+  grapeIds: z.array(z.string().trim().min(1)).max(30).default([]),
+  description: optionalText(5000),
+  characteristics: optionalText(5000),
+  aromas: optionalText(5000),
+  tastingNotes: optionalText(5000),
 });
 
 export const bottleEventSchema = z.object({
@@ -79,4 +94,5 @@ export const bottleEventSchema = z.object({
 export type OrderInput = z.infer<typeof orderSchema>;
 export type BottleEventInput = z.infer<typeof bottleEventSchema>;
 export type PrivateNameInput = z.infer<typeof privateNameSchema>;
+export type PrivateAddressInput = z.infer<typeof privateAddressSchema>;
 export type ExternalWineInput = z.infer<typeof externalWineSchema>;

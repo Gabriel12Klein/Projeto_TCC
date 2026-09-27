@@ -5,7 +5,7 @@ import {
   type BottleEventInput,
   type ExternalWineInput,
   type OrderInput,
-  type PrivateNameInput,
+  type PrivateAddressInput,
 } from './customer.schema.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 
@@ -42,6 +42,26 @@ const bottleInclude = {
   movements: { orderBy: { occurredAt: 'asc' as const } },
 };
 
+const externalWineInclude = {
+  externalWinery: { select: { id: true, name: true } },
+  grapeLinks: { include: { grape: { select: { id: true, name: true } } } },
+};
+
+const addressData = (input: PrivateAddressInput) => ({
+  name: input.name,
+  neighborhood: input.neighborhood || null,
+  city: input.city || null,
+  stateRegion: input.stateRegion || null,
+  country: input.country || null,
+});
+
+async function assertGrapes(grapeIds: string[]) {
+  const ids = [...new Set(grapeIds)];
+  const count = await prisma.grape.count({ where: { id: { in: ids }, active: true } });
+  if (count !== ids.length) throw new AppError(400, 'Selecione somente uvas disponíveis no catálogo.');
+  return ids;
+}
+
 function assertBottleEventDate(date: Date, purchasedAt: Date, openedAt?: Date | null) {
   const minimum = openedAt ?? purchasedAt;
   if (date < minimum)
@@ -53,22 +73,22 @@ export const customerService = {
     return prisma.externalWinery.findMany({ where: { userId }, orderBy: { name: 'asc' } });
   },
 
-  async createExternalWinery(userId: string, input: PrivateNameInput) {
+  async createExternalWinery(userId: string, input: PrivateAddressInput) {
     const duplicate = await prisma.externalWinery.findFirst({
       where: { userId, name: { equals: input.name, mode: 'insensitive' } },
     });
     if (duplicate) throw new AppError(409, 'Você já cadastrou uma vinícola com este nome.');
-    return prisma.externalWinery.create({ data: { userId, name: input.name } });
+    return prisma.externalWinery.create({ data: { userId, ...addressData(input) } });
   },
 
-  async updateExternalWinery(userId: string, id: string, input: PrivateNameInput) {
+  async updateExternalWinery(userId: string, id: string, input: PrivateAddressInput) {
     const record = await prisma.externalWinery.findFirst({ where: { id, userId } });
     if (!record) throw new AppError(404, 'Vinícola não encontrada.');
     const duplicate = await prisma.externalWinery.findFirst({
       where: { userId, id: { not: id }, name: { equals: input.name, mode: 'insensitive' } },
     });
     if (duplicate) throw new AppError(409, 'Você já cadastrou uma vinícola com este nome.');
-    return prisma.externalWinery.update({ where: { id }, data: { name: input.name } });
+    return prisma.externalWinery.update({ where: { id }, data: addressData(input) });
   },
 
   async removeExternalWinery(userId: string, id: string) {
@@ -85,7 +105,7 @@ export const customerService = {
   async listExternalWines(userId: string, externalWineryId?: string) {
     return prisma.externalWine.findMany({
       where: { userId, ...(externalWineryId ? { externalWineryId } : {}) },
-      include: { externalWinery: { select: { id: true, name: true } } },
+      include: externalWineInclude,
       orderBy: [{ externalWinery: { name: 'asc' } }, { name: 'asc' }],
     });
   },
@@ -101,9 +121,20 @@ export const customerService = {
       },
     });
     if (duplicate) throw new AppError(409, 'Este vinho já está cadastrado para a vinícola selecionada.');
+    const grapeIds = await assertGrapes(input.grapeIds);
     return prisma.externalWine.create({
-      data: { userId, externalWineryId: winery.id, name: input.name },
-      include: { externalWinery: { select: { id: true, name: true } } },
+      data: {
+        userId,
+        externalWineryId: winery.id,
+        name: input.name,
+        vintageYear: input.vintageYear,
+        description: input.description || null,
+        characteristics: input.characteristics || null,
+        aromas: input.aromas || null,
+        tastingNotes: input.tastingNotes || null,
+        grapeLinks: { create: grapeIds.map((grapeId) => ({ grapeId })) },
+      },
+      include: externalWineInclude,
     });
   },
 
@@ -123,10 +154,23 @@ export const customerService = {
       },
     });
     if (duplicate) throw new AppError(409, 'Este vinho já está cadastrado para a vinícola selecionada.');
-    return prisma.externalWine.update({
-      where: { id },
-      data: { externalWineryId: winery.id, name: input.name },
-      include: { externalWinery: { select: { id: true, name: true } } },
+    const grapeIds = await assertGrapes(input.grapeIds);
+    return prisma.$transaction(async (transaction) => {
+      await transaction.externalWineGrape.deleteMany({ where: { externalWineId: id } });
+      return transaction.externalWine.update({
+        where: { id },
+        data: {
+          externalWineryId: winery.id,
+          name: input.name,
+          vintageYear: input.vintageYear,
+          description: input.description || null,
+          characteristics: input.characteristics || null,
+          aromas: input.aromas || null,
+          tastingNotes: input.tastingNotes || null,
+          grapeLinks: { create: grapeIds.map((grapeId) => ({ grapeId })) },
+        },
+        include: externalWineInclude,
+      });
     });
   },
 
@@ -145,22 +189,22 @@ export const customerService = {
     return prisma.purchaseLocation.findMany({ where: { userId }, orderBy: { name: 'asc' } });
   },
 
-  async createPurchaseLocation(userId: string, input: PrivateNameInput) {
+  async createPurchaseLocation(userId: string, input: PrivateAddressInput) {
     const duplicate = await prisma.purchaseLocation.findFirst({
       where: { userId, name: { equals: input.name, mode: 'insensitive' } },
     });
     if (duplicate) throw new AppError(409, 'Você já cadastrou um local de compra com este nome.');
-    return prisma.purchaseLocation.create({ data: { userId, name: input.name } });
+    return prisma.purchaseLocation.create({ data: { userId, ...addressData(input) } });
   },
 
-  async updatePurchaseLocation(userId: string, id: string, input: PrivateNameInput) {
+  async updatePurchaseLocation(userId: string, id: string, input: PrivateAddressInput) {
     const record = await prisma.purchaseLocation.findFirst({ where: { id, userId } });
     if (!record) throw new AppError(404, 'Local de compra não encontrado.');
     const duplicate = await prisma.purchaseLocation.findFirst({
       where: { userId, id: { not: id }, name: { equals: input.name, mode: 'insensitive' } },
     });
     if (duplicate) throw new AppError(409, 'Você já cadastrou um local de compra com este nome.');
-    return prisma.purchaseLocation.update({ where: { id }, data: { name: input.name } });
+    return prisma.purchaseLocation.update({ where: { id }, data: addressData(input) });
   },
 
   async removePurchaseLocation(userId: string, id: string) {

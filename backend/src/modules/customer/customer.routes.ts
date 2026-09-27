@@ -6,7 +6,12 @@ import { ensureUploadDirectory } from '../../common/files.js';
 import { AppError } from '../../common/http.js';
 import { asyncRoute } from '../../common/http.js';
 import { requireAuth, requireRoles } from '../auth/auth.middleware.js';
-import { bottleEventSchema, externalWineSchema, orderSchema, privateNameSchema } from './customer.schema.js';
+import {
+  bottleEventSchema,
+  externalWineSchema,
+  orderSchema,
+  privateAddressSchema,
+} from './customer.schema.js';
 import { customerService } from './customer.service.js';
 
 const router = Router();
@@ -42,7 +47,7 @@ router.post(
       .json(
         await customerService.createExternalWinery(
           String(res.locals.user.id),
-          privateNameSchema.parse(req.body),
+          privateAddressSchema.parse(req.body),
         ),
       );
   }),
@@ -54,7 +59,7 @@ router.put(
       await customerService.updateExternalWinery(
         String(res.locals.user.id),
         String(req.params.id),
-        privateNameSchema.parse(req.body),
+        privateAddressSchema.parse(req.body),
       ),
     );
   }),
@@ -125,7 +130,7 @@ router.post(
       .json(
         await customerService.createPurchaseLocation(
           String(res.locals.user.id),
-          privateNameSchema.parse(req.body),
+          privateAddressSchema.parse(req.body),
         ),
       );
   }),
@@ -137,7 +142,7 @@ router.put(
       await customerService.updatePurchaseLocation(
         String(res.locals.user.id),
         String(req.params.id),
-        privateNameSchema.parse(req.body),
+        privateAddressSchema.parse(req.body),
       ),
     );
   }),

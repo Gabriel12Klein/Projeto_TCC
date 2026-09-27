@@ -178,9 +178,10 @@ model Grape {
   description String?
   active      Boolean @default(true)
 
-  wineLinks    WineGrape[]
-  vintageLinks VintageGrape[]
-  batchLinks   BatchGrape[]
+  wineLinks         WineGrape[]
+  vintageLinks      VintageGrape[]
+  batchLinks        BatchGrape[]
+  externalWineLinks ExternalWineGrape[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -384,10 +385,14 @@ model InventoryItem {
 }
 
 model ExternalWinery {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name   String
+  id           String  @id @default(cuid())
+  userId       String
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  neighborhood String?
+  city         String?
+  stateRegion  String?
+  country      String?
 
   wines ExternalWine[]
 
@@ -407,9 +412,15 @@ model ExternalWine {
   externalWineryId String
   externalWinery   ExternalWinery @relation(fields: [externalWineryId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Cascade)
   name             String
+  vintageYear      Int?
+  description      String?        @db.Text
+  characteristics  String?        @db.Text
+  aromas           String?        @db.Text
+  tastingNotes     String?        @db.Text
 
   orderItems CustomerOrderItem[]
   inventory  InventoryItem[]
+  grapeLinks ExternalWineGrape[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -421,11 +432,26 @@ model ExternalWine {
   @@map("vinhos_externo")
 }
 
+model ExternalWineGrape {
+  externalWineId String
+  grapeId        String
+  externalWine   ExternalWine @relation(fields: [externalWineId], references: [id], onDelete: Cascade)
+  grape          Grape        @relation(fields: [grapeId], references: [id], onDelete: Restrict)
+
+  @@id([externalWineId, grapeId])
+  @@index([grapeId])
+  @@map("vinho_externo_uva")
+}
+
 model PurchaseLocation {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name   String
+  id           String  @id @default(cuid())
+  userId       String
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  neighborhood String?
+  city         String?
+  stateRegion  String?
+  country      String?
 
   orders CustomerOrder[]
 
