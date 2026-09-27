@@ -13,7 +13,6 @@ const draft: OrderDraft = {
   purchaseLocationId: 'local-teste',
   purchaseLocation: '',
   editing: null,
-  photoNeedsReselect: false,
 };
 
 function useMemoryStorage() {

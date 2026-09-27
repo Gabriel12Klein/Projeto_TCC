@@ -8,7 +8,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/api';
 import type { CustomerOrder } from '../../types';
-import BottlePhotoPicker from './BottlePhotoPicker';
 import BottleHistory from './BottleHistory';
 import { persistOrderDraft, readOrderDraft } from './orderDraft';
 import InventoryDashboard from './InventoryDashboard';
@@ -57,12 +56,9 @@ function Orders({ userId }: { userId: string }) {
     orderId: string;
     itemId: string;
     date: string;
-    photo?: string | null;
   } | null>(restoredDraft?.editing ?? null);
   const [purchaseLocationId, setPurchaseLocationId] = useState(restoredDraft?.purchaseLocationId ?? '');
   const [purchaseLocation, setPurchaseLocation] = useState(restoredDraft?.purchaseLocation ?? '');
-  const [purchasePhoto, setPurchasePhoto] = useState<File | null>(null);
-  const [photoNeedsReselect, setPhotoNeedsReselect] = useState(restoredDraft?.photoNeedsReselect ?? false);
   const [draftRecovered, setDraftRecovered] = useState(Boolean(restoredDraft));
   const qc = useQueryClient();
   const ordersQuery = useQuery({ queryKey: ['customer-orders'], queryFn: api.customer.orders });
@@ -103,8 +99,6 @@ function Orders({ userId }: { userId: string }) {
     setEditing(null);
     setPurchaseLocationId('');
     setPurchaseLocation('');
-    setPurchasePhoto(null);
-    setPhotoNeedsReselect(false);
     setDraftRecovered(false);
     setWineId('');
     setExternalWineId('');
@@ -118,12 +112,10 @@ function Orders({ userId }: { userId: string }) {
 
   function prepareEdit(order: CustomerOrder, item: CustomerOrder['items'][number]) {
     feedback.show({}, false);
-    setEditing({ orderId: order.id, itemId: item.id, date: order.purchaseDate, photo: item.photoPath });
+    setEditing({ orderId: order.id, itemId: item.id, date: order.purchaseDate });
     setMessage('');
     setPurchaseLocationId(order.purchaseLocationId ?? 'LEGACY');
     setPurchaseLocation(order.purchaseLocation ?? '');
-    setPurchasePhoto(null);
-    setPhotoNeedsReselect(false);
     setDraftRecovered(false);
     setSource(order.source);
     setWineId(item.wineId ?? '');
@@ -156,7 +148,6 @@ function Orders({ userId }: { userId: string }) {
       purchaseLocationId,
       purchaseLocation,
       editing,
-      photoNeedsReselect: Boolean(purchasePhoto || photoNeedsReselect),
     });
   }, [
     userId,
@@ -170,8 +161,6 @@ function Orders({ userId }: { userId: string }) {
     purchaseLocationId,
     purchaseLocation,
     editing,
-    purchasePhoto,
-    photoNeedsReselect,
   ]);
   const orders = ordersQuery.data ?? [];
   const wines = winesQuery.data ?? [];
@@ -186,8 +175,6 @@ function Orders({ userId }: { userId: string }) {
       setOpen(false);
       setPurchaseLocationId('');
       setPurchaseLocation('');
-      setPurchasePhoto(null);
-      setPhotoNeedsReselect(false);
       setDraftRecovered(false);
       setName('');
       setWineId('');
@@ -243,7 +230,6 @@ function Orders({ userId }: { userId: string }) {
         qty,
         purchaseLocation,
         purchaseLocationId,
-        photo: Boolean(purchasePhoto || editing?.photo),
       }),
     };
     feedback.show(issues);
@@ -262,7 +248,6 @@ function Orders({ userId }: { userId: string }) {
         ...(purchaseLocationId === 'LEGACY'
           ? { purchaseLocation: purchaseLocation.trim() }
           : { purchaseLocationId }),
-        photo: purchasePhoto || undefined,
         items: [
           {
             ...(source === 'VINICULA'
@@ -291,7 +276,7 @@ function Orders({ userId }: { userId: string }) {
           className="mt-5 rounded-xl bg-[#d0a565] px-5 py-3 font-semibold text-[#4c151c]"
           disabled={save.isPending}
           onClick={() => {
-            if (name || wineId || externalWineId || purchaseLocationId || purchaseLocation || purchasePhoto) {
+            if (name || wineId || externalWineId || purchaseLocationId || purchaseLocation) {
               setConfirmation({
                 title: 'Cadastrar outro vinho?',
                 description: 'O preenchimento atual será descartado para iniciar um novo cadastro.',
@@ -311,7 +296,7 @@ function Orders({ userId }: { userId: string }) {
         </p>
       )}
       {!open &&
-        (name || wineId || externalWineId || purchaseLocationId || purchaseLocation || purchasePhoto) && (
+        (name || wineId || externalWineId || purchaseLocationId || purchaseLocation) && (
           <button
             type="button"
             className="mt-4 rounded-xl border border-[#7d1d2d] px-5 py-3 text-[#7d1d2d]"
@@ -499,34 +484,6 @@ function Orders({ userId }: { userId: string }) {
                   </Link>
                 </p>
               )}
-            {editing?.photo && !purchasePhoto && (
-              <div className="md:col-span-2 flex items-center gap-3">
-                <PrivateImage
-                  src={editing.photo}
-                  alt="Foto atual do vinho"
-                  className="h-20 w-14 object-contain"
-                />
-                <p className="text-sm text-[#715f59]">
-                  A foto atual será mantida se você não selecionar outra.
-                </p>
-              </div>
-            )}
-            <BottlePhotoPicker
-              buttonId="purchase-photo"
-              externalError={feedback.errors.photo}
-              value={purchasePhoto}
-              onChange={(file) => {
-                setPurchasePhoto(file);
-                setPhotoNeedsReselect(false);
-                feedback.clear('photo');
-              }}
-              required={source === 'OUTRO_LOCAL' && !editing?.photo}
-            />
-            {photoNeedsReselect && !purchasePhoto && (
-              <p className="text-sm text-[#7d1d2d] md:col-span-2" role="status">
-                A foto escolhida antes da interrupção precisa ser selecionada novamente para ser enviada.
-              </p>
-            )}
             {source === 'VINICULA' && (
               <QueryFeedback
                 loading={winesQuery.isPending}
@@ -537,11 +494,6 @@ function Orders({ userId }: { userId: string }) {
                 loadingText="Carregando catálogo…"
                 retry={() => void winesQuery.refetch()}
               />
-            )}
-            {source === 'VINICULA' && (
-              <p className="text-sm text-[#715f59] md:col-span-2">
-                Se não enviar uma foto, será usada a imagem disponível no catálogo da vinícola.
-              </p>
             )}
             <div className="flex flex-wrap gap-3 md:col-span-2">
               <button

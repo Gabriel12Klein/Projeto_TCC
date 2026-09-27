@@ -163,24 +163,44 @@ export const api = {
         `/cliente/vinhos-externos${wineryId ? `?wineryId=${encodeURIComponent(wineryId)}` : ''}`,
       ),
     createExternalWine: (
-      payload: Omit<ExternalWine, 'id' | 'externalWinery' | 'grapeLinks' | 'createdAt' | 'updatedAt'> & {
+      payload: Omit<
+        ExternalWine,
+        'id' | 'externalWinery' | 'grapeLinks' | 'imagePath' | 'createdAt' | 'updatedAt'
+      > & {
         grapeIds: string[];
+        photo: File;
       },
-    ) =>
-      request<ExternalWine>('/cliente/vinhos-externos', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
+    ) => {
+      const { photo, ...data } = payload;
+      const body = new FormData();
+      body.append('payload', JSON.stringify(data));
+      body.append('photo', photo);
+      return request<ExternalWine>('/cliente/vinhos-externos', { method: 'POST', body });
+    },
     updateExternalWine: (
       id: string,
-      payload: Omit<ExternalWine, 'id' | 'externalWinery' | 'grapeLinks' | 'createdAt' | 'updatedAt'> & {
+      payload: Omit<
+        ExternalWine,
+        'id' | 'externalWinery' | 'grapeLinks' | 'imagePath' | 'createdAt' | 'updatedAt'
+      > & {
         grapeIds: string[];
+        photo?: File;
       },
-    ) =>
-      request<ExternalWine>(`/cliente/vinhos-externos/${encodeURIComponent(id)}`, {
+    ) => {
+      const { photo, ...data } = payload;
+      if (!photo)
+        return request<ExternalWine>(`/cliente/vinhos-externos/${encodeURIComponent(id)}`, {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        });
+      const body = new FormData();
+      body.append('payload', JSON.stringify(data));
+      body.append('photo', photo);
+      return request<ExternalWine>(`/cliente/vinhos-externos/${encodeURIComponent(id)}`, {
         method: 'PUT',
-        body: JSON.stringify(payload),
-      }),
+        body,
+      });
+    },
     removeExternalWine: (id: string) =>
       request<void>(`/cliente/vinhos-externos/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     purchaseLocations: () => request<PurchaseLocation[]>('/cliente/locais-compra'),

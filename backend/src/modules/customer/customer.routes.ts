@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { unlink } from 'node:fs/promises';
+import { basename, join } from 'node:path';
 import multer from 'multer';
-import { ensureUploadDirectory } from '../../common/files.js';
+import { ensureUploadDirectory, uploadsRoot } from '../../common/files.js';
 import { AppError } from '../../common/http.js';
 import { asyncRoute } from '../../common/http.js';
 import { requireAuth, requireRoles } from '../auth/auth.middleware.js';
@@ -116,33 +117,61 @@ router.delete(
 );
 router.post(
   '/vinhos-externos',
+  upload.single('photo'),
   asyncRoute(async (req, res) => {
-    res
-      .status(201)
-      .json(
+    try {
+      if (!req.file) throw new AppError(400, 'Adicione uma foto da garrafa.');
+      const payload = req.is('multipart/form-data') ? JSON.parse(req.body.payload) : req.body;
+      res.status(201).json(
         await customerService.createExternalWine(
           String(res.locals.user.id),
-          externalWineSchema.parse(req.body),
+          externalWineSchema.parse(payload),
+          `/uploads/inventory/${req.file.filename}`,
         ),
       );
+    } catch (error) {
+      if (req.file) await unlink(req.file.path).catch(() => undefined);
+      if (error instanceof SyntaxError) throw new AppError(400, 'Os dados do vinho são inválidos.');
+      throw error;
+    }
   }),
 );
 router.put(
   '/vinhos-externos/:id',
+  upload.single('photo'),
   asyncRoute(async (req, res) => {
-    res.json(
-      await customerService.updateExternalWine(
-        String(res.locals.user.id),
-        String(req.params.id),
-        externalWineSchema.parse(req.body),
-      ),
-    );
+    try {
+      const userId = String(res.locals.user.id);
+      const id = String(req.params.id);
+      const previousImage = await customerService.getExternalWineImagePath(userId, id);
+      const payload = req.is('multipart/form-data') ? JSON.parse(req.body.payload) : req.body;
+      const updated = await customerService.updateExternalWine(
+        userId,
+        id,
+        externalWineSchema.parse(payload),
+        req.file ? `/uploads/inventory/${req.file.filename}` : undefined,
+      );
+      if (req.file && previousImage?.startsWith('/uploads/inventory/')) {
+        await unlink(join(uploadsRoot, 'inventory', basename(previousImage))).catch(() => undefined);
+      }
+      res.json(updated);
+    } catch (error) {
+      if (req.file) await unlink(req.file.path).catch(() => undefined);
+      if (error instanceof SyntaxError) throw new AppError(400, 'Os dados do vinho são inválidos.');
+      throw error;
+    }
   }),
 );
 router.delete(
   '/vinhos-externos/:id',
   asyncRoute(async (req, res) => {
-    await customerService.removeExternalWine(String(res.locals.user.id), String(req.params.id));
+    const imagePath = await customerService.removeExternalWine(
+      String(res.locals.user.id),
+      String(req.params.id),
+    );
+    if (imagePath?.startsWith('/uploads/inventory/')) {
+      await unlink(join(uploadsRoot, 'inventory', basename(imagePath))).catch(() => undefined);
+    }
     res.status(204).send();
   }),
 );

@@ -111,7 +111,7 @@ export const customerService = {
     });
   },
 
-  async createExternalWine(userId: string, input: ExternalWineInput) {
+  async createExternalWine(userId: string, input: ExternalWineInput, imagePath?: string) {
     const winery = await prisma.externalWinery.findFirst({ where: { id: input.externalWineryId, userId } });
     if (!winery) throw new AppError(400, 'Selecione uma vinícola cadastrada na sua conta.');
     const duplicate = await prisma.externalWine.findFirst({
@@ -133,13 +133,14 @@ export const customerService = {
         characteristics: input.characteristics || null,
         aromas: input.aromas || null,
         tastingNotes: input.tastingNotes || null,
+        imagePath: imagePath || null,
         grapeLinks: { create: grapeIds.map((grapeId) => ({ grapeId })) },
       },
       include: externalWineInclude,
     });
   },
 
-  async updateExternalWine(userId: string, id: string, input: ExternalWineInput) {
+  async updateExternalWine(userId: string, id: string, input: ExternalWineInput, imagePath?: string) {
     const [record, winery] = await Promise.all([
       prisma.externalWine.findFirst({ where: { id, userId } }),
       prisma.externalWinery.findFirst({ where: { id: input.externalWineryId, userId } }),
@@ -158,7 +159,7 @@ export const customerService = {
     const grapeIds = await assertGrapes(input.grapeIds);
     return prisma.$transaction(async (transaction) => {
       await transaction.externalWineGrape.deleteMany({ where: { externalWineId: id } });
-      return transaction.externalWine.update({
+      const updated = await transaction.externalWine.update({
         where: { id },
         data: {
           externalWineryId: winery.id,
@@ -168,10 +169,21 @@ export const customerService = {
           characteristics: input.characteristics || null,
           aromas: input.aromas || null,
           tastingNotes: input.tastingNotes || null,
+          ...(imagePath ? { imagePath } : {}),
           grapeLinks: { create: grapeIds.map((grapeId) => ({ grapeId })) },
         },
         include: externalWineInclude,
       });
+      if (imagePath) {
+        await Promise.all([
+          transaction.inventoryItem.updateMany({ where: { userId, externalWineId: id }, data: { photoPath: imagePath } }),
+          transaction.customerOrderItem.updateMany({
+            where: { externalWineId: id, order: { userId } },
+            data: { photoPath: imagePath },
+          }),
+        ]);
+      }
+      return updated;
     });
   },
 
@@ -184,6 +196,13 @@ export const customerService = {
     if (record._count.orderItems || record._count.inventory)
       throw new AppError(409, 'Este vinho já faz parte da adega e não pode ser excluído.');
     await prisma.externalWine.delete({ where: { id } });
+    return record.imagePath;
+  },
+
+  async getExternalWineImagePath(userId: string, id: string) {
+    const record = await prisma.externalWine.findFirst({ where: { id, userId }, select: { imagePath: true } });
+    if (!record) throw new AppError(404, 'Vinho externo não encontrado.');
+    return record.imagePath;
   },
 
   async listPurchaseLocations(userId: string) {
@@ -237,8 +256,6 @@ export const customerService = {
 
   async createOrder(userId: string, input: OrderInput, photoPath?: string) {
     input = orderSchema.parse(input);
-    if (input.items.some((item) => !item.wineId) && !photoPath)
-      throw new AppError(400, 'Envie a foto do rótulo externo.');
     return prisma.$transaction(async (transaction) => {
       await lockInventory(transaction, userId);
       const purchaseLocation = input.purchaseLocationId
@@ -286,7 +303,9 @@ export const customerService = {
 
         const name = wine?.name ?? externalWine?.name ?? item.wineName;
         if (!name) throw new AppError(400, 'Informe o nome do vinho comprado.');
-        const itemPhotoPath = photoPath || wine?.image?.path || undefined;
+        const itemPhotoPath = photoPath || wine?.image?.path || externalWine?.imagePath || undefined;
+        if (!wine && !externalWine && !itemPhotoPath)
+          throw new AppError(400, 'Cadastre o vinho externo e sua foto antes de registrar a compra.');
 
         const inventory = wine
           ? await transaction.inventoryItem.findFirst({ where: { userId, wineId: wine.id } })
@@ -446,8 +465,8 @@ export const customerService = {
           409,
           'A alteração retiraria garrafas já consumidas. Confira o saldo antes de reduzir ou trocar o rótulo.',
         );
-      const image = photoPath ?? (sameWine ? old.photoPath : wine?.image?.path) ?? null;
-      if (!wine && !image) throw new AppError(400, 'Envie a foto do rótulo externo.');
+      const catalogImage = wine?.image?.path ?? externalWine?.imagePath;
+      const image = photoPath ?? (sameWine ? old.photoPath ?? catalogImage : catalogImage) ?? null;
       const wineryName =
         item.wineryName ??
         wine?.winery?.name ??

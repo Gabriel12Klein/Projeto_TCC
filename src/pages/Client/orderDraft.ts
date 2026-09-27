@@ -12,9 +12,7 @@ export type OrderDraft = {
     orderId: string;
     itemId: string;
     date: string;
-    photo?: string | null;
   } | null;
-  photoNeedsReselect: boolean;
 };
 
 const draftKey = (userId: string) => `vinum_form_draft:purchase:${userId}`;
@@ -28,8 +26,7 @@ export function parseOrderDraft(value: unknown): OrderDraft | null {
     typeof draft.wineId !== 'string' ||
     typeof draft.name !== 'string' ||
     typeof draft.qty !== 'string' ||
-    typeof draft.purchaseLocation !== 'string' ||
-    typeof draft.photoNeedsReselect !== 'boolean'
+    typeof draft.purchaseLocation !== 'string'
   )
     return null;
   let editing: OrderDraft['editing'] = null;
@@ -39,15 +36,13 @@ export function parseOrderDraft(value: unknown): OrderDraft | null {
     if (
       typeof candidate.orderId !== 'string' ||
       typeof candidate.itemId !== 'string' ||
-      typeof candidate.date !== 'string' ||
-      (candidate.photo != null && typeof candidate.photo !== 'string')
+      typeof candidate.date !== 'string'
     )
       return null;
     editing = {
       orderId: candidate.orderId,
       itemId: candidate.itemId,
       date: candidate.date,
-      photo: candidate.photo as string | null | undefined,
     };
   }
   return {
@@ -66,7 +61,6 @@ export function parseOrderDraft(value: unknown): OrderDraft | null {
     purchaseLocationId: typeof draft.purchaseLocationId === 'string' ? draft.purchaseLocationId : '',
     purchaseLocation: draft.purchaseLocation,
     editing,
-    photoNeedsReselect: draft.photoNeedsReselect,
   };
 }
 
@@ -88,8 +82,7 @@ export function persistOrderDraft(userId: string, draft: OrderDraft) {
       draft.name ||
       draft.purchaseLocationId ||
       draft.purchaseLocation ||
-      draft.qty !== '1' ||
-      draft.photoNeedsReselect,
+      draft.qty !== '1',
     );
     if (hasContent) sessionStorage.setItem(draftKey(userId), JSON.stringify(draft));
     else sessionStorage.removeItem(draftKey(userId));

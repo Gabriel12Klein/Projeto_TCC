@@ -17,7 +17,6 @@ it.each(['0', '-1', '1.5', '', 'abc', '9007199254740992'])(
         qty,
         purchaseLocationId: 'local',
         purchaseLocation: '',
-        photo: false,
       }),
     ).toHaveProperty('qty');
   },
@@ -28,7 +27,7 @@ it('impede consumo superior ao saldo e data futura', () => {
     date: 'A data do consumo não pode estar no futuro.',
   });
 });
-it('usa foto do catálogo mas exige foto do rótulo externo e local da compra', () => {
+it('valida o rótulo e o local sem exigir foto no registro da compra', () => {
   const data = {
     source: 'VINICULA',
     winerySelection: 'VINUM',
@@ -38,7 +37,6 @@ it('usa foto do catálogo mas exige foto do rótulo externo e local da compra', 
     qty: '2',
     purchaseLocationId: 'local',
     purchaseLocation: '',
-    photo: false,
   };
   expect(validatePurchase(data)).toEqual({});
   expect(
@@ -52,7 +50,6 @@ it('usa foto do catálogo mas exige foto do rótulo externo e local da compra', 
   ).toEqual({
     wineId: 'Selecione um vinho cadastrado para esta vinícola.',
     purchaseLocation: 'Selecione o local onde o vinho foi comprado.',
-    photo: 'Adicione uma foto do rótulo comprado.',
   });
   expect(
     validatePurchase({
@@ -61,7 +58,6 @@ it('usa foto do catálogo mas exige foto do rótulo externo e local da compra', 
       winerySelection: 'catena',
       wineId: '',
       externalWineId: 'dv-catena',
-      photo: true,
     }),
   ).toEqual({});
 });

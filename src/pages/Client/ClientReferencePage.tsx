@@ -5,6 +5,8 @@ import { api } from '../../api/api';
 import QueryFeedback from '../../ui/QueryFeedback';
 import type { EntityRecord, ExternalWine, ExternalWinery, PurchaseLocation } from '../../types';
 import ConfirmDeleteDialog from '../../ui/ConfirmDeleteDialog';
+import BottlePhotoPicker from './BottlePhotoPicker';
+import PrivateImage from './PrivateImage';
 
 const inputClass =
   'mt-1 w-full rounded-xl border border-[#d9cbbd] bg-white px-4 py-3 text-[#321b1c] outline-none focus:border-[#8b2638]';
@@ -369,6 +371,8 @@ const emptyWine: WineForm = {
 
 function ExternalWines() {
   const [form, setForm] = useState<WineForm>(emptyWine);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [existingImage, setExistingImage] = useState<string | null>(null);
   const [editingId, setEditingId] = useState('');
   const [message, setMessage] = useState('');
   const [deleteWine, setDeleteWine] = useState<ExternalWine | null>(null);
@@ -396,11 +400,13 @@ function ExternalWines() {
   const save = useMutation({
     mutationFn: () =>
       editingId
-        ? api.customer.updateExternalWine(editingId, payload)
-        : api.customer.createExternalWine(payload),
+        ? api.customer.updateExternalWine(editingId, { ...payload, photo: photo || undefined })
+        : api.customer.createExternalWine({ ...payload, photo: photo! }),
     onSuccess: async () => {
       setMessage(`Vinho ${editingId ? 'atualizado' : 'cadastrado'} com sucesso.`);
       setForm(emptyWine);
+      setPhoto(null);
+      setExistingImage(null);
       setEditingId('');
       await qc.invalidateQueries({ queryKey: ['customer-external-wines'] });
     },
@@ -432,6 +438,8 @@ function ExternalWines() {
       aromas: wine.aromas ?? '',
       tastingNotes: wine.tastingNotes ?? '',
     });
+    setPhoto(null);
+    setExistingImage(wine.imagePath);
     setMessage('');
   };
   const selectedGrapes = (grapes.data ?? [])
@@ -439,6 +447,7 @@ function ExternalWines() {
     .map((grape: EntityRecord) => ({ id: grape.id, name: String(grape.name) }));
   const dirty =
     editingId ||
+    photo ||
     Object.values(form).some((value) => (Array.isArray(value) ? value.length > 0 : Boolean(value)));
   return (
     <PageShell title="Cadastrar vinho">
@@ -460,6 +469,7 @@ function ExternalWines() {
             event.preventDefault();
             setMessage('');
             if (!form.wineryId) return setMessage('Selecione uma vinícola.');
+            if (!editingId && !photo) return setMessage('Adicione uma foto da garrafa.');
             save.mutate();
           }}
         >
@@ -573,6 +583,24 @@ function ExternalWines() {
               />
             </label>
           ))}
+          {existingImage && !photo && (
+            <div className="flex items-center gap-4 rounded-xl border border-[#eadfd3] bg-[#fffaf3] p-4 md:col-span-2">
+              <PrivateImage
+                src={existingImage}
+                alt="Foto atual da garrafa"
+                className="h-24 w-16 rounded-lg object-contain"
+              />
+              <p className="text-sm font-normal text-[#715f59]">
+                A foto atual será mantida. Selecione outra somente para substituí-la.
+              </p>
+            </div>
+          )}
+          <BottlePhotoPicker
+            buttonId="external-wine-photo"
+            value={photo}
+            onChange={setPhoto}
+            required={!existingImage}
+          />
           <div className="flex flex-wrap gap-3 md:col-span-2">
             <button
               className="rounded-xl bg-[#7d1d2d] px-5 py-3 font-semibold text-white disabled:opacity-50"
@@ -588,6 +616,8 @@ function ExternalWines() {
                 onClick={() => {
                   setEditingId('');
                   setForm(emptyWine);
+                  setPhoto(null);
+                  setExistingImage(null);
                   setMessage('');
                 }}
               >
@@ -624,17 +654,26 @@ function ExternalWines() {
               className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#eadfd3] p-4"
               key={wine.id}
             >
-              <div>
-                <strong className="block text-[#5b0c1b]">
-                  {wine.name}
-                  {wine.vintageYear ? ` · ${wine.vintageYear}` : ''}
-                </strong>
-                <span className="text-sm text-[#715f59]">
-                  {wine.externalWinery.name}
-                  {wine.grapeLinks.length
-                    ? ` · ${wine.grapeLinks.map((link) => link.grape.name).join(', ')}`
-                    : ''}
-                </span>
+              <div className="flex min-w-0 items-center gap-3">
+                {wine.imagePath && (
+                  <PrivateImage
+                    src={wine.imagePath}
+                    alt={`Foto de ${wine.name}`}
+                    className="h-16 w-12 shrink-0 rounded-lg bg-[#f5ead8] object-contain"
+                  />
+                )}
+                <div>
+                  <strong className="block text-[#5b0c1b]">
+                    {wine.name}
+                    {wine.vintageYear ? ` · ${wine.vintageYear}` : ''}
+                  </strong>
+                  <span className="text-sm text-[#715f59]">
+                    {wine.externalWinery.name}
+                    {wine.grapeLinks.length
+                      ? ` · ${wine.grapeLinks.map((link) => link.grape.name).join(', ')}`
+                      : ''}
+                  </span>
+                </div>
               </div>
               <div className="flex gap-2">
                 <button

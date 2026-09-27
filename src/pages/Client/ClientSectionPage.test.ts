@@ -140,7 +140,6 @@ it('mostra somente os vinhos da vinícola externa selecionada e locais cadastrad
     purchaseLocationId: '',
     purchaseLocation: '',
     editing: null,
-    photoNeedsReselect: false,
   });
   const html = render('Meus vinhos', true);
   expect(html).toContain('Catálogo da VINUM');
@@ -150,4 +149,5 @@ it('mostra somente os vinhos da vinícola externa selecionada e locais cadastrad
   expect(html).not.toContain('Outro vinho da segunda vinícola');
   expect(html).not.toContain('Vinho oficial VINUM</option></select>');
   expect(html).toContain('Supermercado Central');
+  expect(html).not.toContain('Foto da garrafa');
 });

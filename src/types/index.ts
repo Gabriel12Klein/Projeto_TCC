@@ -143,6 +143,7 @@ export type ExternalWine = {
   characteristics: string | null;
   aromas: string | null;
   tastingNotes: string | null;
+  imagePath: string | null;
   grapeLinks: { grape: { id: string; name: string } }[];
   createdAt: string;
   updatedAt: string;

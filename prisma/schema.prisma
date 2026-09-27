@@ -418,6 +418,7 @@ model ExternalWine {
   characteristics  String?        @db.Text
   aromas           String?        @db.Text
   tastingNotes     String?        @db.Text
+  imagePath        String?
 
   orderItems CustomerOrderItem[]
   inventory  InventoryItem[]

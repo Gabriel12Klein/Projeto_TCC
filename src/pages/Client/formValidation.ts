@@ -7,7 +7,6 @@ export function validatePurchase(data: {
   qty: string;
   purchaseLocation: string;
   purchaseLocationId: string;
-  photo: boolean;
 }) {
   const errors: Record<string, string> = {};
   if (!data.winerySelection) errors.winerySelection = 'Selecione uma vinícola.';
@@ -19,7 +18,6 @@ export function validatePurchase(data: {
     errors.qty = 'Informe uma quantidade inteira de garrafas, maior que zero.';
   if (!data.purchaseLocationId && !data.purchaseLocation.trim())
     errors.purchaseLocation = 'Selecione o local onde o vinho foi comprado.';
-  if (data.source !== 'VINICULA' && !data.photo) errors.photo = 'Adicione uma foto do rótulo comprado.';
   return errors;
 }
 export function validateConsumption(data: { qty: string; date: string; available: number; today: string }) {

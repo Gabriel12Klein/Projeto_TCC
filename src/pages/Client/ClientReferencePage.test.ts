@@ -105,6 +105,8 @@ describe('cadastros privados do cliente', () => {
     expect(html).toContain('Selecione a vinícola');
     expect(html).toContain('Ano da safra');
     expect(html).toContain('Notas de degustação');
+    expect(html).toContain('Foto da garrafa');
+    expect(html).toContain('Adicionar foto');
     expect(html).toContain('Selecione uma uva para adicionar');
     expect(html).toContain('Merlot');
     expect(html).toContain('Escreva uma apresentação geral do vinho.');

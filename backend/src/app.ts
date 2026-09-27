@@ -26,11 +26,12 @@ app.use(express.json({ limit: '2mb' }));
 app.use('/uploads/inventory', requireAuth, requireRoles('CUSTOMER'), asyncRoute(async (req, res, next) => {
   const photoPath = `/uploads/inventory${req.path}`;
   const userId = String(res.locals.user.id);
-  const [stock, order] = await Promise.all([
+  const [stock, order, externalWine] = await Promise.all([
     prisma.inventoryItem.findFirst({ where: { userId, photoPath }, select: { id: true } }),
     prisma.customerOrderItem.findFirst({ where: { photoPath, order: { userId } }, select: { id: true } }),
+    prisma.externalWine.findFirst({ where: { userId, imagePath: photoPath }, select: { id: true } }),
   ]);
-  if (!stock && !order) throw new AppError(404, 'Foto não encontrada.');
+  if (!stock && !order && !externalWine) throw new AppError(404, 'Foto não encontrada.');
   res.setHeader('Cache-Control', 'private, no-store');
   next();
 }), express.static(join(uploadsRoot, 'inventory'), { fallthrough: false, cacheControl: false, dotfiles: 'deny' }));
