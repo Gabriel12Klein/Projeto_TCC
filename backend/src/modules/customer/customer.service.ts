@@ -385,7 +385,7 @@ export const customerService = {
     const bottles = await prisma.cellarBottle.findMany({
       where: { userId },
       include: bottleInclude,
-      orderBy: [{ purchasedAt: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+      orderBy: [{ purchasedAt: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
     });
     const totalsByItem = new Map<string, number>();
     const ordered = [...bottles].sort(
@@ -397,9 +397,22 @@ export const customerService = {
       totalsByItem.set(bottle.inventoryItemId, next);
       numbers.set(bottle.id, next);
     }
+    const statusOrder = new Map([
+      ['DISPONIVEL', 0],
+      ['ABERTA', 1],
+      ['CONSUMIDA', 2],
+    ]);
     return bottles
       .filter((bottle) => !status || bottle.status === status)
-      .map((bottle) => ({ ...bottle, bottleNumber: numbers.get(bottle.id) ?? 1 }));
+      .map((bottle) => ({ ...bottle, bottleNumber: numbers.get(bottle.id) ?? 1 }))
+      .sort(
+        (a, b) =>
+          (statusOrder.get(a.status) ?? 3) - (statusOrder.get(b.status) ?? 3) ||
+          a.inventoryItem.name.localeCompare(b.inventoryItem.name, 'pt-BR') ||
+          a.bottleNumber - b.bottleNumber ||
+          a.purchasedAt.getTime() - b.purchasedAt.getTime() ||
+          a.id.localeCompare(b.id),
+      );
   },
 
   async getBottle(userId: string, bottleId: string) {

@@ -50,3 +50,19 @@ O Dashboard mostra os quatro indicadores solicitados: adquiridas, disponíveis, 
 - A largura ampliada não apresentou overflow horizontal externo.
 
 A regressão geral permanece separada e não foi iniciada por esta alteração.
+
+## Ajustes finais — versão 2.2.1
+
+- `Meus pedidos` foi renomeado para `Meus vinhos`; `/pedidos` continua como redirecionamento compatível para `/vinhos`.
+- Em uma nova carga, `Todos` ordena por disponível, aberta e consumida. Dentro dos grupos, rótulos e números de unidade usam ordem crescente e estável.
+- Depois de confirmar uma mudança em `Todos`, o cache atualiza somente a garrafa correspondente, preservando sua posição visual. Trocar o filtro ou recarregar consulta e reaplica a ordenação padrão.
+- Botões da área do cliente receberam transições sutis de hover, clique, foco e estado desabilitado, respeitando `prefers-reduced-motion`.
+- Botão, subtítulo e cards do Dashboard foram atualizados para a nova nomenclatura.
+- O cadastro passou a normalizar a data local da compra para meio-dia UTC, evitando divergência entre a data exibida e o mínimo permitido para abertura durante a mudança do dia em UTC.
+- Não houve migration: schema, endpoints e modelagem já suportavam os ajustes.
+
+### Limpeza e validação
+
+Foram removidos somente dados pessoais de adega: 6 pedidos, 6 itens de pedido, 8 itens de adega, 36 garrafas e 46 movimentos. Usuários e dados administrativos foram preservados. Ao final permanecem 6 vinhos oficiais, 1 vinícola, 4 safras e 4 lotes.
+
+Não foram encontrados arrays, mocks ou fallbacks de garrafas fora do PostgreSQL. O teste visual criou um vinho controlado com três garrafas, abriu e consumiu a unidade 2, confirmou posição, filtros, totais, gráfico e persistência após recarga. Esses registros controlados foram removidos depois do teste; o Dashboard final está zerado.

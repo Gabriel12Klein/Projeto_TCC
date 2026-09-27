@@ -66,6 +66,8 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
 
     const firstBottles = await customerService.listBottles(userA);
     expect(firstBottles).toHaveLength(6);
+    expect(firstBottles.map((bottle) => bottle.bottleNumber)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(firstBottles.every((bottle) => bottle.status === 'DISPONIVEL')).toBe(true);
     const opened = await customerService.openBottle(userA, firstBottles[0].id, {
       occurredAt: new Date('2026-01-10T12:00:00Z'),
     });
@@ -84,6 +86,17 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
     await expect(
       customerService.openBottle(userA, firstBottles[0].id, { occurredAt: new Date() }),
     ).rejects.toThrow('disponível');
+    const orderedAfterConsumption = await customerService.listBottles(userA);
+    expect(orderedAfterConsumption.map((bottle) => bottle.status)).toEqual([
+      'DISPONIVEL',
+      'DISPONIVEL',
+      'DISPONIVEL',
+      'DISPONIVEL',
+      'CONSUMIDA',
+      'CONSUMIDA',
+    ]);
+    expect(orderedAfterConsumption.slice(0, 4).map((bottle) => bottle.bottleNumber)).toEqual([3, 4, 5, 6]);
+    expect(orderedAfterConsumption.slice(4).map((bottle) => bottle.bottleNumber)).toEqual([1, 2]);
     expect((await customerService.getInventoryDashboard(userA, 2026)).totals).toEqual({
       acquiredBottles: 6,
       consumedBottles: 2,
@@ -234,5 +247,46 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
       ]),
     ).toEqual(beforeFailure);
     expect(orderA.items[0].inventoryItemId).toBe(stockA.id);
+  });
+
+  it('mantém três unidades crescentes e reaplica a ordem por status em nova carga', async () => {
+    await customerService.createOrder(userB, {
+      source: 'VINICULA',
+      purchaseDate: new Date('2026-09-26T12:00:00Z'),
+      purchaseLocation: 'Teste controlado',
+      items: [{ wineId: wineA, quantityBottles: 3 }],
+    });
+    const initial = await customerService.listBottles(userB);
+    expect(initial.map((bottle) => bottle.bottleNumber)).toEqual([1, 2, 3]);
+    expect(initial.map((bottle) => bottle.status)).toEqual(['DISPONIVEL', 'DISPONIVEL', 'DISPONIVEL']);
+
+    const second = initial[1];
+    await customerService.openBottle(userB, second.id, {
+      occurredAt: new Date('2026-09-26T13:00:00Z'),
+    });
+    expect((await customerService.listBottles(userB, 'ABERTA')).map((bottle) => bottle.id)).toEqual([
+      second.id,
+    ]);
+    expect((await customerService.listBottles(userB)).map((bottle) => bottle.bottleNumber)).toEqual([
+      1, 3, 2,
+    ]);
+
+    await customerService.finishBottle(userB, second.id, {
+      occurredAt: new Date('2026-09-26T14:00:00Z'),
+    });
+    const reloaded = await customerService.listBottles(userB);
+    expect(reloaded.map((bottle) => bottle.bottleNumber)).toEqual([1, 3, 2]);
+    expect(reloaded.map((bottle) => bottle.status)).toEqual(['DISPONIVEL', 'DISPONIVEL', 'CONSUMIDA']);
+    expect((await customerService.getBottle(userB, second.id)).status).toBe('CONSUMIDA');
+    expect((await customerService.getInventoryDashboard(userB, 2026)).totals).toMatchObject({
+      acquiredBottles: 3,
+      availableBottles: 2,
+      openedBottles: 0,
+      consumedBottles: 1,
+    });
+    expect((await customerService.getInventoryDashboard(userB, 2026)).monthlyConsumption[8]).toEqual({
+      month: 9,
+      bottles: 1,
+    });
   });
 });

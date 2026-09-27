@@ -2,7 +2,10 @@
 
 /* Fit the administrative shell to tablets; tables retain their own scrolling. */
 @media (max-width: 1250px) {
-  .admin-page > div { width: 100%; min-width: 0; }
+  .admin-page > div {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 /* Cartões das áreas do cliente: deixam o histórico e o estoque mais fáceis de ler. */
@@ -11,8 +14,11 @@
   overflow: hidden;
   border: 1px solid #eadfd3;
   background: linear-gradient(135deg, #fffaf5 0%, #f8efe5 100%);
-  box-shadow: 0 8px 22px rgba(91, 12, 27, .06);
-  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  box-shadow: 0 8px 22px rgba(91, 12, 27, 0.06);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
   min-height: 86px;
   display: flex;
   align-items: center;
@@ -22,7 +28,7 @@
 .client-inventory-card:hover {
   transform: translateY(-2px);
   border-color: #caa36a;
-  box-shadow: 0 12px 28px rgba(91, 12, 27, .12);
+  box-shadow: 0 12px 28px rgba(91, 12, 27, 0.12);
 }
 
 .client-inventory-card::before {
@@ -51,6 +57,46 @@
 .client-section-page form > button {
   width: fit-content;
   min-width: 150px;
+}
+
+/* Feedback discreto e consistente nas ações da área do cliente. */
+.client-section-page :is(button, a) {
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    filter 160ms ease,
+    opacity 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+@media (hover: hover) {
+  .client-section-page :is(button, a):not(:disabled):hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+    box-shadow: 0 6px 14px rgb(91 12 27 / 14%);
+  }
+}
+
+.client-section-page :is(button, a):not(:disabled):active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 6px rgb(91 12 27 / 12%);
+}
+
+.client-section-page :is(button, a):focus-visible {
+  outline: 3px solid #d0a565;
+  outline-offset: 3px;
+}
+
+.client-section-page button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .client-section-page :is(button, a) {
+    transition: none;
+  }
 }
 
 main table th:last-child,

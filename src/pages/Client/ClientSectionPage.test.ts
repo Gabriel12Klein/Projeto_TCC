@@ -9,7 +9,7 @@ function render(title: string, loaded = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime: Infinity } },
   });
-  if (loaded && title === 'Meus pedidos') client.setQueryData(['customer-orders'], []);
+  if (loaded && title === 'Meus vinhos') client.setQueryData(['customer-orders'], []);
   if (loaded && title === 'Dashboard') {
     client.setQueryData(['customer-cellar-bottles', ''], []);
     client.setQueryData(['customer-inventory-dashboard', new Date().getFullYear()], {
@@ -36,10 +36,10 @@ function render(title: string, loaded = false) {
   return html;
 }
 it('não apresenta pedidos vazios enquanto a consulta está carregando', () => {
-  const html = render('Meus pedidos');
-  expect(html).toContain('Carregando pedidos');
-  expect(html).not.toContain('Nenhum pedido registrado.');
-  expect(render('Meus pedidos', true)).toContain('Nenhum pedido registrado.');
+  const html = render('Meus vinhos');
+  expect(html).toContain('Carregando vinhos');
+  expect(html).not.toContain('Você ainda não possui vinhos cadastrados.');
+  expect(render('Meus vinhos', true)).toContain('Você ainda não possui vinhos cadastrados.');
 });
 it('não apresenta painel vazio enquanto as consultas estão carregando', () => {
   const html = render('Dashboard');
@@ -47,7 +47,7 @@ it('não apresenta painel vazio enquanto as consultas estão carregando', () => 
   expect(html).toContain('Carregando dashboard');
   expect(html).not.toContain('Sua adega está vazia.');
   const empty = render('Dashboard', true);
-  expect(empty).toContain('Sua adega está vazia.');
-  expect(empty).toContain('Garrafas adquiridas');
-  expect(empty).toContain('Registrar nova compra');
+  expect(empty).toContain('Você ainda não possui vinhos cadastrados.');
+  expect(empty).toContain('Total de garrafas adquiridas');
+  expect(empty).toContain('Registrar um novo vinho');
 });

@@ -184,7 +184,7 @@ export default function App() {
       </Route>
       <Route path="/estoque" element={<Navigate to="/dashboard" replace />} />
       <Route
-        path="/pedidos"
+        path="/vinhos"
         element={
           user?.role === 'CUSTOMER' ? (
             <CatalogLayout user={user} onLogout={logout} />
@@ -197,13 +197,14 @@ export default function App() {
           index
           element={
             <ClientSectionPage
-              title="Meus pedidos"
-              description="Aqui você poderá acompanhar seus pedidos, status e histórico de compras."
+              title="Meus vinhos"
+              description="Cadastre os vinhos adquiridos e acompanhe o histórico da sua adega."
               userId={user?.id ?? ''}
             />
           }
         />
       </Route>
+      <Route path="/pedidos" element={<Navigate to="/vinhos" replace />} />
       <Route
         path="/login"
         element={<LoginPage onOpenRegister={() => navigate('/cadastro')} onLoginSuccess={loginSuccess} />}

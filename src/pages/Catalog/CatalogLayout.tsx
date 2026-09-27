@@ -37,12 +37,12 @@ export default function CatalogLayout({ user, onLogout }: { user: User; onLogout
             Dashboard
           </NavLink>
           <NavLink
-            to="/pedidos"
+            to="/vinhos"
             className={({ isActive }) =>
               `rounded-xl px-4 py-3 transition ${isActive ? 'bg-[#d0a565] font-semibold text-[#4c151c]' : 'text-white/85 hover:bg-white/10'}`
             }
           >
-            Meus pedidos
+            Meus vinhos
           </NavLink>
         </nav>
         <button

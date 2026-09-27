@@ -13,6 +13,11 @@ import InventoryDashboard from './InventoryDashboard';
 
 const input =
   'w-full rounded-xl border border-[#d9cbbd] bg-white px-4 py-3 text-[#321b1c] outline-none focus:border-[#8b2638]';
+function localTodayAtNoonUtc() {
+  const now = new Date();
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+  return `${localDate}T12:00:00.000Z`;
+}
 function Shell({ title, children }: { title: string; children: ReactNode }) {
   return (
     <main className="client-section-page mx-auto max-w-6xl px-5 py-10 lg:px-10">
@@ -74,7 +79,7 @@ function Orders({ userId }: { userId: string }) {
         ? api.customer.updateOrderItem(editing.orderId, editing.itemId, payload)
         : api.customer.createOrder(payload),
     onSuccess: async () => {
-      setMessage(editing ? 'Pedido atualizado e estoque ajustado.' : 'Pedido salvo e adicionado ao estoque.');
+      setMessage(editing ? 'Vinho atualizado e adega ajustada.' : 'Vinho salvo e adicionado à adega.');
       setEditing(null);
       setOpen(false);
       setPurchaseLocation('');
@@ -90,7 +95,7 @@ function Orders({ userId }: { userId: string }) {
     },
     onError: (e) => {
       feedback.fromApi(e);
-      setMessage(e instanceof Error ? e.message : 'Não foi possível salvar o pedido. Tente novamente.');
+      setMessage(e instanceof Error ? e.message : 'Não foi possível salvar o vinho. Tente novamente.');
     },
   });
   async function submit(e: FormEvent) {
@@ -117,7 +122,7 @@ function Orders({ userId }: { userId: string }) {
     try {
       await save.mutateAsync({
         source,
-        purchaseDate: editing?.date ?? new Date().toISOString(),
+        purchaseDate: editing?.date ?? localTodayAtNoonUtc(),
         purchaseLocation: purchaseLocation.trim(),
         photo: purchasePhoto || undefined,
         items: [
@@ -134,11 +139,11 @@ function Orders({ userId }: { userId: string }) {
     }
   }
   return (
-    <Shell title="Meus pedidos">
+    <Shell title="Meus vinhos">
       <section className="mt-8 rounded-3xl bg-[#5b0c1b] p-8 text-white">
-        <h2 className="font-playfair text-3xl">Registre suas compras</h2>
+        <h2 className="font-playfair text-3xl">Cadastre seus vinhos</h2>
         <p className="mt-2 text-white">
-          Cada compra salva entra automaticamente na sua adega e no resumo de consumo.
+          Cada vinho cadastrado entra automaticamente na sua adega e no resumo de consumo.
         </p>
         <button
           className="mt-5 rounded-xl bg-[#d0a565] px-5 py-3 font-semibold text-[#4c151c]"
@@ -146,7 +151,7 @@ function Orders({ userId }: { userId: string }) {
           onClick={() => {
             if (
               (name || wineId || purchaseLocation || purchasePhoto) &&
-              !window.confirm('Descartar o preenchimento atual e iniciar outra compra?')
+              !window.confirm('Descartar o preenchimento atual e cadastrar outro vinho?')
             )
               return;
             feedback.show({}, false);
@@ -162,12 +167,12 @@ function Orders({ userId }: { userId: string }) {
             setOpen(true);
           }}
         >
-          + Registrar compra
+          + Cadastrar vinho
         </button>
       </section>
       {draftRecovered && (
         <p className="mt-4 rounded-xl border border-[#eadfd3] bg-white p-4 text-[#5b0c1b]" role="status">
-          Rascunho de pedido recuperado nesta aba. Confira os dados antes de salvar.
+          Rascunho de vinho recuperado nesta aba. Confira os dados antes de salvar.
         </p>
       )}
       {!open && (name || wineId || purchaseLocation || purchasePhoto) && (
@@ -210,7 +215,7 @@ function Orders({ userId }: { userId: string }) {
                 >
                   <option value="">Selecione o vinho</option>
                   {editing && wineId && !wines.some((wine) => wine.id === wineId) && (
-                    <option value={wineId}>{name} (rótulo deste pedido)</option>
+                    <option value={wineId}>{name} (rótulo deste cadastro)</option>
                   )}
                   {wines.map((w) => (
                     <option key={w.id} value={w.id}>
@@ -264,7 +269,7 @@ function Orders({ userId }: { userId: string }) {
               <div className="md:col-span-2 flex items-center gap-3">
                 <PrivateImage
                   src={editing.photo}
-                  alt="Foto atual do pedido"
+                  alt="Foto atual do vinho"
                   className="h-20 w-14 object-contain"
                 />
                 <p className="text-sm text-[#715f59]">
@@ -309,7 +314,7 @@ function Orders({ userId }: { userId: string }) {
                 disabled={save.isPending}
                 className="rounded-xl bg-[#7d1d2d] px-5 py-3 font-semibold text-white disabled:opacity-50"
               >
-                {save.isPending ? 'Salvando...' : 'Salvar pedido'}
+                {save.isPending ? 'Salvando...' : 'Salvar vinho'}
               </button>
               <button
                 type="button"
@@ -318,7 +323,7 @@ function Orders({ userId }: { userId: string }) {
                 onClick={() => {
                   if (
                     window.confirm(
-                      'Fechar este formulário? O rascunho ficará disponível nesta sessão até você salvar ou iniciar outra compra.',
+                      'Fechar este formulário? O rascunho ficará disponível nesta sessão até você salvar ou cadastrar outro vinho.',
                     )
                   )
                     setOpen(false);
@@ -343,8 +348,8 @@ function Orders({ userId }: { userId: string }) {
       )}
       <section className="mt-8 overflow-hidden rounded-3xl bg-white shadow-sm">
         <div className="border-b border-[#eadfd3] p-6 md:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6a2d]">Registro de pedidos</p>
-          <h2 className="mt-1 font-playfair text-2xl text-[#5b0c1b]">Histórico de compras</h2>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6a2d]">Vinhos cadastrados</p>
+          <h2 className="mt-1 font-playfair text-2xl text-[#5b0c1b]">Histórico da adega</h2>
           <p className="mt-2 text-[#715f59]">Consulte os rótulos, quantidades, datas e origens.</p>
         </div>
         <QueryFeedback
@@ -352,8 +357,8 @@ function Orders({ userId }: { userId: string }) {
           error={ordersQuery.error}
           fetching={ordersQuery.isFetching}
           empty={!orders.length}
-          emptyText="Nenhum pedido registrado. Use Registrar compra para adicionar o primeiro."
-          loadingText="Carregando pedidos…"
+          emptyText="Você ainda não possui vinhos cadastrados. Use Cadastrar vinho para adicionar o primeiro."
+          loadingText="Carregando vinhos…"
           retry={() => void ordersQuery.refetch()}
         />
         {orders.length ? (
@@ -406,7 +411,7 @@ function Orders({ userId }: { userId: string }) {
                             onClick={() => {
                               if (
                                 open &&
-                                !window.confirm('Abrir outro pedido e descartar o preenchimento atual?')
+                                !window.confirm('Abrir outro vinho e descartar o preenchimento atual?')
                               )
                                 return;
                               feedback.show({}, false);
@@ -452,5 +457,5 @@ export default function ClientSectionPage({
   description?: string;
   userId: string;
 }) {
-  return title === 'Meus pedidos' ? <Orders userId={userId} /> : <InventoryDashboard />;
+  return title === 'Meus vinhos' ? <Orders userId={userId} /> : <InventoryDashboard />;
 }

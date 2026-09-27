@@ -21,11 +21,27 @@ function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleDateString('pt-BR') : '—';
 }
 
+function localDateValue(value: string) {
+  const date = new Date(value);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+}
+
 const statusLabel: Record<BottleStatus, string> = {
   DISPONIVEL: 'Disponível',
   ABERTA: 'Aberta',
   CONSUMIDA: 'Consumida',
 };
+
+export function replaceBottlePreservingOrder(
+  bottles: CellarBottle[] | undefined,
+  updated: CellarBottle,
+  activeStatus: string,
+) {
+  if (!bottles) return bottles;
+  return bottles
+    .map((bottle) => (bottle.id === updated.id ? { ...updated, bottleNumber: bottle.bottleNumber } : bottle))
+    .filter((bottle) => !activeStatus || bottle.status === activeStatus);
+}
 
 function BottleRow({
   bottle,
@@ -91,7 +107,7 @@ function BottleRow({
                 disabled={pending}
                 onClick={() => start('open')}
               >
-                Abrir
+                Abrir garrafa
               </button>
               <button
                 type="button"
@@ -99,7 +115,7 @@ function BottleRow({
                 disabled={pending}
                 onClick={() => start('finish')}
               >
-                Consumir
+                Finalizar garrafa
               </button>
             </>
           )}
@@ -110,7 +126,7 @@ function BottleRow({
               disabled={pending}
               onClick={() => start('finish')}
             >
-              Finalizar consumo
+              Finalizar garrafa
             </button>
           )}
         </div>
@@ -126,7 +142,7 @@ function BottleRow({
               ref={dateInput}
               className="mt-1 block rounded-lg border border-[#d9cbbd] px-3 py-2"
               type="date"
-              min={bottle.openedAt?.slice(0, 10) || bottle.purchasedAt.slice(0, 10)}
+              min={localDateValue(bottle.openedAt || bottle.purchasedAt)}
               max={today()}
               required
               value={date}
@@ -215,16 +231,17 @@ export default function InventoryDashboard() {
       occurredAt: string;
     }) =>
       action === 'open' ? api.customer.openBottle(id, occurredAt) : api.customer.finishBottle(id, occurredAt),
-    onSuccess: async (_, variables) => {
+    onSuccess: async (updated, variables) => {
       setMessage(
         variables.action === 'open'
           ? 'Garrafa aberta e dashboard atualizado.'
           : 'Consumo finalizado e preservado no histórico.',
       );
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ['customer-cellar-bottles'] }),
-        qc.invalidateQueries({ queryKey: ['customer-inventory-dashboard'] }),
-      ]);
+      qc.setQueryData<CellarBottle[]>(['customer-cellar-bottles', status], (current) =>
+        replaceBottlePreservingOrder(current, updated, status),
+      );
+      await qc.invalidateQueries({ queryKey: ['customer-cellar-bottles'], refetchType: 'none' });
+      await qc.invalidateQueries({ queryKey: ['customer-inventory-dashboard'] });
     },
     onError: (error) =>
       setMessage(error instanceof Error ? error.message : 'Não foi possível atualizar a garrafa.'),
@@ -240,13 +257,14 @@ export default function InventoryDashboard() {
       <section className="mt-8 rounded-3xl bg-[#5b0c1b] p-8 text-white">
         <h2 className="font-playfair text-3xl">Resumo da minha adega</h2>
         <p className="mt-2">
-          Acompanhe cada garrafa da compra ao consumo. Novas garrafas entram por Meus pedidos.
+          Acompanhe seus vinhos desde a entrada na adega até o consumo. Novos vinhos podem ser cadastrados em
+          Meus vinhos.
         </p>
         <Link
           className="mt-5 inline-block rounded-xl bg-[#d0a565] px-5 py-3 font-semibold text-[#4c151c]"
-          to="/pedidos"
+          to="/vinhos"
         >
-          Registrar nova compra
+          Registrar um novo vinho
         </Link>
       </section>
 
@@ -264,10 +282,10 @@ export default function InventoryDashboard() {
             aria-label="Indicadores da adega"
           >
             {[
-              ['Garrafas adquiridas', dashboard.data.totals.acquiredBottles],
-              ['Garrafas disponíveis', dashboard.data.totals.availableBottles],
-              ['Garrafas abertas', dashboard.data.totals.openedBottles],
-              ['Garrafas consumidas', dashboard.data.totals.consumedBottles],
+              ['Total de garrafas adquiridas', dashboard.data.totals.acquiredBottles],
+              ['Total de garrafas disponíveis', dashboard.data.totals.availableBottles],
+              ['Total de garrafas abertas', dashboard.data.totals.openedBottles],
+              ['Total de garrafas consumidas', dashboard.data.totals.consumedBottles],
             ].map(([label, value]) => (
               <article className="rounded-2xl bg-white p-5 shadow-sm" key={label}>
                 <strong className="block text-3xl text-[#5b0c1b]">{value}</strong>
@@ -349,9 +367,7 @@ export default function InventoryDashboard() {
           fetching={bottles.isFetching}
           empty={!bottles.data?.length}
           emptyText={
-            status
-              ? 'Nenhuma garrafa com este status.'
-              : 'Sua adega está vazia. Registre uma compra para adicionar as primeiras garrafas.'
+            status ? 'Nenhuma garrafa com este status.' : 'Você ainda não possui vinhos cadastrados.'
           }
           loadingText="Carregando histórico da adega…"
           retry={() => void bottles.refetch()}

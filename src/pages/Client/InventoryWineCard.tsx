@@ -288,7 +288,7 @@ export default function InventoryWineCard({
                       <span className="block">
                         {movement.orderId &&
                         movement.reason === `Compra registrada no pedido ${movement.orderId}`
-                          ? 'Compra registrada em Meus pedidos.'
+                          ? 'Compra registrada em Meus vinhos.'
                           : movement.reason}
                       </span>
                     )}
