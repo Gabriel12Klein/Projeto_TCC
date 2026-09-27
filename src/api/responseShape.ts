@@ -71,6 +71,12 @@ export function validResponse(path: string, method: string, value: unknown) {
     );
   if (route === '/cliente/pedidos' && method === 'GET') return Array.isArray(value) && value.every(order);
   if (route.startsWith('/cliente/pedidos')) return order(value);
+  if (
+    /^\/cliente\/(vinicolas-externas|vinhos-externos|locais-compra)(\/[^/]+)?$/.test(route)
+  ) {
+    if (method === 'GET') return records(value);
+    return object(value) && typeof value.id === 'string' && typeof value.name === 'string';
+  }
   if (route === '/cliente/estoque' && method === 'GET') return Array.isArray(value) && value.every(inventory);
   if (route === '/cliente/estoque/resumo' && method === 'GET') return inventoryDashboard(value);
   if (route === '/cliente/estoque/garrafas' && method === 'GET')

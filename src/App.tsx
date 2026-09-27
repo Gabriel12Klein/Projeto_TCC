@@ -12,6 +12,7 @@ import HomePage from './pages/Home/HomePage';
 import ProfilePage from './pages/Profile/ProfilePage';
 import BatchPublicPage from './pages/Catalog/BatchPublicPage';
 import ClientSectionPage from './pages/Client/ClientSectionPage';
+import ClientReferencePage from './pages/Client/ClientReferencePage';
 import { ApiError } from './api/feedback';
 
 function Loading() {
@@ -205,6 +206,42 @@ export default function App() {
         />
       </Route>
       <Route path="/pedidos" element={<Navigate to="/vinhos" replace />} />
+      <Route
+        path="/cadastros/vinicolas"
+        element={
+          user?.role === 'CUSTOMER' ? (
+            <CatalogLayout user={user} onLogout={logout} />
+          ) : (
+            <Navigate to={user ? '/admin' : customerFallback} replace />
+          )
+        }
+      >
+        <Route index element={<ClientReferencePage kind="winery" />} />
+      </Route>
+      <Route
+        path="/cadastros/vinhos"
+        element={
+          user?.role === 'CUSTOMER' ? (
+            <CatalogLayout user={user} onLogout={logout} />
+          ) : (
+            <Navigate to={user ? '/admin' : customerFallback} replace />
+          )
+        }
+      >
+        <Route index element={<ClientReferencePage kind="wine" />} />
+      </Route>
+      <Route
+        path="/cadastros/locais-compra"
+        element={
+          user?.role === 'CUSTOMER' ? (
+            <CatalogLayout user={user} onLogout={logout} />
+          ) : (
+            <Navigate to={user ? '/admin' : customerFallback} replace />
+          )
+        }
+      >
+        <Route index element={<ClientReferencePage kind="location" />} />
+      </Route>
       <Route
         path="/login"
         element={<LoginPage onOpenRegister={() => navigate('/cadastro')} onLoginSuccess={loginSuccess} />}

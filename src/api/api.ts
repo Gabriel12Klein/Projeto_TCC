@@ -5,9 +5,12 @@ import type {
   CatalogWineDetail,
   CustomerOrder,
   EntityRecord,
+  ExternalWine,
+  ExternalWinery,
   InventoryDashboard,
   InventoryItem,
   PublicBatchDetail,
+  PurchaseLocation,
   ResourceKey,
   User,
 } from '../types';
@@ -142,15 +145,60 @@ export const api = {
     batch: (code: string) => request<PublicBatchDetail>(`/catalog/batches/${encodeURIComponent(code)}`),
   },
   customer: {
+    externalWineries: () => request<ExternalWinery[]>('/cliente/vinicolas-externas'),
+    createExternalWinery: (name: string) =>
+      request<ExternalWinery>('/cliente/vinicolas-externas', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      }),
+    updateExternalWinery: (id: string, name: string) =>
+      request<ExternalWinery>(`/cliente/vinicolas-externas/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+      }),
+    removeExternalWinery: (id: string) =>
+      request<void>(`/cliente/vinicolas-externas/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    externalWines: (wineryId?: string) =>
+      request<ExternalWine[]>(
+        `/cliente/vinhos-externos${wineryId ? `?wineryId=${encodeURIComponent(wineryId)}` : ''}`,
+      ),
+    createExternalWine: (payload: { name: string; externalWineryId: string }) =>
+      request<ExternalWine>('/cliente/vinhos-externos', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    updateExternalWine: (id: string, payload: { name: string; externalWineryId: string }) =>
+      request<ExternalWine>(`/cliente/vinhos-externos/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      }),
+    removeExternalWine: (id: string) =>
+      request<void>(`/cliente/vinhos-externos/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    purchaseLocations: () => request<PurchaseLocation[]>('/cliente/locais-compra'),
+    createPurchaseLocation: (name: string) =>
+      request<PurchaseLocation>('/cliente/locais-compra', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      }),
+    updatePurchaseLocation: (id: string, name: string) =>
+      request<PurchaseLocation>(`/cliente/locais-compra/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+      }),
+    removePurchaseLocation: (id: string) =>
+      request<void>(`/cliente/locais-compra/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     orders: () => request<CustomerOrder[]>('/cliente/pedidos'),
     createOrder: (payload: {
       source: 'VINICULA' | 'OUTRO_LOCAL';
       purchaseDate: string;
+      purchaseLocationId?: string;
       purchaseLocation?: string;
       photo?: File;
       notes?: string;
       items: Array<{
         wineId?: string;
+        externalWineId?: string;
+        externalWineryId?: string;
         wineName?: string;
         wineryName?: string;
         vintageYear?: number;
@@ -174,9 +222,16 @@ export const api = {
       payload: {
         source: 'VINICULA' | 'OUTRO_LOCAL';
         purchaseDate: string;
+        purchaseLocationId?: string;
         purchaseLocation?: string;
         photo?: File;
-        items: Array<{ wineId?: string; wineName?: string; quantityBottles: number }>;
+        items: Array<{
+          wineId?: string;
+          externalWineId?: string;
+          externalWineryId?: string;
+          wineName?: string;
+          quantityBottles: number;
+        }>;
       },
     ) => {
       const { photo, ...data } = payload;

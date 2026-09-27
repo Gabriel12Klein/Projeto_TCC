@@ -99,6 +99,7 @@ export type CustomerOrderItem = {
   photoPath?: string | null;
   id: string;
   wineId: string | null;
+  externalWineId: string | null;
   wineName: string;
   wineryName: string | null;
   vintageYear: number | null;
@@ -106,15 +107,40 @@ export type CustomerOrderItem = {
   volumeMl: number | null;
   unitPrice: number | null;
   wine?: { id: string; name: string; slug: string } | null;
+  externalWine?: ExternalWine | null;
 };
 
 export type CustomerOrder = {
   purchaseLocation?: string | null;
+  purchaseLocationId?: string | null;
   id: string;
   source: 'VINICULA' | 'OUTRO_LOCAL';
   purchaseDate: string;
   notes: string | null;
   items: CustomerOrderItem[];
+};
+
+export type ExternalWinery = {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ExternalWine = {
+  id: string;
+  name: string;
+  externalWineryId: string;
+  externalWinery: { id: string; name: string };
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PurchaseLocation = {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type InventoryMovement = {
@@ -135,6 +161,7 @@ export type InventoryItem = {
   photoPath: string | null;
   quantityBottles: number;
   wineId: string | null;
+  externalWineId?: string | null;
   wine?: { id: string; name: string; slug: string } | null;
   movements: InventoryMovement[];
 };

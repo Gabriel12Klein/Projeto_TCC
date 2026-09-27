@@ -44,6 +44,33 @@ export default function CatalogLayout({ user, onLogout }: { user: User; onLogout
           >
             Meus vinhos
           </NavLink>
+          <p className="mb-1 mt-4 px-3 text-xs font-bold uppercase tracking-[0.2em] text-[#e2bd76]">
+            Cadastros
+          </p>
+          <NavLink
+            to="/cadastros/vinhos"
+            className={({ isActive }) =>
+              `rounded-xl px-4 py-3 transition ${isActive ? 'bg-[#d0a565] font-semibold text-[#4c151c]' : 'text-white/85 hover:bg-white/10'}`
+            }
+          >
+            Cadastrar vinho
+          </NavLink>
+          <NavLink
+            to="/cadastros/vinicolas"
+            className={({ isActive }) =>
+              `rounded-xl px-4 py-3 transition ${isActive ? 'bg-[#d0a565] font-semibold text-[#4c151c]' : 'text-white/85 hover:bg-white/10'}`
+            }
+          >
+            Cadastrar vinícola
+          </NavLink>
+          <NavLink
+            to="/cadastros/locais-compra"
+            className={({ isActive }) =>
+              `rounded-xl px-4 py-3 transition ${isActive ? 'bg-[#d0a565] font-semibold text-[#4c151c]' : 'text-white/85 hover:bg-white/10'}`
+            }
+          >
+            Cadastrar local de compra
+          </NavLink>
         </nav>
         <button
           className="mt-8 rounded-xl border border-white/25 px-4 py-3 text-left text-white/85 transition hover:bg-white/10 lg:mt-auto"
