@@ -5,6 +5,7 @@ import { vintagesService } from './vintages/vintages.service.js';
 import { batchesService } from './batches/batches.service.js';
 import { batchSchema } from './batches/batches.schema.js';
 import { customerService } from './customer/customer.service.js';
+import { todayCivilDate } from './customer/customer.schema.js';
 
 const tag = 'relations-' + Date.now();
 let userId: string, wineryId: string, typeId: string, grapeId: string, secondGrapeId: string;
@@ -214,11 +215,12 @@ describe('Integridade real no PostgreSQL', () => {
   });
 
   it('salva pedidos concorrentes em um estoque único, com movimentos vinculados', async () => {
+    const currentCivilDate = new Date(`${todayCivilDate()}T12:00:00.000Z`);
     const orders = await Promise.all(
       [1, 2, 3].map(() =>
         customerService.createOrder(userId, {
           source: 'VINICULA',
-          purchaseDate: new Date(),
+          purchaseDate: currentCivilDate,
           purchaseLocation: 'Supermercado',
           items: [{ wineId: wineIds[0], vintageYear: 2099, quantityBottles: 2 }],
         }),
@@ -236,7 +238,7 @@ describe('Integridade real no PostgreSQL', () => {
       [1, 2].map(() =>
         customerService.registerConsumption(userId, stock[0].id, {
           quantityBottles: 4,
-          occurredAt: new Date(),
+          occurredAt: currentCivilDate,
         }),
       ),
     );

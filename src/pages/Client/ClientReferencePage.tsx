@@ -103,6 +103,8 @@ function addressFrom(record: ExternalWinery | PurchaseLocation): AddressForm {
 function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
   const winery = kind === 'winery';
   const singular = winery ? 'vinícola' : 'local de compra';
+  const entityLabel = winery ? 'Vinícola' : 'Local de compra';
+  const entityWithArticle = winery ? 'a vinícola' : 'o local de compra';
   const queryKey = winery ? ['customer-external-wineries'] : ['customer-purchase-locations'];
   const [form, setForm] = useState<AddressForm>(emptyAddress);
   const [editingId, setEditingId] = useState('');
@@ -111,6 +113,12 @@ function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
   const [deleteRecord, setDeleteRecord] = useState<ExternalWinery | PurchaseLocation | null>(null);
   const result = useRef<HTMLParagraphElement>(null);
   const qc = useQueryClient();
+  useEffect(() => {
+    setForm(emptyAddress);
+    setEditingId('');
+    setMessage('');
+    setDeleteRecord(null);
+  }, [kind]);
   const query = useQuery({
     queryKey,
     queryFn: winery ? api.customer.externalWineries : api.customer.purchaseLocations,
@@ -150,25 +158,27 @@ function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
           : api.customer.createPurchaseLocation(payload),
     onSuccess: async () => {
       setMessage(
-        `${winery ? 'Vinícola' : 'Local de compra'} ${editingId ? 'atualizado' : 'cadastrado'} com sucesso.`,
+        `${entityLabel} ${editingId ? (winery ? 'atualizada' : 'atualizado') : winery ? 'cadastrada' : 'cadastrado'} com sucesso.`,
       );
       setForm(emptyAddress);
       setEditingId('');
       await qc.invalidateQueries({ queryKey });
     },
     onError: (error) =>
-      setMessage(error instanceof Error ? error.message : `Não foi possível salvar o ${singular}.`),
+      setMessage(error instanceof Error ? error.message : `Não foi possível salvar ${entityWithArticle}.`),
   });
   const remove = useMutation({
     mutationFn: (id: string) =>
       winery ? api.customer.removeExternalWinery(id) : api.customer.removePurchaseLocation(id),
     onSuccess: async () => {
       setDeleteRecord(null);
-      setMessage(`${winery ? 'Vinícola' : 'Local de compra'} excluído com sucesso.`);
+      setMessage(`${entityLabel} ${winery ? 'excluída' : 'excluído'} com sucesso.`);
       await qc.invalidateQueries({ queryKey });
     },
-    onError: (error) =>
-      setMessage(error instanceof Error ? error.message : `Não foi possível excluir o ${singular}.`),
+    onError: (error) => {
+      setDeleteRecord(null);
+      setMessage(error instanceof Error ? error.message : `Não foi possível excluir ${entityWithArticle}.`);
+    },
   });
   useEffect(() => {
     if (message) window.requestAnimationFrame(() => result.current?.focus());
@@ -288,7 +298,7 @@ function NamedReferences({ kind }: { kind: 'winery' | 'location' }) {
           error={query.error}
           fetching={query.isFetching}
           empty={!records.length}
-          emptyText={`Nenhum ${singular} cadastrado.`}
+          emptyText={winery ? 'Nenhuma vinícola cadastrada.' : 'Nenhum local de compra cadastrado.'}
           loadingText="Carregando cadastros…"
           retry={() => void query.refetch()}
         />
@@ -420,8 +430,10 @@ function ExternalWines() {
       setMessage('Vinho excluído com sucesso.');
       await qc.invalidateQueries({ queryKey: ['customer-external-wines'] });
     },
-    onError: (error) =>
-      setMessage(error instanceof Error ? error.message : 'Não foi possível excluir o vinho.'),
+    onError: (error) => {
+      setDeleteWine(null);
+      setMessage(error instanceof Error ? error.message : 'Não foi possível excluir o vinho.');
+    },
   });
   useEffect(() => {
     if (message) window.requestAnimationFrame(() => result.current?.focus());
@@ -551,7 +563,9 @@ function ExternalWines() {
                       type="button"
                       className="grid h-7 w-7 place-items-center rounded-full text-lg leading-none hover:bg-[#f1dcc0] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#8b2638]"
                       aria-label={`Remover ${grape.name}`}
-                      onClick={() => setForm({ ...form, grapeIds: removeGrapeSelection(form.grapeIds, grape.id) })}
+                      onClick={() =>
+                        setForm({ ...form, grapeIds: removeGrapeSelection(form.grapeIds, grape.id) })
+                      }
                     >
                       ×
                     </button>

@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.9.0**
+Versão atual: **2.9.1**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -101,3 +101,12 @@ há mais de uma. O backend valida que o ano pertence ao vinho e persiste o
 snapshot em `item_pedido.vintageYear`. Uma migration incremental preenche
 compras antigas somente quando existe um único ano possível, preservando casos
 ambíguos.
+
+## Versão 2.9.1
+
+Corrige a concordância das mensagens nos cadastros privados de vinícola e local
+de compra, limpa o estado do formulário ao alternar entre essas telas e fecha o
+modal de exclusão quando uma dependência impede a operação, deixando a mensagem
+de recuperação visível e acessível. Também torna o teste concorrente de consumo
+independente da virada do dia em UTC, preservando a regra de datas civis de São
+Paulo. Não houve alteração de banco ou migration.
