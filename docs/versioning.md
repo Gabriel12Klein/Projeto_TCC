@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.9.1**
+Versão atual: **2.9.2**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -110,3 +110,11 @@ modal de exclusão quando uma dependência impede a operação, deixando a mensa
 de recuperação visível e acessível. Também torna o teste concorrente de consumo
 independente da virada do dia em UTC, preservando a regra de datas civis de São
 Paulo. Não houve alteração de banco ou migration.
+
+## Versão 2.9.2
+
+Adiciona scripts documentados para backup e restauração do PostgreSQL, uploads
+privados e configuração local antes da troca ou formatação do computador. Os
+artefatos gerados permanecem ignorados pelo Git para impedir o envio de senhas
+e dados privados ao repositório público. O `docker-compose.yml` versionado
+continua responsável por recriar os containers PostgreSQL e pgAdmin.

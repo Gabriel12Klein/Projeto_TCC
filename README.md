@@ -43,6 +43,32 @@ O Compose usa o volume existente `vinum-tcc-prototipo-local_vinum_postgres_data`
 Nunca use `docker compose down -v`, reset ou exclusão de volumes para atualizar o sistema.
 As portas no arquivo Compose estão limitadas a localhost; containers antigos precisam ser recriados para aplicar alterações de publicação de portas. Um simples restart preserva sua configuração anterior.
 
+### Backup antes de formatar o computador
+
+O GitHub preserva o código, o `docker-compose.yml`, as migrations e os scripts,
+mas não armazena volumes Docker, senhas, uploads privados ou o conteúdo do
+PostgreSQL. Para criar um pacote local com banco, uploads e `.env`, execute:
+
+```powershell
+.\scripts\backup-vinum.ps1
+```
+
+O resultado fica em `backups/vinum-AAAAmmdd-HHmmss` e é ignorado pelo Git.
+Copie essa pasta para um dispositivo externo ou armazenamento privado antes de
+formatar. Não envie esse conteúdo para um repositório público.
+
+Depois de clonar o projeto no computador novo, copie a pasta de backup para um
+local acessível e restaure com:
+
+```powershell
+.\scripts\restore-vinum.ps1 -BackupDirectory "D:\Backup\vinum-AAAAmmdd-HHmmss"
+```
+
+O script recria os serviços definidos no Compose, restaura o PostgreSQL e os
+uploads e instala as dependências. O pgAdmin volta em `http://localhost:5051`;
+cadastre o servidor usando host `postgres`, porta `5432`, banco e usuário
+`vinum`. A configuração visual interna do pgAdmin não faz parte do backup.
+
 ## Domínio administrativo
 
 Somente ADMIN/EDITOR vinculados à VINUM podem administrar produtos. O cadastro público sempre cria CUSTOMER. Uma segunda vinícola é recusada pela API e pelo banco.
