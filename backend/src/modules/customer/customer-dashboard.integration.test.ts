@@ -75,8 +75,14 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
     expect(opened.status).toBe('ABERTA');
     expect(opened.openedAt).toEqual(new Date('2026-01-10T12:00:00Z'));
     expect((await customerService.getInventoryDashboard(userA, 2026)).totals.openedBottles).toBe(1);
+    expect((await prisma.inventoryItem.findUniqueOrThrow({ where: { id: stockA.id } })).quantityBottles).toBe(
+      6,
+    );
     await customerService.finishBottle(userA, firstBottles[0].id, {
       occurredAt: new Date('2026-01-15T12:00:00Z'),
+    });
+    await customerService.openBottle(userA, firstBottles[1].id, {
+      occurredAt: new Date('2026-01-14T12:00:00Z'),
     });
     await customerService.finishBottle(userA, firstBottles[1].id, {
       occurredAt: new Date('2026-01-15T12:00:00Z'),
@@ -205,6 +211,12 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
     expect(await customerService.listInventory(userB)).toEqual([]);
     await expect(customerService.getBottle(userB, firstBottles[0].id)).rejects.toThrow('não encontrada');
     await expect(
+      customerService.discardBottle(userB, firstBottles[2].id, {
+        occurredAt: new Date('2026-03-20T12:00:00Z'),
+        reason: 'Tentativa fora da conta proprietária',
+      }),
+    ).rejects.toThrow('não encontrada');
+    await expect(
       customerService.registerConsumption(userB, stockA.id, {
         quantityBottles: 1,
         occurredAt: new Date('2026-03-20T12:00:00Z'),
@@ -279,9 +291,46 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
     expect(reloaded.map((bottle) => bottle.bottleNumber)).toEqual([1, 3, 2]);
     expect(reloaded.map((bottle) => bottle.status)).toEqual(['DISPONIVEL', 'DISPONIVEL', 'CONSUMIDA']);
     expect((await customerService.getBottle(userB, second.id)).status).toBe('CONSUMIDA');
+
+    const discarded = await customerService.discardBottle(userB, initial[0].id, {
+      occurredAt: new Date('2026-09-26T15:00:00Z'),
+      reason: 'Rolha danificada durante o armazenamento',
+    });
+    expect(discarded).toMatchObject({
+      status: 'DESCARTADA',
+      discardReason: 'Rolha danificada durante o armazenamento',
+    });
+    expect((await customerService.listBottles(userB, 'DESCARTADA')).map((bottle) => bottle.id)).toEqual([
+      initial[0].id,
+    ]);
+    await customerService.openBottle(userB, initial[2].id, {
+      occurredAt: new Date('2026-09-26T15:00:00Z'),
+    });
+    const discardedAfterOpening = await customerService.discardBottle(userB, initial[2].id, {
+      occurredAt: new Date('2026-09-26T16:00:00Z'),
+      reason: 'Vinho oxidado depois da abertura',
+    });
+    expect(discardedAfterOpening.openedAt).toEqual(new Date('2026-09-26T15:00:00Z'));
+    expect(discardedAfterOpening.discardedAt).toEqual(new Date('2026-09-26T16:00:00Z'));
+    await expect(
+      customerService.finishBottle(userB, discardedAfterOpening.id, {
+        occurredAt: new Date('2026-09-26T17:00:00Z'),
+      }),
+    ).rejects.toThrow('Somente uma garrafa aberta');
+    await expect(
+      customerService.discardBottle(userB, second.id, {
+        occurredAt: new Date('2026-09-26T17:00:00Z'),
+        reason: 'Não pode descartar uma garrafa consumida',
+      }),
+    ).rejects.toThrow('disponível ou aberta');
+    expect((await customerService.listBottles(userB)).map((bottle) => bottle.status)).toEqual([
+      'CONSUMIDA',
+      'DESCARTADA',
+      'DESCARTADA',
+    ]);
     expect((await customerService.getInventoryDashboard(userB, 2026)).totals).toMatchObject({
       acquiredBottles: 3,
-      availableBottles: 2,
+      availableBottles: 0,
       openedBottles: 0,
       consumedBottles: 1,
     });
@@ -289,6 +338,10 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
       month: 9,
       bottles: 1,
     });
+    expect(
+      (await prisma.inventoryItem.findFirstOrThrow({ where: { userId: userB, wineId: wineA } }))
+        .quantityBottles,
+    ).toBe(0);
   });
 
   it('aplica as regras por dia civil sem bloquear a data atual', async () => {
@@ -296,6 +349,8 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
     const current = new Date(`${currentKey}T12:00:00.000Z`);
     const previous = new Date(current);
     previous.setUTCDate(previous.getUTCDate() - 1);
+    const beforePurchase = new Date(previous);
+    beforePurchase.setUTCDate(beforePurchase.getUTCDate() - 1);
     const next = new Date(current);
     next.setUTCDate(next.getUTCDate() + 1);
 
@@ -331,6 +386,18 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
     await expect(customerService.openBottle(userB, bottles[2].id, { occurredAt: next })).rejects.toThrow(
       'não pode estar no futuro',
     );
+    await expect(
+      customerService.discardBottle(userB, bottles[2].id, {
+        occurredAt: beforePurchase,
+        reason: 'Data anterior à compra',
+      }),
+    ).rejects.toThrow('anterior à compra ou à abertura');
+    await expect(
+      customerService.discardBottle(userB, bottles[2].id, {
+        occurredAt: next,
+        reason: 'Data futura',
+      }),
+    ).rejects.toThrow('não pode estar no futuro');
 
     const oldOrder = await customerService.createOrder(userB, {
       source: 'VINICULA',
@@ -343,6 +410,20 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
     });
     await expect(
       customerService.openBottle(userB, oldBottle.id, { occurredAt: current }),
-    ).resolves.toMatchObject({ status: 'ABERTA' });
+    ).resolves.toMatchObject({
+      status: 'ABERTA',
+    });
+    await expect(
+      customerService.discardBottle(userB, oldBottle.id, {
+        occurredAt: previous,
+        reason: 'Antes da abertura',
+      }),
+    ).rejects.toThrow('anterior à compra ou à abertura');
+    await expect(
+      customerService.discardBottle(userB, oldBottle.id, {
+        occurredAt: current,
+        reason: 'Descarte no mesmo dia da abertura',
+      }),
+    ).resolves.toMatchObject({ status: 'DESCARTADA' });
   });
 });

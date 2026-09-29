@@ -115,8 +115,17 @@ export const bottleEventSchema = z.object({
     .refine((date) => civilDateKey(date) <= todayCivilDate(), 'A data informada não pode estar no futuro.'),
 });
 
+export const bottleDiscardSchema = bottleEventSchema.extend({
+  reason: z
+    .string()
+    .trim()
+    .min(3, 'Informe o motivo do descarte.')
+    .max(500, 'O motivo do descarte deve ter no máximo 500 caracteres.'),
+});
+
 export type OrderInput = z.infer<typeof orderSchema>;
 export type BottleEventInput = z.infer<typeof bottleEventSchema>;
+export type BottleDiscardInput = z.infer<typeof bottleDiscardSchema>;
 export type PrivateNameInput = z.infer<typeof privateNameSchema>;
 export type PrivateAddressInput = z.infer<typeof privateAddressSchema>;
 export type ExternalWineInput = z.infer<typeof externalWineSchema>;

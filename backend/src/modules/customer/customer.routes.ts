@@ -9,6 +9,7 @@ import { asyncRoute } from '../../common/http.js';
 import { requireAuth, requireRoles } from '../auth/auth.middleware.js';
 import {
   bottleEventSchema,
+  bottleDiscardSchema,
   externalWineSchema,
   orderSchema,
   privateAddressSchema,
@@ -341,6 +342,18 @@ router.post(
         String(res.locals.user.id),
         String(req.params.id),
         bottleEventSchema.parse(req.body),
+      ),
+    );
+  }),
+);
+router.post(
+  '/estoque/garrafas/:id/descartar',
+  asyncRoute(async (req, res) => {
+    res.json(
+      await customerService.discardBottle(
+        String(res.locals.user.id),
+        String(req.params.id),
+        bottleDiscardSchema.parse(req.body),
       ),
     );
   }),

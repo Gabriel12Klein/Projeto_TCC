@@ -30,59 +30,66 @@ afterAll(async () => {
 });
 
 describe('Exclusão real de garrafas por compra', () => {
-  it('remove uma unidade ou somente todas as unidades da compra selecionada', async () => {
+  it('reduz somente a compra de origem e preserva unidades com histórico', async () => {
     const purchaseA = await customerService.createOrder(userA, {
       source: 'VINICULA',
       purchaseDate: new Date('2026-09-27T12:00:00Z'),
       purchaseLocation: 'Loja A',
-      items: [{ wineId, quantityBottles: 5 }],
+      items: [{ wineId, quantityBottles: 10 }],
     });
     const purchaseB = await customerService.createOrder(userA, {
       source: 'VINICULA',
       purchaseDate: new Date('2026-09-27T12:00:00Z'),
       purchaseLocation: 'Loja B',
-      items: [{ wineId, quantityBottles: 2 }],
+      items: [{ wineId, quantityBottles: 5 }],
     });
     const itemA = purchaseA.items[0];
     const bottlesA = await prisma.cellarBottle.findMany({
       where: { orderItemId: itemA.id },
       orderBy: { id: 'asc' },
     });
-    await customerService.openBottle(userA, bottlesA[0].id, { occurredAt: new Date('2026-09-27T13:00:00Z') });
+    expect(bottlesA).toHaveLength(10);
+    await customerService.removeBottle(userA, bottlesA[2].id);
+    expect(await prisma.cellarBottle.findUnique({ where: { id: bottlesA[2].id } })).toBeNull();
+    const afterSingleDelete = await customerService.listOrders(userA);
+    expect(afterSingleDelete.find(({ id }) => id === purchaseA.id)?.items[0].quantityBottles).toBe(9);
+    expect(afterSingleDelete.find(({ id }) => id === purchaseB.id)?.items[0].quantityBottles).toBe(5);
+
+    await customerService.openBottle(userA, bottlesA[0].id, {
+      occurredAt: new Date('2026-09-27T13:00:00Z'),
+    });
     await customerService.finishBottle(userA, bottlesA[0].id, {
       occurredAt: new Date('2026-09-27T14:00:00Z'),
     });
     await customerService.openBottle(userA, bottlesA[1].id, { occurredAt: new Date('2026-09-27T13:00:00Z') });
 
-    await customerService.removeBottle(userA, bottlesA[0].id);
-    expect(await prisma.cellarBottle.findUnique({ where: { id: bottlesA[0].id } })).toBeNull();
-    expect(await prisma.inventoryMovement.count({ where: { cellarBottleId: bottlesA[0].id } })).toBe(0);
-    expect(
-      (await customerService.listOrders(userA)).find(({ id }) => id === purchaseA.id)?.items[0]
-        .quantityBottles,
-    ).toBe(4);
-
-    await customerService.removeOrderItemBottles(userA, purchaseA.id, itemA.id, false);
-    expect(
-      (await customerService.listOrders(userA)).find(({ id }) => id === purchaseA.id)?.items[0]
-        .quantityBottles,
-    ).toBe(3);
+    await expect(customerService.removeBottle(userA, bottlesA[0].id)).rejects.toThrow(
+      'Somente garrafas disponíveis',
+    );
+    await expect(customerService.removeBottle(userA, bottlesA[1].id)).rejects.toThrow(
+      'Somente garrafas disponíveis',
+    );
     await request(app)
       .delete(`/api/cliente/pedidos/${purchaseA.id}/itens/${itemA.id}/garrafas`)
       .set('Authorization', `Bearer ${tokenB}`)
       .expect(404);
 
-    await customerService.removeOrderItemBottles(userA, purchaseA.id, itemA.id, true);
-    expect(await prisma.customerOrder.findUnique({ where: { id: purchaseA.id } })).toBeNull();
-    expect(await prisma.cellarBottle.count({ where: { orderItemId: itemA.id } })).toBe(0);
+    await expect(customerService.removeOrderItemBottles(userA, purchaseA.id, itemA.id, true)).rejects.toThrow(
+      'há garrafas abertas, consumidas ou descartadas',
+    );
+    expect(await prisma.customerOrder.findUnique({ where: { id: purchaseA.id } })).not.toBeNull();
+
+    const itemB = purchaseB.items[0];
+    await customerService.removeOrderItemBottles(userA, purchaseB.id, itemB.id, true);
+    expect(await prisma.customerOrder.findUnique({ where: { id: purchaseB.id } })).toBeNull();
     const remaining = await customerService.listOrders(userA);
-    expect(remaining.map(({ id }) => id)).toContain(purchaseB.id);
-    expect(remaining.find(({ id }) => id === purchaseB.id)?.items[0].quantityBottles).toBe(2);
+    expect(remaining.map(({ id }) => id)).toContain(purchaseA.id);
+    expect(remaining.find(({ id }) => id === purchaseA.id)?.items[0].quantityBottles).toBe(9);
     expect((await customerService.getInventoryDashboard(userA, 2026)).totals).toMatchObject({
-      acquiredBottles: 2,
-      availableBottles: 2,
-      openedBottles: 0,
-      consumedBottles: 0,
+      acquiredBottles: 9,
+      availableBottles: 7,
+      openedBottles: 1,
+      consumedBottles: 1,
     });
   });
 });

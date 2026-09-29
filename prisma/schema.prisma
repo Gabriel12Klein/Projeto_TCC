@@ -502,6 +502,8 @@ model CellarBottle {
   purchasedAt     DateTime
   openedAt        DateTime?
   finishedAt      DateTime?
+  discardedAt     DateTime?
+  discardReason   String?             @db.Text
   movements       InventoryMovement[]
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt

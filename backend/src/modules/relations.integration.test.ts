@@ -350,7 +350,7 @@ describe('Integridade real no PostgreSQL', () => {
         ...input,
         items: [{ wineId: wineIds[1], quantityBottles: 1 }],
       }),
-    ).rejects.toThrow('abertas ou consumidas');
+    ).rejects.toThrow('abertas, consumidas ou descartadas');
     expect(
       (await prisma.customerOrderItem.findUniqueOrThrow({ where: { id: item.id } })).quantityBottles,
     ).toBe(3);
