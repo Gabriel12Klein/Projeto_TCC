@@ -603,7 +603,7 @@ function Orders({ userId }: { userId: string }) {
       <section className="mt-8 overflow-hidden rounded-3xl bg-white shadow-sm">
         <div className="border-b border-[#eadfd3] p-6 md:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6a2d]">Vinhos cadastrados</p>
-          <h2 className="mt-1 font-playfair text-2xl text-[#5b0c1b]">Histórico da adega</h2>
+          <h2 className="mt-1 font-playfair text-2xl text-[#5b0c1b]">Compras</h2>
           <p className="mt-2 text-[#715f59]">
             Consulte os rótulos, quantidades, vinícolas e locais de compra.
           </p>
@@ -723,8 +723,8 @@ function Orders({ userId }: { userId: string }) {
         title={deleting?.mode === 'all' ? 'Excluir todas as garrafas?' : 'Excluir garrafa?'}
         description={
           deleting?.mode === 'all'
-            ? `Você está prestes a excluir permanentemente ${deleting.quantity} garrafas deste registro e seus históricos relacionados.`
-            : `Você está prestes a excluir permanentemente uma unidade de ${deleting?.name ?? 'este registro'} e seu histórico de abertura/consumo. Para remover todo o registro, escolha a opção de excluir as ${deleting?.quantity ?? 0} garrafas.`
+            ? `Você está prestes a excluir permanentemente ${deleting.quantity} garrafas disponíveis desta compra. Garrafas abertas, consumidas ou descartadas são preservadas no histórico.`
+            : `Você está prestes a excluir permanentemente uma unidade disponível de ${deleting?.name ?? 'este registro'} e reduzir a quantidade registrada nesta compra. Para remover todo o registro, escolha a opção de excluir as ${deleting?.quantity ?? 0} garrafas.`
         }
         confirmLabel={deleting?.mode === 'all' ? `Excluir ${deleting.quantity} garrafas` : 'Excluir garrafa'}
         alternativeLabel={

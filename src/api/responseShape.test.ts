@@ -58,3 +58,16 @@ it('preserva respostas vazias de exclusão e rejeita sessão inválida', () => {
     validResponse('/auth/me', 'GET', { id: 'a', name: 'Cliente', email: 'a@example.test', role: 'CUSTOMER' }),
   ).toBe(true);
 });
+
+it('aceita garrafas descartadas no histórico individual', () => {
+  expect(
+    validResponse('/cliente/estoque/garrafas', 'GET', [
+      {
+        id: 'bottle-a',
+        status: 'DESCARTADA',
+        discardedAt: '2026-09-29T12:00:00.000Z',
+        discardReason: 'Quebra acidental',
+      },
+    ]),
+  ).toBe(true);
+});

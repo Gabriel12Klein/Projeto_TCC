@@ -197,7 +197,7 @@ export type InventoryDashboard = {
   monthlyConsumption: { month: number; bottles: number }[];
 };
 
-export type BottleStatus = 'DISPONIVEL' | 'ABERTA' | 'CONSUMIDA';
+export type BottleStatus = 'DISPONIVEL' | 'ABERTA' | 'CONSUMIDA' | 'DESCARTADA';
 
 export type CellarBottle = {
   id: string;
@@ -206,6 +206,8 @@ export type CellarBottle = {
   purchasedAt: string;
   openedAt: string | null;
   finishedAt: string | null;
+  discardedAt: string | null;
+  discardReason: string | null;
   inventoryItem: {
     id: string;
     name: string;

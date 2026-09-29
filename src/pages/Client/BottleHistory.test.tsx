@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   bottleVintageYear,
+  bottleActions,
   formatDate,
   localDateValue,
   replaceBottlePreservingOrder,
@@ -9,6 +10,17 @@ import {
 import type { CellarBottle } from '../../types';
 
 describe('histórico individual da adega', () => {
+  it('oferece somente as ações válidas em cada estado', () => {
+    expect(bottleActions('DISPONIVEL')).toEqual({ open: true, finish: false, discard: true, remove: true });
+    expect(bottleActions('ABERTA')).toEqual({ open: false, finish: true, discard: true, remove: false });
+    expect(bottleActions('CONSUMIDA')).toEqual({ open: false, finish: false, discard: false, remove: false });
+    expect(bottleActions('DESCARTADA')).toEqual({
+      open: false,
+      finish: false,
+      discard: false,
+      remove: false,
+    });
+  });
   it('exibe e reutiliza a data civil sem recuo causado pelo fuso', () => {
     expect(formatDate('2026-09-27T00:00:00.000Z')).toBe('27/09/2026');
     expect(localDateValue('2026-09-27T00:00:00.000Z')).toBe('2026-09-27');
@@ -23,6 +35,14 @@ describe('histórico individual da adega', () => {
       { ...updated, bottleNumber: 1 },
       second,
     ]);
+  });
+
+  it('mantém o descarte na posição atual e o remove de filtros incompatíveis', () => {
+    const first = { id: 'a', bottleNumber: 1, status: 'ABERTA' } as CellarBottle;
+    const second = { id: 'b', bottleNumber: 2, status: 'DISPONIVEL' } as CellarBottle;
+    const discarded = { ...first, status: 'DESCARTADA', discardReason: 'Oxidação' } as CellarBottle;
+    expect(replaceBottlePreservingOrder([first, second], discarded, '')).toEqual([discarded, second]);
+    expect(replaceBottlePreservingOrder([first], discarded, 'ABERTA')).toEqual([]);
   });
 
   it('usa a safra do cadastro privado para vinho externo e a do item para vinho oficial', () => {

@@ -458,3 +458,22 @@ permanece separada e não foi iniciada.
 - A conversão do legado preservou 36 unidades (19 disponíveis e 17 consumidas), sem reset ou exclusão de registros.
 
 Conclusão: a revisão Nielsen das telas diretamente afetadas por esta mudança está encerrada. A regressão geral continua separada e não foi iniciada.
+
+## Revisão Nielsen local — Compras e descarte — 29/09/2026
+
+- Os títulos `Compras` e `Adega - Controle de Estoque` diferenciam aquisição de
+  controle individual sem alterar a navegação existente.
+- Ações são contextuais: disponível oferece Abrir, Descartar e Excluir; aberta
+  oferece Finalizar e Descartar; consumida e descartada ficam somente para
+  consulta.
+- O diálogo próprio de descarte explica a diferença para exclusão, identifica
+  data e motivo, anuncia erros, aceita Escape, contém o foco e o devolve ao
+  acionador.
+- Mensagens de sucesso e erro permanecem anunciadas; o filtro ganhou a opção
+  `Descartadas` e preserva estados de carregamento e vazio.
+- Ações e filtros foram validados no navegador autenticado. Em 390 × 844, cards,
+  datas, status e detalhes permaneceram legíveis sem overflow horizontal dos
+  cards.
+
+Conclusão: a revisão Nielsen ficou restrita aos elementos alterados e foi
+encerrada. A auditoria geral de integração/regressão não foi iniciada.

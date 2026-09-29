@@ -62,6 +62,8 @@ function render(title: string, loaded = false, withBottle = false) {
               purchasedAt: '2026-09-26T12:00:00.000Z',
               openedAt: null,
               finishedAt: null,
+              discardedAt: null,
+              discardReason: null,
               inventoryItem: {
                 name: 'Vinho de teste',
                 photoPath: null,
@@ -105,7 +107,7 @@ it('não apresenta pedidos vazios enquanto a consulta está carregando', () => {
   const empty = render('Meus vinhos', true);
   expect(empty).toContain('Você ainda não possui vinhos cadastrados.');
   expect(empty).toContain('client-empty-feedback px-6 md:px-8');
-  expect(empty).toContain('Minhas garrafas');
+  expect(empty).toContain('Adega - Controle de Estoque');
 });
 it('mantém no Dashboard somente resumo, indicadores e gráfico', () => {
   const html = render('Dashboard');
@@ -114,15 +116,17 @@ it('mantém no Dashboard somente resumo, indicadores e gráfico', () => {
   expect(empty).toContain('Total de garrafas adquiridas');
   expect(empty).toContain('Registrar um novo vinho');
   expect(empty).toContain('Consumo mensal');
-  expect(empty).not.toContain('Minhas garrafas');
+  expect(empty).not.toContain('Adega - Controle de Estoque');
   expect(empty).not.toContain('Abrir garrafa');
 });
 it('exibe em Meus vinhos a lista individual e suas ações', () => {
   const html = render('Meus vinhos', true, true);
-  expect(html).toContain('Minhas garrafas');
+  expect(html).toContain('Adega - Controle de Estoque');
+  expect(html).toContain('Compras');
   expect(html).toContain('Vinho de teste · garrafa #1');
   expect(html).toContain('Abrir garrafa');
-  expect(html).toContain('Finalizar garrafa');
+  expect(html).toContain('Descartar');
+  expect(html).not.toContain('Finalizar garrafa');
   expect(html).toContain('Ver detalhes da garrafa e do vinho');
 });
 it('limpa o vinho anterior ao trocar a vinícola', () => {

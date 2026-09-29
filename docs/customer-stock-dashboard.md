@@ -10,7 +10,13 @@ Cada unidade comprada é representada por uma garrafa física com ciclo próprio
 
 `DISPONIVEL → ABERTA → CONSUMIDA`
 
-Uma garrafa consumida não é apagada. Ela permanece no histórico com compra, abertura, término do consumo, origem, safra e volume disponíveis. Uma garrafa consumida não pode ser aberta ou consumida novamente.
+ou, quando a unidade sai da adega sem consumo:
+
+`DISPONIVEL ou ABERTA → DESCARTADA`
+
+Garrafas consumidas e descartadas não são apagadas. Elas permanecem no
+histórico com seus eventos e dados do vinho. Garrafas disponíveis e abertas
+compõem o estoque ativo; estados consumido e descartado são finais.
 
 ## Banco e preservação
 
@@ -22,15 +28,17 @@ As migrations complementares:
 
 - `20260926211000_bottle_opening_movement`: inclui o movimento auditável `ABERTURA`.
 - `20260926212000_cellar_bottle_integrity`: garante no PostgreSQL que garrafa, estoque, pedido, movimento e cliente sejam compatíveis.
+- `20260929120000_add_discarded_cellar_bottles`: adiciona data e motivo do descarte, estado `DESCARTADA` e movimento `DESCARTE`.
 
 Rótulos externos continuam privados: não criam vinho ou vinícola pública e não aparecem no catálogo.
 
 ## Backend
 
 - A criação de pedido gera uma linha por unidade em `garrafa_adega`, na mesma transação.
-- A edição de quantidade só remove garrafas ainda disponíveis; unidades abertas ou consumidas bloqueiam uma redução incompatível.
-- `POST /api/cliente/estoque/garrafas/:id/abrir` registra a abertura e retira a unidade do saldo disponível.
-- `POST /api/cliente/estoque/garrafas/:id/consumir` finaliza uma garrafa aberta ou realiza abertura e término na mesma data quando o consumo é direto.
+- A edição de quantidade só remove garrafas ainda disponíveis; unidades abertas, consumidas ou descartadas bloqueiam uma redução incompatível.
+- `POST /api/cliente/estoque/garrafas/:id/abrir` registra a abertura e mantém a unidade no estoque ativo.
+- `POST /api/cliente/estoque/garrafas/:id/consumir` finaliza exclusivamente uma garrafa aberta.
+- `POST /api/cliente/estoque/garrafas/:id/descartar` registra data e motivo em uma unidade disponível ou aberta, sem reduzir a quantidade histórica da compra.
 - As ações usam trava transacional por cliente e validam propriedade, estado, datas e saldo no backend.
 - O gráfico mensal usa `finishedAt`, a data em que a garrafa foi terminada.
 
@@ -154,3 +162,27 @@ legado e evidências de validação estão documentados em
   ambígua é alterada.
 - Para compatibilidade durante a leitura, garrafas oficiais antigas sem snapshot
   também exibem a safra quando há exatamente um ano oficial possível.
+
+## Compras, estoque ativo e descarte — versão 2.10.0
+
+- O primeiro bloco de `Meus vinhos` passou de `Histórico da adega` para
+  `Compras`. O segundo passou de `Histórico individual / Minhas garrafas` para
+  `Adega - Controle de Estoque`.
+- Estoque ativo é a soma de disponíveis e abertas. Consumidas e descartadas
+  permanecem no histórico; excluídas deixam de existir.
+- Disponível oferece Abrir, Descartar e Excluir. Aberta oferece Finalizar e
+  Descartar. Consumida e descartada não oferecem ação operacional.
+- O descarte usa diálogo VINUM com data e motivo, respeita compra/abertura/hoje,
+  mantém a relação com a compra e não é contabilizado no gráfico de consumo.
+- A exclusão real aceita somente unidades disponíveis e usa `orderItemId`,
+  reduzindo apenas a compra de origem. Compras com unidades em histórico não
+  podem ser removidas integralmente.
+- Em `Todos`, a carga ordena disponíveis, abertas, consumidas e descartadas. A
+  atualização imediata preserva a posição atual; troca de filtro e reload
+  reaplicam a ordenação.
+- O teste dirigido cobriu compras de 10 e 5 unidades do mesmo vinho, exclusão
+  somente na compra A, abertura, consumo, descarte disponível e aberto, filtros,
+  datas, estados finais, Dashboard, isolamento entre clientes e persistência no
+  PostgreSQL. A validação visual confirmou ações contextuais, Escape/foco do
+  diálogo, estado vazio de descartadas e layout móvel em 390 × 844.
+- A auditoria geral de integração/regressão continua separada e não foi iniciada.

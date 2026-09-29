@@ -104,7 +104,7 @@ export function validResponse(path: string, method: string, value: unknown) {
         (bottle) =>
           object(bottle) &&
           typeof bottle.id === 'string' &&
-          ['DISPONIVEL', 'ABERTA', 'CONSUMIDA'].includes(bottle.status),
+          ['DISPONIVEL', 'ABERTA', 'CONSUMIDA', 'DESCARTADA'].includes(bottle.status),
       )
     );
   // Mutation responses need not include loaded relations.

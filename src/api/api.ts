@@ -302,5 +302,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ occurredAt }),
       }),
+    discardBottle: (bottleId: string, occurredAt: string, reason: string) =>
+      request<CellarBottle>(`/cliente/estoque/garrafas/${encodeURIComponent(bottleId)}/descartar`, {
+        method: 'POST',
+        body: JSON.stringify({ occurredAt, reason }),
+      }),
   },
 };

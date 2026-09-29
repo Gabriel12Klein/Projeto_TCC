@@ -8,6 +8,7 @@ import PrivateImage from './PrivateImage';
 import wineIcon from '../../assets/admin/sidebar/vinho.png';
 import ConfirmDeleteDialog from '../../ui/ConfirmDeleteDialog';
 import ExternalWineDetailsDialog from './ExternalWineDetailsDialog';
+import DiscardBottleDialog from './DiscardBottleDialog';
 
 export function today(now = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -41,7 +42,17 @@ const statusLabel: Record<BottleStatus, string> = {
   DISPONIVEL: 'Disponível',
   ABERTA: 'Aberta',
   CONSUMIDA: 'Consumida',
+  DESCARTADA: 'Descartada',
 };
+
+export function bottleActions(status: BottleStatus) {
+  return {
+    open: status === 'DISPONIVEL',
+    finish: status === 'ABERTA',
+    discard: status === 'DISPONIVEL' || status === 'ABERTA',
+    remove: status === 'DISPONIVEL',
+  };
+}
 
 export function replaceBottlePreservingOrder(
   bottles: CellarBottle[] | undefined,
@@ -59,12 +70,14 @@ function BottleRow({
   pending,
   onEvent,
   onDelete,
+  onDiscard,
   onOpenExternalWine,
 }: {
   bottle: CellarBottle;
   pending: boolean;
   onEvent: (id: string, action: 'open' | 'finish', date: string) => Promise<boolean>;
   onDelete: (bottle: CellarBottle) => void;
+  onDiscard: (bottle: CellarBottle) => void;
   onOpenExternalWine: (id: string) => void;
 }) {
   const [action, setAction] = useState<'open' | 'finish' | null>(null);
@@ -72,6 +85,7 @@ function BottleRow({
   const dateInput = useRef<HTMLInputElement>(null);
   const image = bottle.inventoryItem.photoPath || bottle.inventoryItem.wine?.image?.path || wineIcon;
   const location = bottle.orderItem?.order.purchaseLocation;
+  const availableActions = bottleActions(bottle.status);
   function start(next: 'open' | 'finish') {
     setAction(next);
     window.requestAnimationFrame(() => dateInput.current?.focus());
@@ -99,7 +113,7 @@ function BottleRow({
             {statusLabel[bottle.status]}
           </span>
         </div>
-        <dl className="grid grid-cols-3 gap-4 text-sm">
+        <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
           <div>
             <dt className="text-[#715f59]">Compra</dt>
             <dd>{formatDate(bottle.purchasedAt)}</dd>
@@ -112,9 +126,13 @@ function BottleRow({
             <dt className="text-[#715f59]">Consumo</dt>
             <dd>{formatDate(bottle.finishedAt)}</dd>
           </div>
+          <div>
+            <dt className="text-[#715f59]">Descarte</dt>
+            <dd>{formatDate(bottle.discardedAt)}</dd>
+          </div>
         </dl>
         <div className="flex flex-wrap gap-2">
-          {bottle.status === 'DISPONIVEL' && (
+          {availableActions.open && (
             <>
               <button
                 type="button"
@@ -126,32 +144,42 @@ function BottleRow({
               </button>
               <button
                 type="button"
+                className="rounded-lg border border-[#9a6a2d] px-3 py-2 text-sm font-semibold text-[#7d5b2b]"
+                disabled={pending}
+                onClick={() => onDiscard(bottle)}
+              >
+                Descartar
+              </button>
+              <button
+                type="button"
+                className="self-center rounded-full border-2 border-[#9f1f32] bg-[#fff0f1] px-2.5 py-1.5 text-xs font-bold text-[#8f1f2c] shadow-sm transition hover:bg-[#f7dede]"
+                disabled={pending}
+                onClick={() => onDelete(bottle)}
+              >
+                Excluir garrafa
+              </button>
+            </>
+          )}
+          {availableActions.finish && (
+            <>
+              <button
+                type="button"
                 className="rounded-lg bg-[#7d1d2d] px-3 py-2 text-sm font-semibold text-white"
                 disabled={pending}
                 onClick={() => start('finish')}
               >
                 Finalizar garrafa
               </button>
+              <button
+                type="button"
+                className="rounded-lg border border-[#9a6a2d] px-3 py-2 text-sm font-semibold text-[#7d5b2b]"
+                disabled={pending}
+                onClick={() => onDiscard(bottle)}
+              >
+                Descartar
+              </button>
             </>
           )}
-          {bottle.status === 'ABERTA' && (
-            <button
-              type="button"
-              className="rounded-lg bg-[#7d1d2d] px-3 py-2 text-sm font-semibold text-white"
-              disabled={pending}
-              onClick={() => start('finish')}
-            >
-              Finalizar garrafa
-            </button>
-          )}
-          <button
-            type="button"
-            className="self-center rounded-full border-2 border-[#9f1f32] bg-[#fff0f1] px-2.5 py-1.5 text-xs font-bold text-[#8f1f2c] shadow-sm transition hover:bg-[#f7dede]"
-            disabled={pending}
-            onClick={() => onDelete(bottle)}
-          >
-            Excluir garrafa
-          </button>
         </div>
       </div>
       {action && (
@@ -228,6 +256,12 @@ function BottleRow({
             </p>
           </div>
         )}
+        {bottle.status === 'DESCARTADA' && (
+          <div className="mt-3 rounded-xl border border-[#eadfd3] bg-white p-3">
+            <p className="font-semibold text-[#715f59]">Motivo do descarte</p>
+            <p className="mt-1 text-[#715f59]">{bottle.discardReason}</p>
+          </div>
+        )}
         {bottle.orderItem?.externalWineId && (
           <button
             className="mt-3 font-semibold text-[#7d1d2d] underline underline-offset-4"
@@ -254,6 +288,7 @@ export default function BottleHistory() {
   const [status, setStatus] = useState('');
   const [message, setMessage] = useState('');
   const [deleting, setDeleting] = useState<CellarBottle | null>(null);
+  const [discarding, setDiscarding] = useState<CellarBottle | null>(null);
   const [externalWineId, setExternalWineId] = useState<string | null>(null);
   const resultMessage = useRef<HTMLParagraphElement>(null);
   const qc = useQueryClient();
@@ -309,6 +344,21 @@ export default function BottleHistory() {
       setMessage(error instanceof Error ? error.message : 'Não foi possível excluir a garrafa.');
     },
   });
+  const discard = useMutation({
+    mutationFn: ({ id, occurredAt, reason }: { id: string; occurredAt: string; reason: string }) =>
+      api.customer.discardBottle(id, occurredAt, reason),
+    onSuccess: async (updated) => {
+      setMessage('Garrafa descartada e preservada no histórico da compra.');
+      qc.setQueryData<CellarBottle[]>(['customer-cellar-bottles', status], (current) =>
+        replaceBottlePreservingOrder(current, updated, status),
+      );
+      await qc.invalidateQueries({ queryKey: ['customer-cellar-bottles'], refetchType: 'none' });
+      await qc.invalidateQueries({ queryKey: ['customer-inventory-dashboard'] });
+      await qc.invalidateQueries({ queryKey: ['customer-inventory'] });
+    },
+    onError: (error) =>
+      setMessage(error instanceof Error ? error.message : 'Não foi possível descartar a garrafa.'),
+  });
   useEffect(() => {
     if (message) window.requestAnimationFrame(() => resultMessage.current?.focus());
   }, [message]);
@@ -317,8 +367,8 @@ export default function BottleHistory() {
     <section className="mt-8 rounded-3xl bg-white p-6 shadow-sm md:p-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6a2d]">Histórico individual</p>
-          <h2 className="mt-1 font-playfair text-2xl text-[#5b0c1b]">Minhas garrafas</h2>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6a2d]">Controle por garrafa</p>
+          <h2 className="mt-1 font-playfair text-2xl text-[#5b0c1b]">Adega - Controle de Estoque</h2>
         </div>
         <label className="text-sm font-semibold text-[#5b0c1b]">
           Status
@@ -331,6 +381,7 @@ export default function BottleHistory() {
             <option value="DISPONIVEL">Disponíveis</option>
             <option value="ABERTA">Abertas</option>
             <option value="CONSUMIDA">Consumidas</option>
+            <option value="DESCARTADA">Descartadas</option>
           </select>
         </label>
       </div>
@@ -339,8 +390,9 @@ export default function BottleHistory() {
           <BottleRow
             key={bottle.id}
             bottle={bottle}
-            pending={mutation.isPending || remove.isPending}
+            pending={mutation.isPending || remove.isPending || discard.isPending}
             onDelete={setDeleting}
+            onDiscard={setDiscarding}
             onOpenExternalWine={setExternalWineId}
             onEvent={async (id, action, occurredAt) => {
               setMessage('');
@@ -360,7 +412,7 @@ export default function BottleHistory() {
         fetching={bottles.isFetching}
         empty={!bottles.data?.length}
         emptyText={status ? 'Nenhuma garrafa com este status.' : 'Você ainda não possui vinhos cadastrados.'}
-        loadingText="Carregando histórico da adega…"
+        loadingText="Carregando controle da adega…"
         retry={() => void bottles.refetch()}
       />
       {message && (
@@ -368,7 +420,7 @@ export default function BottleHistory() {
           ref={resultMessage}
           tabIndex={-1}
           className="mt-4 rounded-xl border border-[#dfd0bd] p-4"
-          role={mutation.isError || remove.isError ? 'alert' : 'status'}
+          role={mutation.isError || remove.isError || discard.isError ? 'alert' : 'status'}
         >
           {message}
         </p>
@@ -376,11 +428,30 @@ export default function BottleHistory() {
       <ConfirmDeleteDialog
         open={Boolean(deleting)}
         title="Excluir garrafa?"
-        description={`Esta ação removerá permanentemente a unidade ${deleting?.bottleNumber ?? ''} de ${deleting?.inventoryItem.name ?? 'este vinho'} e seu histórico de abertura/consumo.`}
+        description={`Esta ação removerá permanentemente a unidade ${deleting?.bottleNumber ?? ''} de ${deleting?.inventoryItem.name ?? 'este vinho'} da compra e reduzirá a quantidade registrada. Diferente do descarte, ela não permanecerá no histórico.`}
         confirmLabel="Excluir garrafa"
         pending={remove.isPending}
         onCancel={() => setDeleting(null)}
         onConfirm={() => deleting && remove.mutate(deleting.id)}
+      />
+      <DiscardBottleDialog
+        bottle={discarding}
+        pending={discard.isPending}
+        error={discard.isError ? message : undefined}
+        onCancel={() => {
+          setDiscarding(null);
+          discard.reset();
+        }}
+        onConfirm={async (occurredAt, reason) => {
+          if (!discarding) return false;
+          setMessage('');
+          try {
+            await discard.mutateAsync({ id: discarding.id, occurredAt, reason });
+            return true;
+          } catch {
+            return false;
+          }
+        }}
       />
       <ExternalWineDetailsDialog
         open={Boolean(externalWineId)}
