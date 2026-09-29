@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.9.2**
+Versão atual: **2.10.0**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -118,3 +118,17 @@ privados e configuração local antes da troca ou formatação do computador. Os
 artefatos gerados permanecem ignorados pelo Git para impedir o envio de senhas
 e dados privados ao repositório público. O `docker-compose.yml` versionado
 continua responsável por recriar os containers PostgreSQL e pgAdmin.
+
+## Versão 2.10.0
+
+Separa descarte de consumo no ciclo individual das garrafas. O novo estado
+`DESCARTADA` registra data e motivo, preserva a compra original e não aumenta o
+consumo. Garrafas abertas permanecem no estoque ativo; consumidas e descartadas
+ficam somente no histórico; exclusão real é permitida apenas para unidades
+disponíveis e reduz exclusivamente o item de compra de origem.
+
+A migration incremental `20260929120000_add_discarded_cellar_bottles` adiciona
+`discardedAt`, `discardReason`, o estado `DESCARTADA` e o movimento `DESCARTE`,
+sem recriar tabelas ou alterar migrations antigas. A interface renomeia os
+blocos para `Compras` e `Adega - Controle de Estoque`, adiciona o filtro de
+descartadas e apresenta ações contextuais conforme o estado.
