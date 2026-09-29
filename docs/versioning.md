@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.11.0**
+Versão atual: **2.12.0**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -142,3 +142,12 @@ também oferece limpeza dos filtros e retorno vazio orientativo. O número
 individual da garrafa continua preservado internamente, mas deixa de poluir o
 título visual do rótulo. Vinhos externos permanecem sem tipo porque esse dado
 não existe em seu modelo atual. Não houve alteração de banco ou migration.
+
+## Versão 2.12.0
+
+Adiciona paginação no backend e na interface das listas `Compras` e
+`Adega - Controle de Estoque`. As duas iniciam com 10 registros e permitem
+selecionar 10, 20, 50 ou 100 itens por página, com intervalo, total, navegação
+e página atual acessíveis. Filtros e ordenação são aplicados antes do recorte,
+e alterações de filtro ou limite retornam à primeira página. Não houve
+alteração de schema ou migration.
