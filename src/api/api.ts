@@ -10,6 +10,8 @@ import type {
   ExternalWinery,
   InventoryDashboard,
   InventoryItem,
+  PageLimit,
+  Paginated,
   PublicBatchDetail,
   PurchaseLocation,
   ResourceKey,
@@ -219,7 +221,8 @@ export const api = {
       }),
     removePurchaseLocation: (id: string) =>
       request<void>(`/cliente/locais-compra/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-    orders: () => request<CustomerOrder[]>('/cliente/pedidos'),
+    orders: ({ page = 1, limit = 10 }: { page?: number; limit?: PageLimit } = {}) =>
+      request<Paginated<CustomerOrder>>(`/cliente/pedidos?page=${page}&limit=${limit}`),
     createOrder: (payload: {
       source: 'VINICULA' | 'OUTRO_LOCAL';
       purchaseDate: string;
@@ -291,10 +294,10 @@ export const api = {
     bottles: (filters: BottleListFilters = {}) => {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.set(key, value);
+        if (value) params.set(key, String(value));
       });
       const query = params.toString();
-      return request<CellarBottle[]>(`/cliente/estoque/garrafas${query ? `?${query}` : ''}`);
+      return request<Paginated<CellarBottle>>(`/cliente/estoque/garrafas${query ? `?${query}` : ''}`);
     },
     bottleWineTypes: () => request<WineTypeOption[]>('/cliente/estoque/tipos-vinho'),
     bottle: (bottleId: string) =>

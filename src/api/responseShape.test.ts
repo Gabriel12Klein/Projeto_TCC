@@ -5,7 +5,15 @@ it('rejeita sucesso malformado antes de renderizar listas', () => {
   for (const value of [null, {}, 'ok', [null], [{ id: 'x' }]])
     expect(validResponse('/catalog/wines', 'GET', value)).toBe(false);
   expect(validResponse('/catalog/wines', 'GET', [])).toBe(true);
-  expect(validResponse('/cliente/pedidos', 'GET', [{ id: 'x', items: null }])).toBe(false);
+  expect(
+    validResponse('/cliente/pedidos', 'GET', {
+      items: [{ id: 'x', items: null }],
+      total: 1,
+      page: 1,
+      limit: 10,
+      totalPages: 1,
+    }),
+  ).toBe(false);
   expect(validResponse('/cliente/vinicolas-externas', 'GET', [{ id: 'x', name: 'Catena' }])).toBe(true);
   expect(validResponse('/cliente/vinhos-externos?wineryId=x', 'GET', [null])).toBe(false);
   expect(
@@ -61,14 +69,20 @@ it('preserva respostas vazias de exclusão e rejeita sessão inválida', () => {
 
 it('aceita garrafas descartadas no histórico individual', () => {
   expect(
-    validResponse('/cliente/estoque/garrafas', 'GET', [
-      {
-        id: 'bottle-a',
-        status: 'DESCARTADA',
-        discardedAt: '2026-09-29T12:00:00.000Z',
-        discardReason: 'Quebra acidental',
-      },
-    ]),
+    validResponse('/cliente/estoque/garrafas', 'GET', {
+      items: [
+        {
+          id: 'bottle-a',
+          status: 'DESCARTADA',
+          discardedAt: '2026-09-29T12:00:00.000Z',
+          discardReason: 'Quebra acidental',
+        },
+      ],
+      total: 1,
+      page: 1,
+      limit: 10,
+      totalPages: 1,
+    }),
   ).toBe(true);
 });
 

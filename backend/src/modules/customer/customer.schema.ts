@@ -128,12 +128,25 @@ const optionalCivilDate = z.preprocess(
   z.date().optional(),
 );
 
+export const paginationSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce
+    .number()
+    .int()
+    .refine((value) => [10, 20, 50, 100].includes(value), {
+      message: 'O limite deve ser 10, 20, 50 ou 100.',
+    })
+    .default(10),
+});
+
 export const bottleListFiltersSchema = z
   .object({
     status: z.enum(['DISPONIVEL', 'ABERTA', 'CONSUMIDA', 'DESCARTADA']).optional(),
     wineTypeId: z.string().trim().min(1).optional(),
     purchasedFrom: optionalCivilDate,
     purchasedTo: optionalCivilDate,
+    page: paginationSchema.shape.page,
+    limit: paginationSchema.shape.limit,
   })
   .refine(
     ({ purchasedFrom, purchasedTo }) => !purchasedFrom || !purchasedTo || purchasedFrom <= purchasedTo,
@@ -147,6 +160,7 @@ export type OrderInput = z.infer<typeof orderSchema>;
 export type BottleEventInput = z.infer<typeof bottleEventSchema>;
 export type BottleDiscardInput = z.infer<typeof bottleDiscardSchema>;
 export type BottleListFilters = z.infer<typeof bottleListFiltersSchema>;
+export type PaginationInput = z.infer<typeof paginationSchema>;
 export type PrivateNameInput = z.infer<typeof privateNameSchema>;
 export type PrivateAddressInput = z.infer<typeof privateAddressSchema>;
 export type ExternalWineInput = z.infer<typeof externalWineSchema>;

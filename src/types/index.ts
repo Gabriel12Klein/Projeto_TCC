@@ -121,6 +121,16 @@ export type CustomerOrder = {
   items: CustomerOrderItem[];
 };
 
+export type PageLimit = 10 | 20 | 50 | 100;
+
+export type Paginated<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  limit: PageLimit;
+  totalPages: number;
+};
+
 export type ExternalWinery = {
   id: string;
   name: string;
@@ -247,6 +257,8 @@ export type BottleListFilters = {
   wineTypeId?: string;
   purchasedFrom?: string;
   purchasedTo?: string;
+  page?: number;
+  limit?: PageLimit;
 };
 
 export type WineTypeOption = { id: string; name: string };

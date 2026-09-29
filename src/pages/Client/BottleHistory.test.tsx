@@ -5,6 +5,7 @@ import {
   formatDate,
   localDateValue,
   purchaseDateRangeError,
+  replaceBottleInPage,
   replaceBottlePreservingOrder,
   today,
 } from './BottleHistory';
@@ -53,6 +54,18 @@ describe('histórico individual da adega', () => {
     const discarded = { ...first, status: 'DESCARTADA', discardReason: 'Oxidação' } as CellarBottle;
     expect(replaceBottlePreservingOrder([first, second], discarded, '')).toEqual([discarded, second]);
     expect(replaceBottlePreservingOrder([first], discarded, 'ABERTA')).toEqual([]);
+  });
+
+  it('atualiza totais da página quando a alteração deixa o filtro atual', () => {
+    const bottle = { id: 'a', bottleNumber: 1, status: 'ABERTA' } as CellarBottle;
+    const updated = { ...bottle, status: 'CONSUMIDA' } as CellarBottle;
+    expect(
+      replaceBottleInPage(
+        { items: [bottle], total: 11, page: 2, limit: 10, totalPages: 2 },
+        updated,
+        'ABERTA',
+      ),
+    ).toEqual({ items: [], total: 10, page: 2, limit: 10, totalPages: 1 });
   });
 
   it('usa a safra do cadastro privado para vinho externo e a do item para vinho oficial', () => {

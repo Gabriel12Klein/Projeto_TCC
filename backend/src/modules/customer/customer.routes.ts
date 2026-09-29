@@ -11,6 +11,7 @@ import {
   bottleEventSchema,
   bottleDiscardSchema,
   bottleListFiltersSchema,
+  paginationSchema,
   externalWineSchema,
   orderSchema,
   privateAddressSchema,
@@ -227,8 +228,10 @@ router.delete(
 
 router.get(
   '/pedidos',
-  asyncRoute(async (_req, res) => {
-    res.json(await customerService.listOrders(String(res.locals.user.id)));
+  asyncRoute(async (req, res) => {
+    res.json(
+      await customerService.listOrdersPage(String(res.locals.user.id), paginationSchema.parse(req.query)),
+    );
   }),
 );
 router.post(
@@ -314,7 +317,7 @@ router.get(
   '/estoque/garrafas',
   asyncRoute(async (req, res) => {
     const filters = bottleListFiltersSchema.parse(req.query);
-    res.json(await customerService.listBottles(String(res.locals.user.id), filters));
+    res.json(await customerService.listBottlesPage(String(res.locals.user.id), filters));
   }),
 );
 router.get(

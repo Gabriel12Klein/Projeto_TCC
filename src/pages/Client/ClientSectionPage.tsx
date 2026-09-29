@@ -7,12 +7,13 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/api';
-import type { CustomerOrder } from '../../types';
+import type { CustomerOrder, PageLimit } from '../../types';
 import BottleHistory from './BottleHistory';
 import { persistOrderDraft, readOrderDraft } from './orderDraft';
 import InventoryDashboard from './InventoryDashboard';
 import ConfirmDeleteDialog from '../../ui/ConfirmDeleteDialog';
 import ConfirmDialog from '../../ui/ConfirmDialog';
+import Pagination, { lastValidPage } from '../../ui/Pagination';
 
 const input =
   'w-full rounded-xl border border-[#d9cbbd] bg-white px-4 py-3 text-[#321b1c] outline-none focus:border-[#8b2638]';
@@ -61,8 +62,13 @@ function Orders({ userId }: { userId: string }) {
   const [purchaseLocationId, setPurchaseLocationId] = useState(restoredDraft?.purchaseLocationId ?? '');
   const [purchaseLocation, setPurchaseLocation] = useState(restoredDraft?.purchaseLocation ?? '');
   const [draftRecovered, setDraftRecovered] = useState(Boolean(restoredDraft));
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersLimit, setOrdersLimit] = useState<PageLimit>(10);
   const qc = useQueryClient();
-  const ordersQuery = useQuery({ queryKey: ['customer-orders'], queryFn: api.customer.orders });
+  const ordersQuery = useQuery({
+    queryKey: ['customer-orders', ordersPage, ordersLimit],
+    queryFn: () => api.customer.orders({ page: ordersPage, limit: ordersLimit }),
+  });
   const winesQuery = useQuery({ queryKey: ['public-wines'], queryFn: () => api.catalog.list() });
   const wineriesQuery = useQuery({
     queryKey: ['customer-external-wineries'],
@@ -180,13 +186,18 @@ function Orders({ userId }: { userId: string }) {
     purchaseLocation,
     editing,
   ]);
-  const orders = ordersQuery.data ?? [];
+  const orders = ordersQuery.data?.items ?? [];
+  useEffect(() => {
+    const validPage = lastValidPage(ordersPage, ordersQuery.data?.totalPages ?? 1);
+    if (ordersPage !== validPage) setOrdersPage(validPage);
+  }, [ordersPage, ordersQuery.data?.totalPages]);
   const save = useMutation({
     mutationFn: (payload: Parameters<typeof api.customer.createOrder>[0]) =>
       editing
         ? api.customer.updateOrderItem(editing.orderId, editing.itemId, payload)
         : api.customer.createOrder(payload),
     onSuccess: async () => {
+      if (!editing) setOrdersPage(1);
       setMessage(editing ? 'Vinho atualizado e adega ajustada.' : 'Vinho salvo e adicionado à adega.');
       setEditing(null);
       setOpen(false);
@@ -620,89 +631,103 @@ function Orders({ userId }: { userId: string }) {
           />
         </div>
         {orders.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left">
-              <thead className="bg-[#f8efe5] text-xs uppercase tracking-wider text-[#7d5b2b]">
-                <tr>
-                  <th className="px-6 py-4">Nome do rótulo</th>
-                  <th className="px-6 py-4">Quantidade</th>
-                  <th className="px-6 py-4">Data da compra</th>
-                  <th className="px-6 py-4">Vinícola</th>
-                  <th className="px-6 py-4">Local de compra</th>
-                  <th className="px-6 py-4 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.flatMap((order: CustomerOrder) =>
-                  order.items.map((item) => (
-                    <tr className="border-t border-[#eee3d5] hover:bg-[#fffaf5]" key={item.id}>
-                      <td className="px-6 py-5 font-semibold text-[#5b0c1b]">
-                        <div className="flex items-center gap-3">
-                          {item.photoPath && (
-                            <PrivateImage
-                              src={item.photoPath}
-                              alt=""
-                              className="h-14 w-10 shrink-0 rounded-lg object-contain"
-                            />
-                          )}
-                          <span>{item.wineName}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5 text-[#715f59]">{item.quantityBottles} garrafa(s)</td>
-                      <td className="px-6 py-5 text-[#715f59]">
-                        {new Date(order.purchaseDate).toLocaleDateString('pt-BR')}
-                      </td>
-                      <td className="px-6 py-5 text-[#715f59]">
-                        {item.wineryName ??
-                          item.externalWine?.externalWinery.name ??
-                          (item.wineId ? 'VINUM' : 'Não informada')}
-                      </td>
-                      <td className="px-6 py-5 text-[#715f59]">
-                        {order.purchaseLocationRef?.name ?? order.purchaseLocation ?? 'Não informado'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            className="rounded-lg border border-[#9a6a2d] px-3 py-2 text-xs font-semibold text-[#7d5b2b]"
-                            disabled={save.isPending}
-                            onClick={() => {
-                              if (open) {
-                                setConfirmation({
-                                  title: 'Abrir outro vinho?',
-                                  description:
-                                    'O preenchimento atual será descartado antes de abrir o vinho selecionado.',
-                                  cancelLabel: 'Continuar editando',
-                                  confirmLabel: 'Abrir outro vinho',
-                                  action: () => prepareEdit(order, item),
-                                });
-                              } else prepareEdit(order, item);
-                            }}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            className="rounded-lg border border-[#7d1d2d] px-3 py-2 text-xs font-semibold text-[#7d1d2d]"
-                            disabled={removeBottles.isPending}
-                            onClick={() =>
-                              setDeleting({
-                                orderId: order.id,
-                                itemId: item.id,
-                                name: item.wineName,
-                                quantity: item.quantityBottles,
-                                mode: 'one',
-                              })
-                            }
-                          >
-                            Excluir
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )),
-                )}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[980px] text-left">
+                <thead className="bg-[#f8efe5] text-xs uppercase tracking-wider text-[#7d5b2b]">
+                  <tr>
+                    <th className="px-6 py-4">Nome do rótulo</th>
+                    <th className="px-6 py-4">Quantidade</th>
+                    <th className="px-6 py-4">Data da compra</th>
+                    <th className="px-6 py-4">Vinícola</th>
+                    <th className="px-6 py-4">Local de compra</th>
+                    <th className="px-6 py-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.flatMap((order: CustomerOrder) =>
+                    order.items.map((item) => (
+                      <tr className="border-t border-[#eee3d5] hover:bg-[#fffaf5]" key={item.id}>
+                        <td className="px-6 py-5 font-semibold text-[#5b0c1b]">
+                          <div className="flex items-center gap-3">
+                            {item.photoPath && (
+                              <PrivateImage
+                                src={item.photoPath}
+                                alt=""
+                                className="h-14 w-10 shrink-0 rounded-lg object-contain"
+                              />
+                            )}
+                            <span>{item.wineName}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 text-[#715f59]">{item.quantityBottles} garrafa(s)</td>
+                        <td className="px-6 py-5 text-[#715f59]">
+                          {new Date(order.purchaseDate).toLocaleDateString('pt-BR')}
+                        </td>
+                        <td className="px-6 py-5 text-[#715f59]">
+                          {item.wineryName ??
+                            item.externalWine?.externalWinery.name ??
+                            (item.wineId ? 'VINUM' : 'Não informada')}
+                        </td>
+                        <td className="px-6 py-5 text-[#715f59]">
+                          {order.purchaseLocationRef?.name ?? order.purchaseLocation ?? 'Não informado'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              className="rounded-lg border border-[#9a6a2d] px-3 py-2 text-xs font-semibold text-[#7d5b2b]"
+                              disabled={save.isPending}
+                              onClick={() => {
+                                if (open) {
+                                  setConfirmation({
+                                    title: 'Abrir outro vinho?',
+                                    description:
+                                      'O preenchimento atual será descartado antes de abrir o vinho selecionado.',
+                                    cancelLabel: 'Continuar editando',
+                                    confirmLabel: 'Abrir outro vinho',
+                                    action: () => prepareEdit(order, item),
+                                  });
+                                } else prepareEdit(order, item);
+                              }}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              className="rounded-lg border border-[#7d1d2d] px-3 py-2 text-xs font-semibold text-[#7d1d2d]"
+                              disabled={removeBottles.isPending}
+                              onClick={() =>
+                                setDeleting({
+                                  orderId: order.id,
+                                  itemId: item.id,
+                                  name: item.wineName,
+                                  quantity: item.quantityBottles,
+                                  mode: 'one',
+                                })
+                              }
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )),
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              page={ordersQuery.data?.page ?? ordersPage}
+              limit={ordersLimit}
+              total={ordersQuery.data?.total ?? 0}
+              totalPages={ordersQuery.data?.totalPages ?? 0}
+              label="Compras"
+              onPageChange={setOrdersPage}
+              onLimitChange={(nextLimit) => {
+                setOrdersLimit(nextLimit);
+                setOrdersPage(1);
+              }}
+            />
+          </>
         ) : null}
       </section>
       <ConfirmDialog

@@ -204,3 +204,27 @@ legado e evidências de validação estão documentados em
 - A ordenação, a atualização na posição atual sob o filtro `Todos`, os detalhes
   e todas as ações do ciclo da garrafa foram preservados. Não houve alteração
   de schema ou migration.
+
+## Paginação de compras e garrafas — versão 2.12.0
+
+- `GET /api/cliente/pedidos` e `GET /api/cliente/estoque/garrafas` recebem
+  `page` e `limit` e retornam `{ items, total, page, limit, totalPages }`.
+- O limite padrão é 10 e as opções aceitas são 10, 20, 50 e 100. A interface
+  apresenta intervalo, total, página atual, páginas numeradas e ações Anterior
+  e Próxima.
+- A consulta de compras ordena antes de aplicar `skip` e `take`. A consulta de
+  garrafas aplica os filtros no PostgreSQL, preserva a ordem por status, rótulo,
+  data e identificador e só então seleciona a página.
+- Trocar filtro ou quantidade por página retorna à página 1. Após exclusão, uma
+  página final que deixou de existir recua automaticamente para a última página
+  válida.
+- No filtro `Todos`, mudanças de estado continuam atualizando a unidade no lugar
+  sem reposicioná-la imediatamente. A ordenação normal volta na troca de filtro
+  ou em uma nova carga.
+- O estado vazio não exibe controles de paginação. Os controles usam rótulos
+  acessíveis, indicam a página atual e reorganizam-se em telas estreitas.
+- Testes automatizados cobrem limites, filtros, ordenação, isolamento entre
+  clientes e ajuste de página. A validação interativa confirmou 21 compras e 25
+  garrafas temporárias nas páginas 10/20 e em 390 × 844; esses dados de teste
+  foram removidos ao final.
+- Não houve alteração no schema do banco nem nova migration.

@@ -21,7 +21,13 @@ function render(title: string, loaded = false, withBottle = false) {
     defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime: Infinity } },
   });
   if (loaded && title === 'Meus vinhos') {
-    client.setQueryData(['customer-orders'], []);
+    client.setQueryData(['customer-orders', 1, 10], {
+      items: [],
+      total: 0,
+      page: 1,
+      limit: 10,
+      totalPages: 0,
+    });
     client.setQueryData(
       ['customer-external-wineries'],
       [
@@ -51,9 +57,8 @@ function render(title: string, loaded = false, withBottle = false) {
         },
       ],
     );
-    client.setQueryData(
-      ['customer-cellar-bottles', '', '', '', ''],
-      withBottle
+    client.setQueryData(['customer-cellar-bottles', '', '', '', '', 1, 10], {
+      items: withBottle
         ? [
             {
               id: 'bottle-1',
@@ -74,7 +79,11 @@ function render(title: string, loaded = false, withBottle = false) {
             },
           ]
         : [],
-    );
+      total: withBottle ? 1 : 0,
+      page: 1,
+      limit: 10,
+      totalPages: withBottle ? 1 : 0,
+    });
     client.setQueryData(['customer-cellar-wine-types'], [{ id: 'tinto', name: 'Tinto' }]);
   }
   if (loaded && title === 'Dashboard') {

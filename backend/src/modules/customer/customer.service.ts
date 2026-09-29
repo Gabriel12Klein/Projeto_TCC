@@ -9,9 +9,10 @@ import {
   type BottleListFilters,
   type ExternalWineInput,
   type OrderInput,
+  type PaginationInput,
   type PrivateAddressInput,
 } from './customer.schema.js';
-import type { Prisma } from '../../generated/prisma/client.js';
+import { Prisma } from '../../generated/prisma/client.js';
 
 // Serialize stock changes per owner, including first insertion of a label.
 async function lockInventory(transaction: Prisma.TransactionClient, userId: string) {
@@ -72,6 +73,58 @@ const bottleInclude = {
   },
   movements: { orderBy: { occurredAt: 'asc' as const } },
 };
+type BottleWithRelations = Prisma.CellarBottleGetPayload<{ include: typeof bottleInclude }>;
+
+function paginated<T>(items: T[], total: number, page: number, limit: number) {
+  return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+}
+
+async function listAllBottles(userId: string, input: Partial<BottleListFilters> | string = {}) {
+  const status = typeof input === 'string' ? input : input.status;
+  const wineTypeId = typeof input === 'string' ? undefined : input.wineTypeId;
+  const purchasedFrom = typeof input === 'string' ? undefined : input.purchasedFrom;
+  const purchasedTo = typeof input === 'string' ? undefined : input.purchasedTo;
+  const allowed = ['DISPONIVEL', 'ABERTA', 'CONSUMIDA', 'DESCARTADA'];
+  if (status && !allowed.includes(status)) throw new AppError(400, 'Informe um status de garrafa válido.');
+  const bottles = await prisma.cellarBottle.findMany({
+    where: { userId },
+    include: bottleInclude,
+    orderBy: [{ purchasedAt: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+  });
+  const totalsByItem = new Map<string, number>();
+  const ordered = [...bottles].sort(
+    (a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime() || a.id.localeCompare(b.id),
+  );
+  const numbers = new Map<string, number>();
+  for (const bottle of ordered) {
+    const next = (totalsByItem.get(bottle.inventoryItemId) ?? 0) + 1;
+    totalsByItem.set(bottle.inventoryItemId, next);
+    numbers.set(bottle.id, next);
+  }
+  const statusOrder = new Map([
+    ['DISPONIVEL', 0],
+    ['ABERTA', 1],
+    ['CONSUMIDA', 2],
+    ['DESCARTADA', 3],
+  ]);
+  return bottles
+    .filter(
+      (bottle) =>
+        (!status || bottle.status === status) &&
+        (!wineTypeId || bottle.inventoryItem.wine?.typeId === wineTypeId) &&
+        (!purchasedFrom || civilDateKey(bottle.purchasedAt) >= civilDateKey(purchasedFrom)) &&
+        (!purchasedTo || civilDateKey(bottle.purchasedAt) <= civilDateKey(purchasedTo)),
+    )
+    .map((bottle) => ({ ...bottle, bottleNumber: numbers.get(bottle.id) ?? 1 }))
+    .sort(
+      (a, b) =>
+        (statusOrder.get(a.status) ?? 3) - (statusOrder.get(b.status) ?? 3) ||
+        a.inventoryItem.name.localeCompare(b.inventoryItem.name, 'pt-BR') ||
+        a.bottleNumber - b.bottleNumber ||
+        a.purchasedAt.getTime() - b.purchasedAt.getTime() ||
+        a.id.localeCompare(b.id),
+    );
+}
 
 const addressData = (input: PrivateAddressInput) => ({
   name: input.name,
@@ -295,7 +348,7 @@ export const customerService = {
   },
 
   async listOrders(userId: string) {
-    return prisma.customerOrder.findMany({
+    const query = {
       where: { userId },
       include: {
         purchaseLocationRef: { select: { id: true, name: true } },
@@ -306,8 +359,34 @@ export const customerService = {
           },
         },
       },
-      orderBy: { purchaseDate: 'desc' },
-    });
+      orderBy: [{ purchaseDate: 'desc' as const }, { createdAt: 'desc' as const }, { id: 'desc' as const }],
+    };
+    return prisma.customerOrder.findMany(query);
+  },
+
+  async listOrdersPage(userId: string, pagination: PaginationInput) {
+    const query = {
+      where: { userId },
+      include: {
+        purchaseLocationRef: { select: { id: true, name: true } },
+        items: {
+          include: {
+            wine: { select: { id: true, name: true, slug: true } },
+            externalWine: { include: { externalWinery: { select: { id: true, name: true } } } },
+          },
+        },
+      },
+      orderBy: [{ purchaseDate: 'desc' as const }, { createdAt: 'desc' as const }, { id: 'desc' as const }],
+    };
+    const [items, total] = await prisma.$transaction([
+      prisma.customerOrder.findMany({
+        ...query,
+        skip: (pagination.page - 1) * pagination.limit,
+        take: pagination.limit,
+      }),
+      prisma.customerOrder.count({ where: { userId } }),
+    ]);
+    return paginated(items, total, pagination.page, pagination.limit);
   },
 
   async createOrder(userId: string, input: OrderInput, photoPath?: string) {
@@ -817,51 +896,75 @@ export const customerService = {
     });
   },
 
-  async listBottles(userId: string, input: BottleListFilters | string = {}) {
-    const status = typeof input === 'string' ? input : input.status;
-    const wineTypeId = typeof input === 'string' ? undefined : input.wineTypeId;
-    const purchasedFrom = typeof input === 'string' ? undefined : input.purchasedFrom;
-    const purchasedTo = typeof input === 'string' ? undefined : input.purchasedTo;
+  async listBottlesPage(userId: string, input: BottleListFilters) {
+    const { status, wineTypeId, purchasedFrom, purchasedTo, page, limit } = input;
     const allowed = ['DISPONIVEL', 'ABERTA', 'CONSUMIDA', 'DESCARTADA'];
     if (status && !allowed.includes(status)) throw new AppError(400, 'Informe um status de garrafa válido.');
-    const bottles = await prisma.cellarBottle.findMany({
-      where: { userId },
-      include: bottleInclude,
-      orderBy: [{ purchasedAt: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+    const where: Prisma.CellarBottleWhereInput = {
+      userId,
+      status: status || undefined,
+      inventoryItem: wineTypeId ? { wine: { typeId: wineTypeId } } : undefined,
+      purchasedAt:
+        purchasedFrom || purchasedTo
+          ? { gte: purchasedFrom || undefined, lte: purchasedTo || undefined }
+          : undefined,
+    };
+    const total = await prisma.cellarBottle.count({ where });
+    const statuses = status ? [status] : ['DISPONIVEL', 'ABERTA', 'CONSUMIDA', 'DESCARTADA'];
+    const grouped = await prisma.cellarBottle.groupBy({
+      by: ['status'],
+      where,
+      _count: { _all: true },
     });
-    const totalsByItem = new Map<string, number>();
-    const ordered = [...bottles].sort(
-      (a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime() || a.id.localeCompare(b.id),
-    );
-    const numbers = new Map<string, number>();
-    for (const bottle of ordered) {
-      const next = (totalsByItem.get(bottle.inventoryItemId) ?? 0) + 1;
-      totalsByItem.set(bottle.inventoryItemId, next);
-      numbers.set(bottle.id, next);
+    const totals = new Map(grouped.map((group) => [group.status, group._count._all]));
+    let remainingSkip = (page - 1) * limit;
+    let remainingTake = limit;
+    const pageItems: BottleWithRelations[] = [];
+    for (const currentStatus of statuses) {
+      const groupTotal = totals.get(currentStatus) ?? 0;
+      if (remainingSkip >= groupTotal) {
+        remainingSkip -= groupTotal;
+        continue;
+      }
+      if (!remainingTake) break;
+      const items = await prisma.cellarBottle.findMany({
+        where: { ...where, status: currentStatus },
+        include: bottleInclude,
+        orderBy: [{ inventoryItem: { name: 'asc' } }, { purchasedAt: 'asc' }, { id: 'asc' }],
+        skip: remainingSkip,
+        take: remainingTake,
+      });
+      pageItems.push(...items);
+      remainingTake -= items.length;
+      remainingSkip = 0;
     }
-    const statusOrder = new Map([
-      ['DISPONIVEL', 0],
-      ['ABERTA', 1],
-      ['CONSUMIDA', 2],
-      ['DESCARTADA', 3],
-    ]);
-    return bottles
-      .filter(
-        (bottle) =>
-          (!status || bottle.status === status) &&
-          (!wineTypeId || bottle.inventoryItem.wine?.typeId === wineTypeId) &&
-          (!purchasedFrom || civilDateKey(bottle.purchasedAt) >= civilDateKey(purchasedFrom)) &&
-          (!purchasedTo || civilDateKey(bottle.purchasedAt) <= civilDateKey(purchasedTo)),
-      )
-      .map((bottle) => ({ ...bottle, bottleNumber: numbers.get(bottle.id) ?? 1 }))
-      .sort(
-        (a, b) =>
-          (statusOrder.get(a.status) ?? 3) - (statusOrder.get(b.status) ?? 3) ||
-          a.inventoryItem.name.localeCompare(b.inventoryItem.name, 'pt-BR') ||
-          a.bottleNumber - b.bottleNumber ||
-          a.purchasedAt.getTime() - b.purchasedAt.getTime() ||
-          a.id.localeCompare(b.id),
-      );
+    const ids = pageItems.map(({ id }) => id);
+    const numbered = ids.length
+      ? await prisma.$queryRaw<{ id: string; bottleNumber: bigint }[]>(Prisma.sql`
+            SELECT numbered.id, numbered."bottleNumber"
+            FROM (
+              SELECT id,
+                ROW_NUMBER() OVER (
+                  PARTITION BY "inventoryItemId"
+                  ORDER BY "purchasedAt" ASC, id ASC
+                ) AS "bottleNumber"
+              FROM "garrafa_adega"
+              WHERE "userId" = ${userId}
+            ) AS numbered
+            WHERE numbered.id IN (${Prisma.join(ids)})
+          `)
+      : [];
+    const numbers = new Map(numbered.map(({ id, bottleNumber }) => [id, Number(bottleNumber)]));
+    return paginated(
+      pageItems.map((bottle) => ({ ...bottle, bottleNumber: numbers.get(bottle.id) ?? 1 })),
+      total,
+      page,
+      limit,
+    );
+  },
+
+  async listBottles(userId: string, input: Partial<BottleListFilters> | string = {}) {
+    return listAllBottles(userId, input);
   },
 
   async getBottle(userId: string, bottleId: string) {

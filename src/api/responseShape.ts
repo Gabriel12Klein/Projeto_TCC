@@ -1,6 +1,14 @@
 const object = (value: unknown): value is Record<string, any> =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const records = (value: unknown) => Array.isArray(value) && value.every(object);
+const paginated = (value: unknown, item: (entry: any) => boolean) =>
+  object(value) &&
+  Array.isArray(value.items) &&
+  value.items.every(item) &&
+  Number.isInteger(value.total) &&
+  Number.isInteger(value.page) &&
+  [10, 20, 50, 100].includes(value.limit) &&
+  Number.isInteger(value.totalPages);
 const user = (value: unknown) =>
   object(value) &&
   typeof value.id === 'string' &&
@@ -86,7 +94,7 @@ export function validResponse(path: string, method: string, value: unknown) {
       Array.isArray(value.grapes) &&
       (!value.wine || (object(value.wine) && Array.isArray(value.wine.grapes)))
     );
-  if (route === '/cliente/pedidos' && method === 'GET') return Array.isArray(value) && value.every(order);
+  if (route === '/cliente/pedidos' && method === 'GET') return paginated(value, order);
   if (route.startsWith('/cliente/pedidos')) return order(value);
   if (route === '/cliente/vinhos-externos' && method === 'GET')
     return Array.isArray(value) && value.every(externalWine);
@@ -106,14 +114,12 @@ export function validResponse(path: string, method: string, value: unknown) {
       )
     );
   if (route === '/cliente/estoque/garrafas' && method === 'GET')
-    return (
-      Array.isArray(value) &&
-      value.every(
-        (bottle) =>
-          object(bottle) &&
-          typeof bottle.id === 'string' &&
-          ['DISPONIVEL', 'ABERTA', 'CONSUMIDA', 'DESCARTADA'].includes(bottle.status),
-      )
+    return paginated(
+      value,
+      (bottle) =>
+        object(bottle) &&
+        typeof bottle.id === 'string' &&
+        ['DISPONIVEL', 'ABERTA', 'CONSUMIDA', 'DESCARTADA'].includes(bottle.status),
     );
   // Mutation responses need not include loaded relations.
   if (route.startsWith('/cliente/estoque')) return object(value) && typeof value.id === 'string';

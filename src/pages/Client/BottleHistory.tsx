@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/api';
 import QueryFeedback from '../../ui/QueryFeedback';
-import type { BottleStatus, CellarBottle } from '../../types';
+import type { BottleStatus, CellarBottle, PageLimit, Paginated } from '../../types';
 import PrivateImage from './PrivateImage';
 import wineIcon from '../../assets/admin/sidebar/vinho.png';
 import ConfirmDeleteDialog from '../../ui/ConfirmDeleteDialog';
 import ExternalWineDetailsDialog from './ExternalWineDetailsDialog';
 import DiscardBottleDialog from './DiscardBottleDialog';
+import Pagination, { lastValidPage } from '../../ui/Pagination';
 
 export function today(now = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -67,6 +68,18 @@ export function replaceBottlePreservingOrder(
   return bottles
     .map((bottle) => (bottle.id === updated.id ? { ...updated, bottleNumber: bottle.bottleNumber } : bottle))
     .filter((bottle) => !activeStatus || bottle.status === activeStatus);
+}
+
+export function replaceBottleInPage(
+  current: Paginated<CellarBottle> | undefined,
+  updated: CellarBottle,
+  activeStatus: string,
+) {
+  if (!current) return current;
+  const items = replaceBottlePreservingOrder(current.items, updated, activeStatus) ?? [];
+  const removed = current.items.length - items.length;
+  const total = Math.max(current.total - removed, 0);
+  return { ...current, items, total, totalPages: Math.ceil(total / current.limit) };
 }
 
 function BottleRow({
@@ -291,6 +304,8 @@ export default function BottleHistory() {
   const [wineTypeId, setWineTypeId] = useState('');
   const [purchasedFrom, setPurchasedFrom] = useState('');
   const [purchasedTo, setPurchasedTo] = useState('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState<PageLimit>(10);
   const [message, setMessage] = useState('');
   const [deleting, setDeleting] = useState<CellarBottle | null>(null);
   const [discarding, setDiscarding] = useState<CellarBottle | null>(null);
@@ -300,8 +315,8 @@ export default function BottleHistory() {
   const rangeError = purchaseDateRangeError(purchasedFrom, purchasedTo);
   const hasFilters = Boolean(status || wineTypeId || purchasedFrom || purchasedTo);
   const bottleQueryKey = useMemo(
-    () => ['customer-cellar-bottles', status, wineTypeId, purchasedFrom, purchasedTo] as const,
-    [status, wineTypeId, purchasedFrom, purchasedTo],
+    () => ['customer-cellar-bottles', status, wineTypeId, purchasedFrom, purchasedTo, page, limit] as const,
+    [status, wineTypeId, purchasedFrom, purchasedTo, page, limit],
   );
   const wineTypes = useQuery({
     queryKey: ['customer-cellar-wine-types'],
@@ -315,6 +330,8 @@ export default function BottleHistory() {
         wineTypeId: wineTypeId || undefined,
         purchasedFrom: purchasedFrom || undefined,
         purchasedTo: purchasedTo || undefined,
+        page,
+        limit,
       }),
     enabled: !rangeError,
   });
@@ -340,10 +357,13 @@ export default function BottleHistory() {
           ? 'Garrafa aberta e dashboard atualizado.'
           : 'Consumo finalizado e preservado no histórico.',
       );
-      qc.setQueryData<CellarBottle[]>(bottleQueryKey, (current) =>
-        replaceBottlePreservingOrder(current, updated, status),
+      qc.setQueryData<Paginated<CellarBottle>>(bottleQueryKey, (current) =>
+        replaceBottleInPage(current, updated, status),
       );
-      await qc.invalidateQueries({ queryKey: ['customer-cellar-bottles'], refetchType: 'none' });
+      await qc.invalidateQueries({
+        queryKey: ['customer-cellar-bottles'],
+        refetchType: status ? 'active' : 'none',
+      });
       await qc.invalidateQueries({ queryKey: ['customer-inventory-dashboard'] });
     },
     onError: (error) =>
@@ -371,10 +391,13 @@ export default function BottleHistory() {
       api.customer.discardBottle(id, occurredAt, reason),
     onSuccess: async (updated) => {
       setMessage('Garrafa descartada e preservada no histórico da compra.');
-      qc.setQueryData<CellarBottle[]>(bottleQueryKey, (current) =>
-        replaceBottlePreservingOrder(current, updated, status),
+      qc.setQueryData<Paginated<CellarBottle>>(bottleQueryKey, (current) =>
+        replaceBottleInPage(current, updated, status),
       );
-      await qc.invalidateQueries({ queryKey: ['customer-cellar-bottles'], refetchType: 'none' });
+      await qc.invalidateQueries({
+        queryKey: ['customer-cellar-bottles'],
+        refetchType: status ? 'active' : 'none',
+      });
       await qc.invalidateQueries({ queryKey: ['customer-inventory-dashboard'] });
       await qc.invalidateQueries({ queryKey: ['customer-inventory'] });
     },
@@ -384,6 +407,10 @@ export default function BottleHistory() {
   useEffect(() => {
     if (message) window.requestAnimationFrame(() => resultMessage.current?.focus());
   }, [message]);
+  useEffect(() => {
+    const validPage = lastValidPage(page, bottles.data?.totalPages ?? 1);
+    if (page !== validPage) setPage(validPage);
+  }, [bottles.data?.totalPages, page]);
 
   return (
     <section className="mt-8 rounded-3xl bg-white p-6 shadow-sm md:p-8">
@@ -399,7 +426,10 @@ export default function BottleHistory() {
           <select
             className="mt-1 block w-full rounded-lg border border-[#d9cbbd] bg-white px-3 py-2"
             value={status}
-            onChange={(event) => setStatus(event.target.value)}
+            onChange={(event) => {
+              setStatus(event.target.value);
+              setPage(1);
+            }}
           >
             <option value="">Todos</option>
             <option value="DISPONIVEL">Disponíveis</option>
@@ -413,7 +443,10 @@ export default function BottleHistory() {
           <select
             className="mt-1 block w-full rounded-lg border border-[#d9cbbd] bg-white px-3 py-2"
             value={wineTypeId}
-            onChange={(event) => setWineTypeId(event.target.value)}
+            onChange={(event) => {
+              setWineTypeId(event.target.value);
+              setPage(1);
+            }}
             disabled={wineTypes.isPending}
           >
             <option value="">Todos</option>
@@ -430,7 +463,10 @@ export default function BottleHistory() {
             className="mt-1 block w-full rounded-lg border border-[#d9cbbd] bg-white px-3 py-2"
             type="date"
             value={purchasedFrom}
-            onChange={(event) => setPurchasedFrom(event.target.value)}
+            onChange={(event) => {
+              setPurchasedFrom(event.target.value);
+              setPage(1);
+            }}
           />
         </label>
         <label className="text-sm font-semibold text-[#5b0c1b]">
@@ -439,7 +475,10 @@ export default function BottleHistory() {
             className="mt-1 block w-full rounded-lg border border-[#d9cbbd] bg-white px-3 py-2"
             type="date"
             value={purchasedTo}
-            onChange={(event) => setPurchasedTo(event.target.value)}
+            onChange={(event) => {
+              setPurchasedTo(event.target.value);
+              setPage(1);
+            }}
           />
         </label>
         <button
@@ -451,6 +490,7 @@ export default function BottleHistory() {
             setWineTypeId('');
             setPurchasedFrom('');
             setPurchasedTo('');
+            setPage(1);
           }}
         >
           Limpar filtros
@@ -467,7 +507,7 @@ export default function BottleHistory() {
         </p>
       )}
       <div className="mt-6 grid gap-4">
-        {(bottles.data ?? []).map((bottle) => (
+        {(bottles.data?.items ?? []).map((bottle) => (
           <BottleRow
             key={bottle.id}
             bottle={bottle}
@@ -491,7 +531,7 @@ export default function BottleHistory() {
         loading={!rangeError && bottles.isPending}
         error={rangeError ? null : bottles.error}
         fetching={!rangeError && bottles.isFetching}
-        empty={!rangeError && !bottles.data?.length}
+        empty={!rangeError && !bottles.data?.items.length}
         emptyText={
           hasFilters
             ? 'Nenhuma garrafa encontrada com os filtros selecionados.'
@@ -500,6 +540,20 @@ export default function BottleHistory() {
         loadingText="Carregando controle da adega…"
         retry={() => void bottles.refetch()}
       />
+      {!rangeError && bottles.data && (
+        <Pagination
+          page={bottles.data.page}
+          limit={limit}
+          total={bottles.data.total}
+          totalPages={bottles.data.totalPages}
+          label="Adega - Controle de Estoque"
+          onPageChange={setPage}
+          onLimitChange={(nextLimit) => {
+            setLimit(nextLimit);
+            setPage(1);
+          }}
+        />
+      )}
       {message && (
         <p
           ref={resultMessage}

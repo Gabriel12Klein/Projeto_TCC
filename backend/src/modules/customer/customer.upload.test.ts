@@ -66,8 +66,8 @@ it('salva foto e local no pedido e compartilha a foto com o estoque', async () =
     .get('/api/cliente/pedidos')
     .set('Authorization', `Bearer ${token}`)
     .expect(200);
-  expect(history.body[0].purchaseLocation).toBe('Mercado de teste');
-  expect(history.body[0].items[0].photoPath).toBe(photoPath);
+  expect(history.body.items[0].purchaseLocation).toBe('Mercado de teste');
+  expect(history.body.items[0].items[0].photoPath).toBe(photoPath);
   await request(app).get(photoPath!).expect(401);
   await request(app).get(photoPath!.replace('/inventory/', '/%69nventory/')).expect(404);
   const photo = await request(app).get(photoPath!).set('Authorization', `Bearer ${token}`).expect(200);
@@ -76,7 +76,7 @@ it('salva foto e local no pedido e compartilha a foto com o estoque', async () =
   expect(
     (await request(app).get('/api/cliente/pedidos').set('Authorization', `Bearer ${otherToken}`).expect(200))
       .body,
-  ).toEqual([]);
+  ).toMatchObject({ items: [], total: 0, page: 1, limit: 10, totalPages: 0 });
   expect(
     (await request(app).get('/api/cliente/estoque').set('Authorization', `Bearer ${otherToken}`).expect(200))
       .body,
@@ -142,7 +142,7 @@ it('rejeita arquivo de formato inválido sem cadastrar pedido', async () => {
     .attach('photo', Buffer.from('arquivo'), { filename: 'teste.txt', contentType: 'text/plain' })
     .expect(400);
   const after = await request(app).get('/api/cliente/pedidos').set('Authorization', `Bearer ${token}`);
-  expect(after.body.length).toBe(before.body.length);
+  expect(after.body.total).toBe(before.body.total);
 });
 
 it('atualiza o pedido pela API preservando foto, data e identificação', async () => {
@@ -150,7 +150,7 @@ it('atualiza o pedido pela API preservando foto, data e identificação', async 
     .get('/api/cliente/pedidos')
     .set('Authorization', `Bearer ${token}`)
     .expect(200);
-  const order = history.body[0];
+  const order = history.body.items[0];
   const item = order.items[0];
   const edited = await request(app)
     .put(`/api/cliente/pedidos/${order.id}/itens/${item.id}`)
@@ -185,7 +185,7 @@ it('atualiza o pedido pela API preservando foto, data e identificação', async 
     ),
   ).toBe(true);
   expect(
-    (await request(app).get('/api/cliente/pedidos').set('Authorization', `Bearer ${token}`).expect(200))
-      .body[0].id,
+    (await request(app).get('/api/cliente/pedidos').set('Authorization', `Bearer ${token}`).expect(200)).body
+      .items[0].id,
   ).toBe(order.id);
 });

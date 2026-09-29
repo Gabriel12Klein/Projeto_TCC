@@ -9,9 +9,11 @@ import { civilDateKey, todayCivilDate } from './customer.schema.js';
 const suffix = randomUUID();
 const emailA = `dashboard-a-${suffix}@test.invalid`;
 const emailB = `dashboard-b-${suffix}@test.invalid`;
+const emailC = `dashboard-c-${suffix}@test.invalid`;
 const password = `Painel1!${suffix}`;
 let userA = '';
 let userB = '';
+let userC = '';
 let tokenA = '';
 let wineA = '';
 let wineB = '';
@@ -29,6 +31,12 @@ beforeAll(async () => {
       .send({ name: 'Dashboard B', email: emailB, password })
       .expect(201)
   ).body.id;
+  userC = (
+    await request(app)
+      .post('/api/auth/register')
+      .send({ name: 'Dashboard C', email: emailC, password })
+      .expect(201)
+  ).body.id;
   tokenA = (await request(app).post('/api/auth/login').send({ email: emailA, password }).expect(200)).body
     .token;
   const wines = await prisma.wine.findMany({
@@ -42,11 +50,97 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await prisma.user.deleteMany({ where: { email: { in: [emailA, emailB] } } });
+  await prisma.user.deleteMany({ where: { email: { in: [emailA, emailB, emailC] } } });
   await prisma.$disconnect();
 });
 
 describe('Pedidos, estoque e dashboard por cliente', () => {
+  it('pagina compras e garrafas após ordenar e filtrar, sem cruzar clientes', async () => {
+    expect(await customerService.listOrdersPage(userC, { page: 1, limit: 10 })).toEqual({
+      items: [],
+      total: 0,
+      page: 1,
+      limit: 10,
+      totalPages: 0,
+    });
+    const orderIds = Array.from({ length: 21 }, (_, index) => `page-order-${suffix}-${index + 1}`);
+    await prisma.customerOrder.createMany({
+      data: orderIds.map((id, index) => ({
+        id,
+        userId: userC,
+        source: 'VINICULA',
+        purchaseDate: new Date(`2026-01-${String(index + 1).padStart(2, '0')}T12:00:00Z`),
+        purchaseLocation: 'Teste de paginação',
+      })),
+    });
+    await prisma.customerOrderItem.createMany({
+      data: orderIds.map((orderId, index) => ({
+        id: `page-item-${suffix}-${index + 1}`,
+        orderId,
+        wineId: wineA,
+        wineName: `Compra paginada ${index + 1}`,
+        quantityBottles: 1,
+      })),
+    });
+    const orders10 = await customerService.listOrdersPage(userC, { page: 1, limit: 10 });
+    expect(orders10).toMatchObject({ total: 21, page: 1, limit: 10, totalPages: 3 });
+    expect(orders10.items).toHaveLength(10);
+    expect((await customerService.listOrdersPage(userC, { page: 2, limit: 10 })).items).toHaveLength(10);
+    expect((await customerService.listOrdersPage(userC, { page: 3, limit: 10 })).items).toHaveLength(1);
+    expect(await customerService.listOrdersPage(userC, { page: 2, limit: 20 })).toMatchObject({
+      total: 21,
+      totalPages: 2,
+      page: 2,
+      limit: 20,
+    });
+
+    const inventory = await prisma.inventoryItem.create({
+      data: {
+        userId: userC,
+        wineId: wineA,
+        name: 'Estoque paginado',
+        wineryName: 'VINUM',
+        quantityBottles: 13,
+      },
+    });
+    await prisma.cellarBottle.createMany({
+      data: Array.from({ length: 25 }, (_, index) => ({
+        id: `page-bottle-${suffix}-${index + 1}`,
+        userId: userC,
+        inventoryItemId: inventory.id,
+        status: index < 12 ? 'CONSUMIDA' : 'DISPONIVEL',
+        purchasedAt: new Date(`2026-01-${String(index + 1).padStart(2, '0')}T12:00:00Z`),
+        finishedAt: index < 12 ? new Date('2026-02-01T12:00:00Z') : null,
+      })),
+    });
+    const bottles10 = await customerService.listBottlesPage(userC, { page: 1, limit: 10 });
+    expect(bottles10).toMatchObject({ total: 25, page: 1, limit: 10, totalPages: 3 });
+    expect(bottles10.items).toHaveLength(10);
+    expect((await customerService.listBottlesPage(userC, { page: 2, limit: 10 })).items).toHaveLength(10);
+    expect((await customerService.listBottlesPage(userC, { page: 3, limit: 10 })).items).toHaveLength(5);
+    expect(await customerService.listBottlesPage(userC, { page: 1, limit: 20 })).toMatchObject({
+      total: 25,
+      totalPages: 2,
+    });
+    expect(await customerService.listBottlesPage(userC, { page: 1, limit: 50 })).toMatchObject({
+      total: 25,
+      totalPages: 1,
+    });
+    const typeId = (await prisma.wine.findUniqueOrThrow({ where: { id: wineA }, select: { typeId: true } }))
+      .typeId;
+    const filtered = await customerService.listBottlesPage(userC, {
+      page: 1,
+      limit: 10,
+      status: 'CONSUMIDA',
+      wineTypeId: typeId,
+      purchasedFrom: new Date('2026-01-05T12:00:00Z'),
+      purchasedTo: new Date('2026-01-10T12:00:00Z'),
+    });
+    expect(filtered).toMatchObject({ total: 6, totalPages: 1 });
+    expect(filtered.items).toHaveLength(6);
+    expect((await customerService.listBottlesPage(userA, { page: 1, limit: 100 })).total).toBe(0);
+  });
+
   it('executa a matriz funcional obrigatória com dados reais', async () => {
     const orderA = await customerService.createOrder(userA, {
       source: 'VINICULA',
@@ -205,7 +299,8 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
       )
       .set('Authorization', `Bearer ${tokenA}`)
       .expect(200);
-    expect(filteredResponse.body).toHaveLength(7);
+    expect(filteredResponse.body).toMatchObject({ total: 7, page: 1, limit: 10, totalPages: 1 });
+    expect(filteredResponse.body.items).toHaveLength(7);
     await request(app)
       .get('/api/cliente/estoque/garrafas?purchasedFrom=2026-01-21&purchasedTo=2026-01-20')
       .set('Authorization', `Bearer ${tokenA}`)

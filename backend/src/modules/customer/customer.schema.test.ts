@@ -5,6 +5,7 @@ import {
   bottleListFiltersSchema,
   civilDateKey,
   todayCivilDate,
+  paginationSchema,
 } from './customer.schema.js';
 
 function addCivilDays(value: string, days: number) {
@@ -59,5 +60,14 @@ describe('datas civis da adega', () => {
       bottleListFiltersSchema.parse({ purchasedFrom: '2026-09-28', purchasedTo: '2026-09-27' }),
     ).toThrow('A data inicial não pode ser posterior à data final.');
     expect(() => bottleListFiltersSchema.parse({ purchasedFrom: '2026-02-31' })).toThrow();
+  });
+
+  it('aplica paginação padrão e aceita somente limites previstos', () => {
+    expect(paginationSchema.parse({})).toEqual({ page: 1, limit: 10 });
+    expect(paginationSchema.parse({ page: '3', limit: '20' })).toEqual({ page: 3, limit: 20 });
+    expect(() => paginationSchema.parse({ page: 0, limit: 10 })).toThrow();
+    expect(() => paginationSchema.parse({ page: 1, limit: 15 })).toThrow(
+      'O limite deve ser 10, 20, 50 ou 100.',
+    );
   });
 });
