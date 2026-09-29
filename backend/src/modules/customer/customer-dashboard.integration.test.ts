@@ -163,6 +163,58 @@ describe('Pedidos, estoque e dashboard por cliente', () => {
     expect(await prisma.wine.count({ where: { name: externalName } })).toBe(0);
     expect(await prisma.winery.count()).toBe(wineriesBefore);
 
+    const wineAType = await prisma.wine.findUniqueOrThrow({
+      where: { id: wineA },
+      select: { typeId: true },
+    });
+    expect(
+      await customerService.listBottles(userA, {
+        purchasedFrom: new Date('2026-01-20T12:00:00Z'),
+        purchasedTo: new Date('2026-02-02T12:00:00Z'),
+      }),
+    ).toHaveLength(7);
+    expect(
+      await customerService.listBottles(userA, {
+        purchasedFrom: new Date('2026-01-05T12:00:00Z'),
+        purchasedTo: new Date('2026-01-05T12:00:00Z'),
+      }),
+    ).toHaveLength(6);
+    expect(
+      await customerService.listBottles(userA, { purchasedFrom: new Date('2026-02-02T12:00:00Z') }),
+    ).toHaveLength(7);
+    expect(
+      await customerService.listBottles(userA, { purchasedTo: new Date('2026-01-05T12:00:00Z') }),
+    ).toHaveLength(6);
+    const combinedFilters = await customerService.listBottles(userA, {
+      status: 'DISPONIVEL',
+      wineTypeId: wineAType.typeId,
+      purchasedFrom: new Date('2026-01-05T12:00:00Z'),
+      purchasedTo: new Date('2026-01-20T12:00:00Z'),
+    });
+    expect(combinedFilters).toHaveLength(7);
+    expect(combinedFilters.every((bottle) => bottle.inventoryItem.wine?.typeId === wineAType.typeId)).toBe(
+      true,
+    );
+    const wineTypes = await customerService.listBottleWineTypes(userA);
+    expect(wineTypes.map(({ id }) => id)).toContain(wineAType.typeId);
+    expect(await customerService.listBottleWineTypes(userB)).toEqual(wineTypes);
+
+    const filteredResponse = await request(app)
+      .get(
+        `/api/cliente/estoque/garrafas?status=DISPONIVEL&wineTypeId=${wineAType.typeId}&purchasedFrom=2026-01-05&purchasedTo=2026-01-20`,
+      )
+      .set('Authorization', `Bearer ${tokenA}`)
+      .expect(200);
+    expect(filteredResponse.body).toHaveLength(7);
+    await request(app)
+      .get('/api/cliente/estoque/garrafas?purchasedFrom=2026-01-21&purchasedTo=2026-01-20')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .expect(400);
+    expect(
+      (await request(app).get('/api/cliente/estoque/tipos-vinho').set('Authorization', `Bearer ${tokenA}`))
+        .body,
+    ).toEqual(expect.arrayContaining([expect.objectContaining({ id: wineAType.typeId })]));
+
     const stockB = await prisma.inventoryItem.findFirstOrThrow({ where: { userId: userA, wineId: wineB } });
     const movementsBefore = await prisma.inventoryMovement.count({ where: { inventoryItemId: stockB.id } });
     await expect(

@@ -4,6 +4,7 @@ import {
   bottleActions,
   formatDate,
   localDateValue,
+  purchaseDateRangeError,
   replaceBottlePreservingOrder,
   today,
 } from './BottleHistory';
@@ -25,6 +26,15 @@ describe('histórico individual da adega', () => {
     expect(formatDate('2026-09-27T00:00:00.000Z')).toBe('27/09/2026');
     expect(localDateValue('2026-09-27T00:00:00.000Z')).toBe('2026-09-27');
     expect(today(new Date('2026-01-01T02:30:00.000Z'))).toBe('2025-12-31');
+  });
+
+  it('valida o intervalo de compra antes de consultar o backend', () => {
+    expect(purchaseDateRangeError('2026-09-27', '2026-09-27')).toBe('');
+    expect(purchaseDateRangeError('2026-09-27', '')).toBe('');
+    expect(purchaseDateRangeError('', '2026-09-27')).toBe('');
+    expect(purchaseDateRangeError('2026-09-28', '2026-09-27')).toBe(
+      'A data inicial não pode ser posterior à data final.',
+    );
   });
 
   it('preserva a posição da garrafa ao atualizar com o filtro Todos', () => {

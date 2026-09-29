@@ -71,3 +71,8 @@ it('aceita garrafas descartadas no histórico individual', () => {
     ]),
   ).toBe(true);
 });
+
+it('valida as opções de tipo de vinho da adega', () => {
+  expect(validResponse('/cliente/estoque/tipos-vinho', 'GET', [{ id: 'tipo-a', name: 'Tinto' }])).toBe(true);
+  expect(validResponse('/cliente/estoque/tipos-vinho', 'GET', [{ id: 'tipo-a' }])).toBe(false);
+});

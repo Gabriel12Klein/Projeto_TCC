@@ -97,6 +97,14 @@ export function validResponse(path: string, method: string, value: unknown) {
   }
   if (route === '/cliente/estoque' && method === 'GET') return Array.isArray(value) && value.every(inventory);
   if (route === '/cliente/estoque/resumo' && method === 'GET') return inventoryDashboard(value);
+  if (route === '/cliente/estoque/tipos-vinho' && method === 'GET')
+    return (
+      Array.isArray(value) &&
+      value.every(
+        (wineType) =>
+          object(wineType) && typeof wineType.id === 'string' && typeof wineType.name === 'string',
+      )
+    );
   if (route === '/cliente/estoque/garrafas' && method === 'GET')
     return (
       Array.isArray(value) &&

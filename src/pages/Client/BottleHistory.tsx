@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/api';
@@ -29,6 +29,10 @@ export function formatDate(value: string | null) {
 
 export function localDateValue(value: string) {
   return value.slice(0, 10);
+}
+
+export function purchaseDateRangeError(from: string, to: string) {
+  return from && to && from > to ? 'A data inicial não pode ser posterior à data final.' : '';
 }
 
 export function bottleVintageYear(bottle: CellarBottle) {
@@ -101,9 +105,7 @@ function BottleRow({
       <div className="flex flex-wrap items-center gap-4">
         <PrivateImage src={image} alt="" className="h-16 w-14 rounded-xl object-contain bg-[#f1e4d1]" />
         <div className="min-w-[180px] flex-1">
-          <h3 className="font-semibold text-[#5b0c1b]">
-            {bottle.inventoryItem.name} · garrafa #{bottle.bottleNumber}
-          </h3>
+          <h3 className="font-semibold text-[#5b0c1b]">{bottle.inventoryItem.name}</h3>
           <p className="text-sm text-[#715f59]">
             {bottle.inventoryItem.wineryName ||
               bottle.inventoryItem.wine?.winery?.name ||
@@ -286,15 +288,35 @@ function BottleRow({
 
 export default function BottleHistory() {
   const [status, setStatus] = useState('');
+  const [wineTypeId, setWineTypeId] = useState('');
+  const [purchasedFrom, setPurchasedFrom] = useState('');
+  const [purchasedTo, setPurchasedTo] = useState('');
   const [message, setMessage] = useState('');
   const [deleting, setDeleting] = useState<CellarBottle | null>(null);
   const [discarding, setDiscarding] = useState<CellarBottle | null>(null);
   const [externalWineId, setExternalWineId] = useState<string | null>(null);
   const resultMessage = useRef<HTMLParagraphElement>(null);
   const qc = useQueryClient();
+  const rangeError = purchaseDateRangeError(purchasedFrom, purchasedTo);
+  const hasFilters = Boolean(status || wineTypeId || purchasedFrom || purchasedTo);
+  const bottleQueryKey = useMemo(
+    () => ['customer-cellar-bottles', status, wineTypeId, purchasedFrom, purchasedTo] as const,
+    [status, wineTypeId, purchasedFrom, purchasedTo],
+  );
+  const wineTypes = useQuery({
+    queryKey: ['customer-cellar-wine-types'],
+    queryFn: api.customer.bottleWineTypes,
+  });
   const bottles = useQuery({
-    queryKey: ['customer-cellar-bottles', status],
-    queryFn: () => api.customer.bottles(status || undefined),
+    queryKey: bottleQueryKey,
+    queryFn: () =>
+      api.customer.bottles({
+        status: status ? (status as BottleStatus) : undefined,
+        wineTypeId: wineTypeId || undefined,
+        purchasedFrom: purchasedFrom || undefined,
+        purchasedTo: purchasedTo || undefined,
+      }),
+    enabled: !rangeError,
   });
   const externalWine = useQuery({
     queryKey: ['customer-external-wine-details', externalWineId],
@@ -318,7 +340,7 @@ export default function BottleHistory() {
           ? 'Garrafa aberta e dashboard atualizado.'
           : 'Consumo finalizado e preservado no histórico.',
       );
-      qc.setQueryData<CellarBottle[]>(['customer-cellar-bottles', status], (current) =>
+      qc.setQueryData<CellarBottle[]>(bottleQueryKey, (current) =>
         replaceBottlePreservingOrder(current, updated, status),
       );
       await qc.invalidateQueries({ queryKey: ['customer-cellar-bottles'], refetchType: 'none' });
@@ -349,7 +371,7 @@ export default function BottleHistory() {
       api.customer.discardBottle(id, occurredAt, reason),
     onSuccess: async (updated) => {
       setMessage('Garrafa descartada e preservada no histórico da compra.');
-      qc.setQueryData<CellarBottle[]>(['customer-cellar-bottles', status], (current) =>
+      qc.setQueryData<CellarBottle[]>(bottleQueryKey, (current) =>
         replaceBottlePreservingOrder(current, updated, status),
       );
       await qc.invalidateQueries({ queryKey: ['customer-cellar-bottles'], refetchType: 'none' });
@@ -370,10 +392,12 @@ export default function BottleHistory() {
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6a2d]">Controle por garrafa</p>
           <h2 className="mt-1 font-playfair text-2xl text-[#5b0c1b]">Adega - Controle de Estoque</h2>
         </div>
+      </div>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:items-end">
         <label className="text-sm font-semibold text-[#5b0c1b]">
           Status
           <select
-            className="ml-2 rounded-lg border border-[#d9cbbd] bg-white px-3 py-2"
+            className="mt-1 block w-full rounded-lg border border-[#d9cbbd] bg-white px-3 py-2"
             value={status}
             onChange={(event) => setStatus(event.target.value)}
           >
@@ -384,7 +408,64 @@ export default function BottleHistory() {
             <option value="DESCARTADA">Descartadas</option>
           </select>
         </label>
+        <label className="text-sm font-semibold text-[#5b0c1b]">
+          Tipo de vinho
+          <select
+            className="mt-1 block w-full rounded-lg border border-[#d9cbbd] bg-white px-3 py-2"
+            value={wineTypeId}
+            onChange={(event) => setWineTypeId(event.target.value)}
+            disabled={wineTypes.isPending}
+          >
+            <option value="">Todos</option>
+            {(wineTypes.data ?? []).map((wineType) => (
+              <option key={wineType.id} value={wineType.id}>
+                {wineType.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm font-semibold text-[#5b0c1b]">
+          Data inicial
+          <input
+            className="mt-1 block w-full rounded-lg border border-[#d9cbbd] bg-white px-3 py-2"
+            type="date"
+            value={purchasedFrom}
+            onChange={(event) => setPurchasedFrom(event.target.value)}
+          />
+        </label>
+        <label className="text-sm font-semibold text-[#5b0c1b]">
+          Data final
+          <input
+            className="mt-1 block w-full rounded-lg border border-[#d9cbbd] bg-white px-3 py-2"
+            type="date"
+            value={purchasedTo}
+            onChange={(event) => setPurchasedTo(event.target.value)}
+          />
+        </label>
+        <button
+          className="rounded-lg border border-[#7d1d2d] px-4 py-2 text-sm font-semibold text-[#7d1d2d] disabled:cursor-not-allowed disabled:opacity-50"
+          type="button"
+          disabled={!hasFilters}
+          onClick={() => {
+            setStatus('');
+            setWineTypeId('');
+            setPurchasedFrom('');
+            setPurchasedTo('');
+          }}
+        >
+          Limpar filtros
+        </button>
       </div>
+      {rangeError && (
+        <p className="mt-3 text-sm font-semibold text-[#9f1f32]" role="alert">
+          {rangeError}
+        </p>
+      )}
+      {wineTypes.error && (
+        <p className="mt-3 text-sm text-[#9f1f32]" role="alert">
+          Não foi possível carregar os tipos de vinho.
+        </p>
+      )}
       <div className="mt-6 grid gap-4">
         {(bottles.data ?? []).map((bottle) => (
           <BottleRow
@@ -407,11 +488,15 @@ export default function BottleHistory() {
         ))}
       </div>
       <QueryFeedback
-        loading={bottles.isPending}
-        error={bottles.error}
-        fetching={bottles.isFetching}
-        empty={!bottles.data?.length}
-        emptyText={status ? 'Nenhuma garrafa com este status.' : 'Você ainda não possui vinhos cadastrados.'}
+        loading={!rangeError && bottles.isPending}
+        error={rangeError ? null : bottles.error}
+        fetching={!rangeError && bottles.isFetching}
+        empty={!rangeError && !bottles.data?.length}
+        emptyText={
+          hasFilters
+            ? 'Nenhuma garrafa encontrada com os filtros selecionados.'
+            : 'Você ainda não possui vinhos cadastrados.'
+        }
         loadingText="Carregando controle da adega…"
         retry={() => void bottles.refetch()}
       />

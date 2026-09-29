@@ -10,6 +10,7 @@ import { requireAuth, requireRoles } from '../auth/auth.middleware.js';
 import {
   bottleEventSchema,
   bottleDiscardSchema,
+  bottleListFiltersSchema,
   externalWineSchema,
   orderSchema,
   privateAddressSchema,
@@ -312,8 +313,14 @@ router.get(
 router.get(
   '/estoque/garrafas',
   asyncRoute(async (req, res) => {
-    const status = req.query.status == null ? undefined : String(req.query.status);
-    res.json(await customerService.listBottles(String(res.locals.user.id), status));
+    const filters = bottleListFiltersSchema.parse(req.query);
+    res.json(await customerService.listBottles(String(res.locals.user.id), filters));
+  }),
+);
+router.get(
+  '/estoque/tipos-vinho',
+  asyncRoute(async (_req, res) => {
+    res.json(await customerService.listBottleWineTypes(String(res.locals.user.id)));
   }),
 );
 router.get(

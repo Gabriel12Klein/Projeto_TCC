@@ -123,9 +123,30 @@ export const bottleDiscardSchema = bottleEventSchema.extend({
     .max(500, 'O motivo do descarte deve ter no máximo 500 caracteres.'),
 });
 
+const optionalCivilDate = z.preprocess(
+  (value) => (value == null || value === '' ? undefined : normalizeCivilDate(value)),
+  z.date().optional(),
+);
+
+export const bottleListFiltersSchema = z
+  .object({
+    status: z.enum(['DISPONIVEL', 'ABERTA', 'CONSUMIDA', 'DESCARTADA']).optional(),
+    wineTypeId: z.string().trim().min(1).optional(),
+    purchasedFrom: optionalCivilDate,
+    purchasedTo: optionalCivilDate,
+  })
+  .refine(
+    ({ purchasedFrom, purchasedTo }) => !purchasedFrom || !purchasedTo || purchasedFrom <= purchasedTo,
+    {
+      path: ['purchasedTo'],
+      message: 'A data inicial não pode ser posterior à data final.',
+    },
+  );
+
 export type OrderInput = z.infer<typeof orderSchema>;
 export type BottleEventInput = z.infer<typeof bottleEventSchema>;
 export type BottleDiscardInput = z.infer<typeof bottleDiscardSchema>;
+export type BottleListFilters = z.infer<typeof bottleListFiltersSchema>;
 export type PrivateNameInput = z.infer<typeof privateNameSchema>;
 export type PrivateAddressInput = z.infer<typeof privateAddressSchema>;
 export type ExternalWineInput = z.infer<typeof externalWineSchema>;

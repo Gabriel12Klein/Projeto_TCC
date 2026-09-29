@@ -52,7 +52,7 @@ function render(title: string, loaded = false, withBottle = false) {
       ],
     );
     client.setQueryData(
-      ['customer-cellar-bottles', ''],
+      ['customer-cellar-bottles', '', '', '', ''],
       withBottle
         ? [
             {
@@ -75,6 +75,7 @@ function render(title: string, loaded = false, withBottle = false) {
           ]
         : [],
     );
+    client.setQueryData(['customer-cellar-wine-types'], [{ id: 'tinto', name: 'Tinto' }]);
   }
   if (loaded && title === 'Dashboard') {
     client.setQueryData(['customer-inventory-dashboard', new Date().getFullYear()], {
@@ -123,7 +124,13 @@ it('exibe em Meus vinhos a lista individual e suas ações', () => {
   const html = render('Meus vinhos', true, true);
   expect(html).toContain('Adega - Controle de Estoque');
   expect(html).toContain('Compras');
-  expect(html).toContain('Vinho de teste · garrafa #1');
+  expect(html).toContain('Vinho de teste');
+  expect(html).not.toContain('garrafa #1');
+  expect(html).toContain('Tipo de vinho');
+  expect(html).toContain('Tinto');
+  expect(html).toContain('Data inicial');
+  expect(html).toContain('Data final');
+  expect(html).toContain('Limpar filtros');
   expect(html).toContain('Abrir garrafa');
   expect(html).toContain('Descartar');
   expect(html).not.toContain('Finalizar garrafa');

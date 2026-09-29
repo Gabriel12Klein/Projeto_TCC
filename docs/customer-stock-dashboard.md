@@ -186,3 +186,21 @@ legado e evidências de validação estão documentados em
   PostgreSQL. A validação visual confirmou ações contextuais, Escape/foco do
   diálogo, estado vazio de descartadas e layout móvel em 390 × 844.
 - A auditoria geral de integração/regressão continua separada e não foi iniciada.
+
+## Filtros da adega — versão 2.11.0
+
+- A listagem individual combina Status, Tipo de vinho, Data inicial e Data
+  final. Datas são inclusivas e qualquer uma das extremidades pode ser usada
+  isoladamente.
+- Intervalos com data inicial posterior à final são bloqueados antes da
+  consulta e também rejeitados pela API. `Limpar filtros` restaura a listagem
+  completa e combinações vazias exibem orientação própria.
+- O seletor de tipo apresenta os tipos oficiais realmente cadastrados na tabela
+  de tipos de vinho. Rótulos externos aparecem em `Todos` e não recebem tipo
+  inventado, pois esse atributo não existe no cadastro privado atual.
+- O sufixo visual `garrafa #N` foi removido do título. A identificação e a
+  numeração de cada unidade continuam preservadas no backend, nas ações e nos
+  diálogos que precisam distinguir a garrafa.
+- A ordenação, a atualização na posição atual sob o filtro `Todos`, os detalhes
+  e todas as ações do ciclo da garrafa foram preservados. Não houve alteração
+  de schema ou migration.

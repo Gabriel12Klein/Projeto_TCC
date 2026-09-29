@@ -1,5 +1,6 @@
 import type {
   AuthSession,
+  BottleListFilters,
   CellarBottle,
   CatalogWine,
   CatalogWineDetail,
@@ -13,6 +14,7 @@ import type {
   PurchaseLocation,
   ResourceKey,
   User,
+  WineTypeOption,
 } from '../types';
 import type {
   AdminSummary,
@@ -286,8 +288,15 @@ export const api = {
     inventory: () => request<InventoryItem[]>('/cliente/estoque'),
     inventoryDashboard: (year?: number) =>
       request<InventoryDashboard>(`/cliente/estoque/resumo${year ? `?year=${year}` : ''}`),
-    bottles: (status?: string) =>
-      request<CellarBottle[]>(`/cliente/estoque/garrafas${status ? `?status=${status}` : ''}`),
+    bottles: (filters: BottleListFilters = {}) => {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) params.set(key, value);
+      });
+      const query = params.toString();
+      return request<CellarBottle[]>(`/cliente/estoque/garrafas${query ? `?${query}` : ''}`);
+    },
+    bottleWineTypes: () => request<WineTypeOption[]>('/cliente/estoque/tipos-vinho'),
     bottle: (bottleId: string) =>
       request<CellarBottle>(`/cliente/estoque/garrafas/${encodeURIComponent(bottleId)}`),
     removeBottle: (bottleId: string) =>

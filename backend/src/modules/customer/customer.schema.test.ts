@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { bottleDiscardSchema, bottleEventSchema, civilDateKey, todayCivilDate } from './customer.schema.js';
+import {
+  bottleDiscardSchema,
+  bottleEventSchema,
+  bottleListFiltersSchema,
+  civilDateKey,
+  todayCivilDate,
+} from './customer.schema.js';
 
 function addCivilDays(value: string, days: number) {
   const date = new Date(`${value}T12:00:00.000Z`);
@@ -35,5 +41,23 @@ describe('datas civis da adega', () => {
     expect(() => bottleDiscardSchema.parse({ occurredAt: current, reason: '  ' })).toThrow(
       'Informe o motivo do descarte',
     );
+  });
+
+  it('aceita intervalos inclusivos e filtros parciais de compra', () => {
+    expect(
+      bottleListFiltersSchema.parse({ purchasedFrom: '2026-09-27', purchasedTo: '2026-09-27' }),
+    ).toMatchObject({
+      purchasedFrom: new Date('2026-09-27T12:00:00.000Z'),
+      purchasedTo: new Date('2026-09-27T12:00:00.000Z'),
+    });
+    expect(bottleListFiltersSchema.parse({ purchasedFrom: '2026-09-27' }).purchasedTo).toBeUndefined();
+    expect(bottleListFiltersSchema.parse({ purchasedTo: '2026-09-27' }).purchasedFrom).toBeUndefined();
+  });
+
+  it('rejeita intervalo invertido e data inexistente', () => {
+    expect(() =>
+      bottleListFiltersSchema.parse({ purchasedFrom: '2026-09-28', purchasedTo: '2026-09-27' }),
+    ).toThrow('A data inicial não pode ser posterior à data final.');
+    expect(() => bottleListFiltersSchema.parse({ purchasedFrom: '2026-02-31' })).toThrow();
   });
 });

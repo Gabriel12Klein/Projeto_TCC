@@ -6,6 +6,7 @@ import {
   todayCivilDate,
   type BottleEventInput,
   type BottleDiscardInput,
+  type BottleListFilters,
   type ExternalWineInput,
   type OrderInput,
   type PrivateAddressInput,
@@ -53,6 +54,8 @@ const bottleInclude = {
           slug: true,
           description: true,
           volumeMl: true,
+          typeId: true,
+          wineType: { select: { id: true, name: true } },
           winery: { select: { name: true } },
           image: { select: { path: true } },
           grapeLinks: { include: { grape: { select: { id: true, name: true } } } },
@@ -807,7 +810,18 @@ export const customerService = {
     };
   },
 
-  async listBottles(userId: string, status?: string) {
+  async listBottleWineTypes(_userId: string) {
+    return prisma.wineType.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+  },
+
+  async listBottles(userId: string, input: BottleListFilters | string = {}) {
+    const status = typeof input === 'string' ? input : input.status;
+    const wineTypeId = typeof input === 'string' ? undefined : input.wineTypeId;
+    const purchasedFrom = typeof input === 'string' ? undefined : input.purchasedFrom;
+    const purchasedTo = typeof input === 'string' ? undefined : input.purchasedTo;
     const allowed = ['DISPONIVEL', 'ABERTA', 'CONSUMIDA', 'DESCARTADA'];
     if (status && !allowed.includes(status)) throw new AppError(400, 'Informe um status de garrafa válido.');
     const bottles = await prisma.cellarBottle.findMany({
@@ -832,7 +846,13 @@ export const customerService = {
       ['DESCARTADA', 3],
     ]);
     return bottles
-      .filter((bottle) => !status || bottle.status === status)
+      .filter(
+        (bottle) =>
+          (!status || bottle.status === status) &&
+          (!wineTypeId || bottle.inventoryItem.wine?.typeId === wineTypeId) &&
+          (!purchasedFrom || civilDateKey(bottle.purchasedAt) >= civilDateKey(purchasedFrom)) &&
+          (!purchasedTo || civilDateKey(bottle.purchasedAt) <= civilDateKey(purchasedTo)),
+      )
       .map((bottle) => ({ ...bottle, bottleNumber: numbers.get(bottle.id) ?? 1 }))
       .sort(
         (a, b) =>

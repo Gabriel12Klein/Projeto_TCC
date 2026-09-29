@@ -219,6 +219,8 @@ export type CellarBottle = {
       slug: string;
       description: string;
       volumeMl: number;
+      typeId: string;
+      wineType: { id: string; name: string };
       winery: { name: string } | null;
       image: { path: string } | null;
       grapeLinks: { grape: { id: string; name: string } }[];
@@ -239,3 +241,12 @@ export type CellarBottle = {
   } | null;
   movements: InventoryMovement[];
 };
+
+export type BottleListFilters = {
+  status?: BottleStatus;
+  wineTypeId?: string;
+  purchasedFrom?: string;
+  purchasedTo?: string;
+};
+
+export type WineTypeOption = { id: string; name: string };
