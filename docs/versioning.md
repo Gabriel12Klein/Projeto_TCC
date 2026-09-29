@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.10.0**
+Versão atual: **2.11.0**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -132,3 +132,13 @@ A migration incremental `20260929120000_add_discarded_cellar_bottles` adiciona
 sem recriar tabelas ou alterar migrations antigas. A interface renomeia os
 blocos para `Compras` e `Adega - Controle de Estoque`, adiciona o filtro de
 descartadas e apresenta ações contextuais conforme o estado.
+
+## Versão 2.11.0
+
+Amplia a listagem `Adega - Controle de Estoque` com filtros combináveis de
+status, tipo oficial de vinho e intervalo inclusivo da data da compra. O
+intervalo pode ser parcial e é validado no frontend e no backend; a interface
+também oferece limpeza dos filtros e retorno vazio orientativo. O número
+individual da garrafa continua preservado internamente, mas deixa de poluir o
+título visual do rótulo. Vinhos externos permanecem sem tipo porque esse dado
+não existe em seu modelo atual. Não houve alteração de banco ou migration.
