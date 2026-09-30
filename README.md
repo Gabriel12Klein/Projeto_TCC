@@ -79,7 +79,10 @@ Somente ADMIN/EDITOR vinculados à VINUM podem administrar produtos. O cadastro 
 - Vinho contém uma ou mais uvas por `vinho_uva`. Novos vinhos exigem classificação; cadastros legados sem classificação continuam preservados até edição.
 - Safra pertence ao vinho e copia suas uvas em uma transação. Alterar posteriormente o vinho ou editar observações da safra não muda essa composição histórica.
 - Lote pertence a uma safra e ao mesmo vinho, garantido pela FK composta. A seleção é automática apenas quando existe uma safra; com várias, exige escolha.
-- O catálogo apresenta somente vinhos publicados. Consultas públicas de lotes exigem lote e vinho publicados.
+- O catálogo apresenta somente vinhos publicados. Na página inicial, tipo e
+  classificação usam referências ativas do PostgreSQL e podem ser combinados
+  com a busca por nome, acionada a partir da terceira letra. Consultas públicas
+  de lotes exigem lote e vinho publicados.
 - Blockchain continua reservada. O QR Code de cada lote é gerado por usuário
   administrativo, tem payload e data persistidos no PostgreSQL e aponta para a
   consulta pública `/consulta/lotes/:code`. A imagem é reconstruída do payload,

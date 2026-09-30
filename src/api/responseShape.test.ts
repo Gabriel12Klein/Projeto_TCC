@@ -78,6 +78,21 @@ it('valida a resposta persistida da geração de QR Code', () => {
   expect(validResponse('/lotes/batch-a/qr-code', 'POST', { ...response, targetUrl: null })).toBe(false);
 });
 
+it('valida as opções públicas dos filtros do catálogo', () => {
+  expect(
+    validResponse('/catalog/filters', 'GET', {
+      types: [{ id: 'tipo-tinto', name: 'Tinto' }],
+      classifications: [{ id: 'classificacao-seco', name: 'Seco' }],
+    }),
+  ).toBe(true);
+  expect(
+    validResponse('/catalog/filters', 'GET', {
+      types: [{ id: 'tipo-tinto' }],
+      classifications: [],
+    }),
+  ).toBe(false);
+});
+
 it('aceita garrafas descartadas no histórico individual', () => {
   expect(
     validResponse('/cliente/estoque/garrafas', 'GET', {

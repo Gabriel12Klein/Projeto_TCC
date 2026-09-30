@@ -113,6 +113,7 @@ export const openApiDocument = {
         parameters: [
           { name: 'q', in: 'query', schema: { type: 'string' } },
           { name: 'type', in: 'query', schema: { type: 'string' } },
+          { name: 'classification', in: 'query', schema: { type: 'string' } },
         ],
         responses: {
           '200': {
@@ -122,6 +123,13 @@ export const openApiDocument = {
             },
           },
         },
+      },
+    },
+    '/catalog/filters': {
+      get: {
+        tags: ['Catálogo'],
+        summary: 'Lista tipos e classificações ativos para os filtros públicos',
+        responses: { '200': { description: 'Opções dos filtros do catálogo' } },
       },
     },
     '/catalog/wines/{slug}': {

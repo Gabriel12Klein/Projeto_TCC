@@ -111,41 +111,61 @@ function publicWineView(wine: Prisma.WineGetPayload<{ select: typeof publicWineS
   };
 }
 
+function normalizeSearchText(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR');
+}
+
 export const catalogService = {
-  async list(query = '', type = '') {
+  async list(query = '', type = '', classification = '') {
+    const normalizedQuery = normalizeSearchText(query.trim());
     const wines = await prisma.wine.findMany({
       where: {
         status: 'PUBLISHED',
-        ...(query
-          ? {
-              OR: [
-                { name: { contains: query } },
-                { description: { contains: query } },
-                { grapeLinks: { some: { grape: { name: { contains: query } } } } },
-              ],
-            }
-          : {}),
         ...(type ? { wineType: { name: type } } : {}),
+        ...(classification ? { classification: { name: classification } } : {}),
       },
       select: summarySelect,
       orderBy: { name: 'asc' },
     });
-    return wines.map((wine) => ({
-      id: wine.id,
-      name: wine.name,
-      slug: wine.slug,
-      type: wine.wineType?.name ?? '',
-      classification: wine.classification?.name ?? null,
-      grapes: wine.grapeLinks.map(({ grape }) => grape.name).join(', '),
-      volumeMl: wine.volumeMl,
-      alcoholPercentage: wine.alcoholPercentage,
-      description: wine.description,
-      characteristics: wine.characteristics,
-      aromas: wine.aromas,
-      tastingNotes: wine.tastingNotes,
-      pairing: wine.pairing,
-      imagePath: wine.image?.path ?? null,
-    }));
+    return wines
+      .filter(
+        (wine) => normalizedQuery.length < 3 || normalizeSearchText(wine.name).includes(normalizedQuery),
+      )
+      .map((wine) => ({
+        id: wine.id,
+        name: wine.name,
+        slug: wine.slug,
+        type: wine.wineType?.name ?? '',
+        classification: wine.classification?.name ?? null,
+        grapes: wine.grapeLinks.map(({ grape }) => grape.name).join(', '),
+        volumeMl: wine.volumeMl,
+        alcoholPercentage: wine.alcoholPercentage,
+        description: wine.description,
+        characteristics: wine.characteristics,
+        aromas: wine.aromas,
+        tastingNotes: wine.tastingNotes,
+        pairing: wine.pairing,
+        imagePath: wine.image?.path ?? null,
+      }));
+  },
+
+  async filterOptions() {
+    const [types, classifications] = await prisma.$transaction([
+      prisma.wineType.findMany({
+        where: { active: true },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
+      prisma.classification.findMany({
+        where: { active: true },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
+    ]);
+    return { types, classifications };
   },
 
   async findBySlug(slug: string) {

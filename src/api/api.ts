@@ -4,6 +4,7 @@ import type {
   CellarBottle,
   CatalogWine,
   CatalogWineDetail,
+  CatalogFilterOptions,
   CustomerOrder,
   EntityRecord,
   ExternalWine,
@@ -143,13 +144,15 @@ export const api = {
       { method: 'POST' },
     ),
   catalog: {
-    list: (filters: { q?: string; type?: string } = {}) => {
+    list: (filters: { q?: string; type?: string; classification?: string } = {}) => {
       const params = new URLSearchParams();
       if (filters.q) params.set('q', filters.q);
       if (filters.type) params.set('type', filters.type);
+      if (filters.classification) params.set('classification', filters.classification);
       const query = params.size ? `?${params}` : '';
       return request<CatalogWine[]>(`/catalog/wines${query}`);
     },
+    filters: () => request<CatalogFilterOptions>('/catalog/filters'),
     detail: (slug: string) => request<CatalogWineDetail>(`/catalog/wines/${encodeURIComponent(slug)}`),
     batch: (code: string) => request<PublicBatchDetail>(`/catalog/batches/${encodeURIComponent(code)}`),
   },

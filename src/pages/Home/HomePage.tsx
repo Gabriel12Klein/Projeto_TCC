@@ -7,6 +7,7 @@ import { api, getStoredUser } from '../../api/api';
 import logo from '../Login/assets/logo-vinum.png';
 import background from '../Login/assets/background-login.png';
 import profileIcon from '../../assets/admin/common/profile.png';
+import { CATALOG_SEARCH_DEBOUNCE_MS, CATALOG_SEARCH_MIN_LENGTH, catalogSearchQuery } from './catalogFilters';
 
 export default function HomePage({ onLogout }: { onLogout: () => Promise<void> }) {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -15,6 +16,10 @@ export default function HomePage({ onLogout }: { onLogout: () => Promise<void> }
   const menuId = useId();
   const exiting = useRef(false);
   const [leaving, setLeaving] = useState(false);
+  const [wineName, setWineName] = useState('');
+  const [wineType, setWineType] = useState('');
+  const [classification, setClassification] = useState('');
+  const [debouncedWineName, setDebouncedWineName] = useState('');
   useEffect(() => {
     if (!profileMenuOpen) return;
     const outside = (event: PointerEvent) => {
@@ -33,6 +38,15 @@ export default function HomePage({ onLogout }: { onLogout: () => Promise<void> }
       document.removeEventListener('keydown', escape);
     };
   }, [profileMenuOpen]);
+  useEffect(() => {
+    const query = catalogSearchQuery(wineName);
+    if (!query) {
+      setDebouncedWineName('');
+      return;
+    }
+    const timer = window.setTimeout(() => setDebouncedWineName(query), CATALOG_SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [wineName]);
   const user = getStoredUser();
   const firstName = user?.name.trim().split(/\s+/)[0] ?? '';
   const {
@@ -42,9 +56,24 @@ export default function HomePage({ onLogout }: { onLogout: () => Promise<void> }
     isFetching,
     refetch,
   } = useQuery({
-    queryKey: ['public-home-wines'],
-    queryFn: () => api.catalog.list(),
+    queryKey: ['public-home-wines', debouncedWineName, wineType, classification],
+    queryFn: () => api.catalog.list({ q: debouncedWineName, type: wineType, classification }),
+    placeholderData: (previous) => previous,
   });
+  const {
+    data: filterOptions,
+    isLoading: filtersLoading,
+    error: filtersError,
+    isFetching: filtersFetching,
+    refetch: refetchFilters,
+  } = useQuery({
+    queryKey: ['public-catalog-filters'],
+    queryFn: api.catalog.filters,
+  });
+  const hasFilters = Boolean(wineName.trim() || wineType || classification);
+  const nameWaitingForThirdCharacter =
+    wineName.trim().length > 0 && wineName.trim().length < CATALOG_SEARCH_MIN_LENGTH;
+  const remainingSearchCharacters = CATALOG_SEARCH_MIN_LENGTH - wineName.trim().length;
   return (
     <div className="min-h-screen bg-[#f7f2eb] text-[#321b1c]">
       <header className="absolute inset-x-0 top-0 z-20">
@@ -195,15 +224,94 @@ export default function HomePage({ onLogout }: { onLogout: () => Promise<void> }
               Explore nossos rótulos e encontre o vinho ideal para cada momento.
             </p>
           </div>
+          <div className="mb-8 grid gap-4 rounded-2xl border border-[#dec9a6] bg-white p-5 shadow-sm md:grid-cols-2 lg:grid-cols-[minmax(260px,1.5fr)_minmax(180px,1fr)_minmax(180px,1fr)_auto] lg:items-end">
+            <label className="flex min-w-0 flex-col gap-2 font-semibold text-[#5b0c1b]">
+              Buscar vinho
+              <input
+                type="search"
+                value={wineName}
+                aria-describedby="catalog-search-help"
+                placeholder="Digite o nome do vinho"
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setWineName(value);
+                  if (!catalogSearchQuery(value)) setDebouncedWineName('');
+                }}
+                className="min-h-12 rounded-xl border border-[#cdbbaf] px-4 py-3 font-normal text-[#321b1c] outline-none transition placeholder:text-[#8b7f7b] focus:border-[#851329] focus:ring-2 focus:ring-[#851329]/15"
+              />
+              <span id="catalog-search-help" className="min-h-5 text-xs font-normal text-[#715f59]">
+                {nameWaitingForThirdCharacter
+                  ? `Digite mais ${remainingSearchCharacters} ${remainingSearchCharacters === 1 ? 'caractere' : 'caracteres'} para pesquisar.`
+                  : 'A busca automática começa na terceira letra.'}
+              </span>
+            </label>
+            <label className="flex min-w-0 flex-col gap-2 font-semibold text-[#5b0c1b]">
+              Tipo de vinho
+              <select
+                value={wineType}
+                disabled={filtersLoading || Boolean(filtersError)}
+                onChange={(event) => setWineType(event.target.value)}
+                className="min-h-12 rounded-xl border border-[#cdbbaf] bg-white px-4 py-3 font-normal text-[#321b1c] outline-none transition focus:border-[#851329] focus:ring-2 focus:ring-[#851329]/15 disabled:cursor-wait disabled:opacity-60"
+              >
+                <option value="">Todos</option>
+                {(filterOptions?.types ?? []).map((option) => (
+                  <option key={option.id} value={option.name}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+              <span className="min-h-5" aria-hidden="true" />
+            </label>
+            <label className="flex min-w-0 flex-col gap-2 font-semibold text-[#5b0c1b]">
+              Classificação
+              <select
+                value={classification}
+                disabled={filtersLoading || Boolean(filtersError)}
+                onChange={(event) => setClassification(event.target.value)}
+                className="min-h-12 rounded-xl border border-[#cdbbaf] bg-white px-4 py-3 font-normal text-[#321b1c] outline-none transition focus:border-[#851329] focus:ring-2 focus:ring-[#851329]/15 disabled:cursor-wait disabled:opacity-60"
+              >
+                <option value="">Todas</option>
+                {(filterOptions?.classifications ?? []).map((option) => (
+                  <option key={option.id} value={option.name}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+              <span className="min-h-5" aria-hidden="true" />
+            </label>
+            <div className="flex min-h-[76px] items-start md:col-span-2 lg:col-span-1 lg:items-start lg:pt-8">
+              <button
+                type="button"
+                disabled={!hasFilters}
+                onClick={() => {
+                  setWineName('');
+                  setDebouncedWineName('');
+                  setWineType('');
+                  setClassification('');
+                }}
+                className="min-h-12 w-full rounded-xl border border-[#851329] px-5 py-3 font-semibold text-[#851329] transition hover:bg-[#851329] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#851329] disabled:cursor-not-allowed disabled:opacity-45 lg:w-auto"
+              >
+                Limpar filtros
+              </button>
+            </div>
+          </div>
           <QueryFeedback
-            loading={isLoading}
-            error={error}
-            fetching={isFetching}
+            loading={isLoading || filtersLoading}
+            error={error || filtersError}
+            fetching={isFetching || filtersFetching}
             empty={wines.length === 0}
             loadingText="Carregando nossos rótulos…"
-            emptyText="Em breve, novos rótulos estarão disponíveis."
-            retry={() => void refetch()}
+            emptyText="Nenhum vinho encontrado com os filtros selecionados."
+            retry={() => {
+              void refetch();
+              void refetchFilters();
+            }}
           />
+          {!isLoading && !error && isFetching ? (
+            <p role="status" className="mb-4 text-sm text-[#715f59]">
+              Atualizando resultados…
+            </p>
+          ) : null}
           <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
             {wines.slice(0, 6).map((wine) => (
               <article

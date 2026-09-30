@@ -38,6 +38,11 @@ export type CatalogWine = {
   imagePath: string | null;
 };
 
+export type CatalogFilterOptions = {
+  types: { id: string; name: string }[];
+  classifications: { id: string; name: string }[];
+};
+
 export type CatalogWineDetail = CatalogWine & {
   winery: { name: string; city: string; state: string } | null;
   vintages: {

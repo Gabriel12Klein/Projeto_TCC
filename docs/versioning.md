@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.13.0**
+Versão atual: **2.14.0**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -161,3 +161,12 @@ depender de arquivo local ou Base64. A geração é idempotente, restrita à ár
 administrativa e mantém compatibilidade com caminhos históricos. O QR direciona
 somente para a consulta pública do lote e não altera a funcionalidade de
 blockchain, que continua reservada para trabalho futuro.
+
+## Versão 2.14.0
+
+Adiciona à seleção pública da página inicial filtros combináveis por tipo de
+vinho, classificação e nome. Tipos e classificações ativos são carregados do
+PostgreSQL por endpoint público próprio. A busca por nome começa na terceira
+letra, usa debounce de 300 ms e compara trechos sem diferenciar maiúsculas ou
+acentos. O catálogo continua limitado aos vinhos oficiais publicados, sem
+alteração de schema ou migration.

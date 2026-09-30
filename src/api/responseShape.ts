@@ -82,6 +82,18 @@ export function validResponse(path: string, method: string, value: unknown) {
       typeof value.created === 'boolean'
     );
   if (route === '/catalog/wines') return Array.isArray(value) && value.every(wine);
+  if (route === '/catalog/filters')
+    return (
+      object(value) &&
+      ['types', 'classifications'].every(
+        (key) =>
+          Array.isArray(value[key]) &&
+          value[key].every(
+            (option: unknown) =>
+              object(option) && typeof option.id === 'string' && typeof option.name === 'string',
+          ),
+      )
+    );
   if (route.startsWith('/catalog/wines/'))
     return (
       wine(value) &&

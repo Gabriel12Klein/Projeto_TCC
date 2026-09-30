@@ -25,8 +25,18 @@ router.get(
   '/wines',
   asyncRoute(async (req, res) => {
     res.json(
-      await catalogService.list(String(req.query.q ?? '').trim(), String(req.query.type ?? '').trim()),
+      await catalogService.list(
+        String(req.query.q ?? '').trim(),
+        String(req.query.type ?? '').trim(),
+        String(req.query.classification ?? '').trim(),
+      ),
     );
+  }),
+);
+router.get(
+  '/filters',
+  asyncRoute(async (_req, res) => {
+    res.json(await catalogService.filterOptions());
   }),
 );
 router.get(
