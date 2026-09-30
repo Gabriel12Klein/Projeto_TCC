@@ -7,6 +7,11 @@ export default defineConfig({
   server: {
     port: 5173,
     host: '0.0.0.0',
+
+   allowedHosts: [
+    'gabrielkleinpc.tail6c9d7c.ts.net'
+  ],
+    
     proxy: {
       '/api': 'http://localhost:3001',
       '/uploads': 'http://localhost:3001',
