@@ -14,6 +14,13 @@ import { selectVintage } from '../modules/Lote/selection';
 import ConfirmDialog from '../../../ui/ConfirmDialog';
 
 const draftFiles = new Map();
+export const unsavedQrMessage = 'O QR Code só pode ser gerado após salvar o lote. Preencha os dados obrigatórios e salve o registro primeiro.';
+
+export function batchQrAvailability(batchId?: string | number | null) {
+  return batchId
+    ? { canGenerate: true, message: '' }
+    : { canGenerate: false, message: unsavedQrMessage };
+}
 
 const secondaryButton = 'min-w-[clamp(140px,13vw,165px)] min-h-12 h-[clamp(48px,5vh,54px)] rounded-[7px] px-[clamp(16px,1.5vw,24px)] flex items-center justify-center gap-[10px] text-[clamp(13px,1vw,15px)] cursor-pointer border-[1.5px] border-[#b8aaa5] bg-white text-[#4a3d3b] transition-[transform,box-shadow,background-color,border-color,color] duration-150 hover:bg-[#fff8f6] hover:border-[#8f2940] hover:text-[#75172a] hover:shadow-[0_5px_13px_rgba(91,12,27,.10)] hover:-translate-y-px active:translate-y-0 active:scale-[.98] focus-visible:outline-[3px] focus-visible:outline-[rgba(194,137,57,.42)] focus-visible:outline-offset-2';
 
@@ -308,8 +315,10 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
   }
 
   async function generateQrCode() {
-    if (!initialData?.id) {
-      showMessage('Salve o lote antes de gerar o QR Code.');
+    const availability = batchQrAvailability(initialData?.id);
+    if (!availability.canGenerate) {
+      setQrFeedback({ type: 'status', text: availability.message });
+      showMessage(availability.message);
       return;
     }
     setQrBusy(true);
@@ -388,10 +397,16 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
       <button
         type="button"
         className={`${secondaryButton} w-full`}
-        disabled={qrBusy || !initialData?.id || Boolean(form.qrCodeGeneratedAt)}
+        disabled={qrBusy || Boolean(form.qrCodeGeneratedAt)}
         title={!initialData?.id ? 'Salve o lote antes de gerar o QR Code' : undefined}
         onClick={() => {
           setQrFeedback(null);
+          const availability = batchQrAvailability(initialData?.id);
+          if (!availability.canGenerate) {
+            setQrFeedback({ type: 'status', text: availability.message });
+            showMessage(availability.message);
+            return;
+          }
           setQrConfirmation(true);
         }}
       >

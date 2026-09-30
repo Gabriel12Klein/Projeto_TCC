@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.14.2**
+Versão atual: **2.14.3**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -187,3 +187,11 @@ aviso explica que a consulta será pública e que o código do lote ficará
 bloqueado depois da geração. O mesmo fluxo agora apresenta feedback local de
 processamento, sucesso e erro junto ao QR Code, além da mensagem global já
 existente. Não houve alteração de schema ou migration.
+
+## Versão 2.14.3
+
+Corrige o feedback do botão de geração de QR Code em lotes ainda não salvos. O
+botão permanece acionável para apresentar a orientação de que o lote deve ser
+salvo primeiro, mas a geração e a requisição ao backend continuam bloqueadas
+enquanto não existir um `id`. Inclui teste automatizado para os estados com e
+sem persistência. Não houve alteração de schema ou migration.
