@@ -154,6 +154,8 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
   const sending = useRef(false);
   const [busy, setBusy] = useState(false);
   const [qrBusy, setQrBusy] = useState(false);
+  const [qrConfirmation, setQrConfirmation] = useState(false);
+  const [qrFeedback, setQrFeedback] = useState<{ type: 'status' | 'success' | 'error'; text: string } | null>(null);
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [form,setForm] = useState<Record<string, any>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -312,6 +314,7 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     }
     setQrBusy(true);
     onBusyChange(true);
+    setQrFeedback({ type: 'status', text: 'Gerando e vinculando o QR Code ao lote…' });
     showMessage('Gerando QR Code…');
     try {
       const result = await api.generateBatchQr(String(initialData.id));
@@ -320,12 +323,19 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
         qrCode: result.path,
         qrCodeGeneratedAt: result.generatedAt,
       }));
+      setQrFeedback({
+        type: 'success',
+        text: 'QR Code gerado com sucesso. Ele já está vinculado a este lote e disponível para consulta.',
+      });
       showMessage('QR Code gerado e persistido no lote.');
-    } catch {
-      showMessage('Não foi possível gerar o QR Code. Tente novamente.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível gerar o QR Code. Tente novamente.';
+      setQrFeedback({ type: 'error', text: message });
+      showMessage(message);
     } finally {
       setQrBusy(false);
       onBusyChange(false);
+      setQrConfirmation(false);
     }
   }
 
@@ -380,7 +390,10 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
         className={`${secondaryButton} w-full`}
         disabled={qrBusy || !initialData?.id || Boolean(form.qrCodeGeneratedAt)}
         title={!initialData?.id ? 'Salve o lote antes de gerar o QR Code' : undefined}
-        onClick={generateQrCode}
+        onClick={() => {
+          setQrFeedback(null);
+          setQrConfirmation(true);
+        }}
       >
         <img className="w-[25px] h-[25px] object-contain" src={qrIcon} alt=""/>
         {qrBusy ? 'Gerando QR Code…' : form.qrCodeGeneratedAt ? 'QR Code gerado' : 'Gerar QR Code'}
@@ -397,6 +410,21 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
       </div>
     </div>}
 
+    {config.blockchainInfo && qrFeedback && (
+      <p
+        className={`mt-3 mb-0 rounded-[9px] border px-4 py-3 text-[13px] leading-[1.45] ${
+          qrFeedback.type === 'error'
+            ? 'border-[#d9a4a4] bg-[#fff5f5] text-[#8f1f2c]'
+            : qrFeedback.type === 'success'
+              ? 'border-[#b8ceb2] bg-[#f7fff5] text-[#315b2d]'
+              : 'border-[#e2c28d] bg-[#fffaf2] text-[#71511f]'
+        }`}
+        role={qrFeedback.type === 'error' ? 'alert' : 'status'}
+      >
+        {qrFeedback.text}
+      </p>
+    )}
+
     {config.blockchainInfo && <div className="mt-[clamp(12px,1.2vw,16px)] flex items-center gap-3 rounded-[9px] border border-[#e4bd84] bg-[#fffaf4] px-[clamp(14px,1.4vw,18px)] py-2.5">
       <img className="h-9 w-9 shrink-0 object-contain" src={blockchainIcon} alt=""/>
       <p className="m-0 flex min-w-0 items-baseline gap-2 text-[12px] leading-[1.35]"><b className="shrink-0 text-[#302627]">Blockchain:</b><span className="text-[#5f5651]">Ao registrar na blockchain, as informações do lote serão armazenadas futuramente de forma imutável.</span></p>
@@ -408,6 +436,18 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
       <button type="button" className={secondaryButton} onClick={cancelForm}><img className="w-[25px] h-[25px] object-contain" src={cancelIcon} alt=""/>Cancelar</button>
     </div>}
     </fieldset>
+    <ConfirmDialog
+      open={qrConfirmation}
+      title="Gerar QR Code deste lote?"
+      description={'O QR Code abrirá a consulta pública deste lote. Depois de gerado, o código do lote não poderá ser alterado para evitar que o QR Code impresso deixe de funcionar.\n\nConfirme somente se os dados e o código do lote estiverem corretos.'}
+      cancelLabel="Revisar dados"
+      confirmLabel="Gerar QR Code"
+      pending={qrBusy}
+      pendingLabel="Gerando QR Code…"
+      variant="warning"
+      onCancel={() => setQrConfirmation(false)}
+      onConfirm={() => void generateQrCode()}
+    />
     <ConfirmDialog
       open={pendingConfirmation !== null}
       title={pendingConfirmation === 'cancel' ? 'Sair sem salvar?' : 'Limpar formulário?'}
