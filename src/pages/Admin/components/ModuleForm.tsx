@@ -318,13 +318,11 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     const availability = batchQrAvailability(initialData?.id);
     if (!availability.canGenerate) {
       setQrFeedback({ type: 'status', text: availability.message });
-      showMessage(availability.message);
       return;
     }
     setQrBusy(true);
     onBusyChange(true);
     setQrFeedback({ type: 'status', text: 'Gerando e vinculando o QR Code ao lote…' });
-    showMessage('Gerando QR Code…');
     try {
       const result = await api.generateBatchQr(String(initialData.id));
       setForm((current) => ({
@@ -336,11 +334,9 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
         type: 'success',
         text: 'QR Code gerado com sucesso. Ele já está vinculado a este lote e disponível para consulta.',
       });
-      showMessage('QR Code gerado e persistido no lote.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível gerar o QR Code. Tente novamente.';
       setQrFeedback({ type: 'error', text: message });
-      showMessage(message);
     } finally {
       setQrBusy(false);
       onBusyChange(false);
@@ -404,7 +400,6 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
           const availability = batchQrAvailability(initialData?.id);
           if (!availability.canGenerate) {
             setQrFeedback({ type: 'status', text: availability.message });
-            showMessage(availability.message);
             return;
           }
           setQrConfirmation(true);

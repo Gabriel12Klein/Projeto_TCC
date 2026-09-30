@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.14.3**
+Versão atual: **2.14.4**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -195,3 +195,10 @@ botão permanece acionável para apresentar a orientação de que o lote deve se
 salvo primeiro, mas a geração e a requisição ao backend continuam bloqueadas
 enquanto não existir um `id`. Inclui teste automatizado para os estados com e
 sem persistência. Não houve alteração de schema ou migration.
+
+## Versão 2.14.4
+
+Remove a duplicidade de mensagens no fluxo de geração do QR Code. Avisos de
+pré-condição, processamento, sucesso e erro passam a aparecer somente no bloco
+contextual próximo ao botão e à prévia do código, sem repetir o mesmo texto no
+rodapé global do painel. Não houve alteração de schema ou migration.
