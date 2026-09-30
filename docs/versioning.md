@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.14.0**
+Versão atual: **2.14.1**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -170,3 +170,12 @@ PostgreSQL por endpoint público próprio. A busca por nome começa na terceira
 letra, usa debounce de 300 ms e compara trechos sem diferenciar maiúsculas ou
 acentos. O catálogo continua limitado aos vinhos oficiais publicados, sem
 alteração de schema ou migration.
+
+## Versão 2.14.1
+
+Executa uma limpeza técnica conservadora do repositório: remove componentes
+órfãos já substituídos, estilos associados, assets sem referências e cópias
+binárias idênticas. Também elimina declarações comprovadamente não utilizadas e
+amplia o `.gitignore` para artefatos regeneráveis e temporários. Migrations,
+backups, uploads, documentação histórica, endpoints e dependências foram
+preservados. Não houve alteração funcional, de schema ou de dados.

@@ -18,7 +18,7 @@ router.post(
     res.json(await authService.login(loginSchema.parse(req.body)));
   }),
 );
-router.get('/me', requireAuth, (req, res) => res.json(res.locals.user));
+router.get('/me', requireAuth, (_req, res) => res.json(res.locals.user));
 router.patch(
   '/me',
   requireAuth,

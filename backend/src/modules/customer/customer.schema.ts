@@ -161,6 +161,5 @@ export type BottleEventInput = z.infer<typeof bottleEventSchema>;
 export type BottleDiscardInput = z.infer<typeof bottleDiscardSchema>;
 export type BottleListFilters = z.infer<typeof bottleListFiltersSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;
-export type PrivateNameInput = z.infer<typeof privateNameSchema>;
 export type PrivateAddressInput = z.infer<typeof privateAddressSchema>;
 export type ExternalWineInput = z.infer<typeof externalWineSchema>;

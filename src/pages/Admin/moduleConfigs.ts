@@ -6,7 +6,7 @@ import vinicolaState from '../../assets/admin/vinicola/state.png';
 import vinicolaBlockchain from '../../assets/admin/vinicola/blockchain.png';
 import safraRepresentative from '../../assets/admin/safra/representative.png';
 import safraIdentifier from '../../assets/admin/safra/identifier.png';
-import safraYear from '../../assets/admin/safra/year.png';
+import safraYear from '../../assets/admin/lote/date.png';
 import safraStatus from '../../assets/admin/safra/status.png';
 import safraObservation from '../../assets/admin/safra/observation.png';
 import vinhoRepresentative from '../../assets/admin/vinho/representative.png';

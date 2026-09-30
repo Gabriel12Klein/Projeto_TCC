@@ -15,7 +15,7 @@ export const requireAuth: RequestHandler = asyncRoute(async (req, res, next) => 
 });
 
 export function requireRoles(...roles: string[]): RequestHandler {
-  return (req, res, next) => {
+  return (_req, res, next) => {
     if (!res.locals.user || !roles.includes(String(res.locals.user.role))) {
       next(new AppError(403, 'Você não possui permissão para acessar este recurso.'));
       return;

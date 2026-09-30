@@ -1,7 +1,15 @@
 node_modules/
 dist/
+build/
+coverage/
 .vite/
+.cache/
+tmp/
+temp/
 *.log
+*.tmp
+*.bak
+*.old
 .DS_Store
 .env
 .env.local

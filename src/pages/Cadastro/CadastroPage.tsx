@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../../api/api';
 import { registerFormSchema, type RegisterForm } from '../../features/auth/auth.schemas';
 
-import backgroundRegister from './assets/background-register.png';
+import backgroundRegister from '../Login/assets/background-login.png';
 import iconUserName from './assets/icon-user-name.png';
 import iconLogin from './assets/icon-login.png';
 import iconCompleteManagement from './assets/icon-complete-management.png';

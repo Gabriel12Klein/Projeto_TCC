@@ -9,7 +9,6 @@ const suffix = randomUUID();
 const password = `Excluir1!${suffix}`;
 const emails = [`excluir-a-${suffix}@test.invalid`, `excluir-b-${suffix}@test.invalid`];
 let userA = '';
-let _userB = '';
 let tokenB = '';
 let wineId = '';
 
@@ -17,9 +16,7 @@ beforeAll(async () => {
   userA = (
     await request(app).post('/api/auth/register').send({ name: 'Excluir A', email: emails[0], password })
   ).body.id;
-  _userB = (
-    await request(app).post('/api/auth/register').send({ name: 'Excluir B', email: emails[1], password })
-  ).body.id;
+  await request(app).post('/api/auth/register').send({ name: 'Excluir B', email: emails[1], password });
   tokenB = (await request(app).post('/api/auth/login').send({ email: emails[1], password })).body.token;
   wineId = (await prisma.wine.findFirstOrThrow({ where: { status: 'PUBLISHED' }, select: { id: true } })).id;
 });
