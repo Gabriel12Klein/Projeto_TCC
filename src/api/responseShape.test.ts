@@ -67,6 +67,17 @@ it('preserva respostas vazias de exclusão e rejeita sessão inválida', () => {
   ).toBe(true);
 });
 
+it('valida a resposta persistida da geração de QR Code', () => {
+  const response = {
+    path: '/api/catalog/batches/L26001/qr-code',
+    targetUrl: 'http://localhost:5173/consulta/lotes/L26001',
+    generatedAt: '2026-09-29T21:00:00.000Z',
+    created: true,
+  };
+  expect(validResponse('/lotes/batch-a/qr-code', 'POST', response)).toBe(true);
+  expect(validResponse('/lotes/batch-a/qr-code', 'POST', { ...response, targetUrl: null })).toBe(false);
+});
+
 it('aceita garrafas descartadas no histórico individual', () => {
   expect(
     validResponse('/cliente/estoque/garrafas', 'GET', {

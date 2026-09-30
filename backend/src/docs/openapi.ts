@@ -202,5 +202,16 @@ export const openApiDocument = {
         responses: { '201': { description: 'QR Code gerado' } },
       },
     },
+    '/catalog/batches/{code}/qr-code': {
+      get: {
+        tags: ['Catálogo'],
+        summary: 'Exibe o QR Code persistido de um lote',
+        parameters: [{ name: 'code', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': { description: 'Imagem PNG do QR Code' },
+          '404': { description: 'Lote sem QR Code' },
+        },
+      },
+    },
   },
 } as const;

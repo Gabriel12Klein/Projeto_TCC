@@ -2,6 +2,13 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { AppError } from '../../common/http.js';
 import { batchCodeToProductionDate, normalizeBatchCode, toDate, toInputDate } from '../../common/format.js';
 import { prisma } from '../../lib/prisma.js';
+import {
+  batchPublicUrl,
+  batchQrImagePath,
+  renderQrCode,
+  resolvePublicAppUrl,
+  type QrRenderer,
+} from '../../common/qrCode.js';
 const REGISTERED_BLOCKCHAIN_STATUS = 'Registrado na blockchain';
 
 const includeVintage = {
@@ -34,6 +41,7 @@ function toView(batch: Prisma.BatchGetPayload<{ include: typeof includeVintage }
     status: batch.status,
     blockchain: batch.blockchainRef ?? '',
     qrCode: batch.qrCodePath ?? '',
+    qrCodeGeneratedAt: batch.qrCodeGeneratedAt?.toISOString() ?? null,
   };
 }
 
@@ -45,7 +53,8 @@ async function resolveWineId(input: Record<string, unknown>, currentId?: string 
   }
   if (input.wineName) {
     const wines = await prisma.wine.findMany({ where: { name: String(input.wineName) }, take: 2 });
-    if (wines.length !== 1) throw new AppError(400, 'Selecione o vinho pelo identificador; o nome não é único ou não existe.');
+    if (wines.length !== 1)
+      throw new AppError(400, 'Selecione o vinho pelo identificador; o nome não é único ou não existe.');
     return wines[0].id;
   }
   if (currentId) return currentId;
@@ -60,7 +69,8 @@ async function resolveVintageId(input: Record<string, unknown>, currentId?: stri
       where: Number.isFinite(year) ? { year } : { identifier: String(input.vintageName) },
       take: 2,
     });
-    if (vintages.length !== 1) throw new AppError(400, 'Selecione a safra pelo identificador; o ano não é único ou não existe.');
+    if (vintages.length !== 1)
+      throw new AppError(400, 'Selecione a safra pelo identificador; o ano não é único ou não existe.');
     return vintages[0].id;
   }
   if (currentId) return currentId;
@@ -68,9 +78,13 @@ async function resolveVintageId(input: Record<string, unknown>, currentId?: stri
 }
 
 async function resolveGrapeIds(vintageId: string, wineId: string) {
-  const vintage = await prisma.vintage.findUnique({ where: { id: vintageId }, include: { grapeLinks: true } });
+  const vintage = await prisma.vintage.findUnique({
+    where: { id: vintageId },
+    include: { grapeLinks: true },
+  });
   if (!vintage) throw new AppError(400, 'A safra relacionada não foi encontrada.');
-  if (vintage.wineId !== wineId) throw new AppError(400, 'A safra selecionada não pertence ao vinho deste lote.');
+  if (vintage.wineId !== wineId)
+    throw new AppError(400, 'A safra selecionada não pertence ao vinho deste lote.');
   if (!vintage.grapeLinks.length) throw new AppError(400, 'Cadastre as uvas da safra antes de criar o lote.');
   return vintage.grapeLinks.map(({ grapeId }) => grapeId);
 }
@@ -87,7 +101,8 @@ export const batchesService = {
     return batches.map(toView);
   },
   async create(input: Record<string, unknown>) {
-    if (input.status === REGISTERED_BLOCKCHAIN_STATUS || input.blockchain || input.qrCode) throw new AppError(400, 'Blockchain e QR Code estão reservados para trabalhos futuros.');
+    if (input.status === REGISTERED_BLOCKCHAIN_STATUS || input.blockchain || input.qrCode)
+      throw new AppError(400, 'Blockchain e QR Code estão reservados para trabalhos futuros.');
     const code = normalizeBatchCode(String(input.code));
     const productionDate = batchCodeToProductionDate(code);
     const wineId = await resolveWineId(input);
@@ -118,14 +133,27 @@ export const batchesService = {
   },
   async update(id: string, input: Record<string, unknown>) {
     const current = await prisma.batch.findUniqueOrThrow({ where: { id } });
-    if ((input.status === REGISTERED_BLOCKCHAIN_STATUS && current.status !== input.status) || (input.blockchain && input.blockchain !== current.blockchainRef) || (input.qrCode && input.qrCode !== current.qrCodePath)) throw new AppError(400, 'Blockchain e QR Code estão reservados para trabalhos futuros.');
+    if (
+      (input.status === REGISTERED_BLOCKCHAIN_STATUS && current.status !== input.status) ||
+      (input.blockchain && input.blockchain !== current.blockchainRef) ||
+      (input.qrCode && input.qrCode !== current.qrCodePath)
+    )
+      throw new AppError(400, 'Blockchain e QR Code estão reservados para trabalhos futuros.');
     const data: Prisma.BatchUncheckedUpdateInput = {};
     if (input.wineId !== undefined || input.wineName !== undefined)
       data.wineId = await resolveWineId(input, current.wineId);
     const effectiveWineId = await resolveWineId(input, current.wineId);
     const effectiveVintageId = await resolveVintageId(input, current.vintageId);
     const grapeIds = await resolveGrapeIds(effectiveVintageId, effectiveWineId);
-    if (input.code !== undefined) data.code = normalizeBatchCode(String(input.code));
+    if (input.code !== undefined) {
+      const nextCode = normalizeBatchCode(String(input.code));
+      if (nextCode !== current.code && (current.qrCodePayload || current.qrCodePath))
+        throw new AppError(
+          409,
+          'O código de um lote com QR Code não pode ser alterado, pois isso invalidaria códigos já impressos.',
+        );
+      data.code = nextCode;
+    }
     if (input.vintageId !== undefined || input.vintageName !== undefined)
       data.vintageId = await resolveVintageId(input, current.vintageId);
     if (input.quantity !== undefined) data.quantityLiters = Number(input.quantity);
@@ -152,5 +180,37 @@ export const batchesService = {
   },
   async remove(id: string) {
     await prisma.batch.delete({ where: { id } });
+  },
+  async generateQrCode(id: string, requestOrigin?: string, renderer: QrRenderer = renderQrCode) {
+    const batch = await prisma.batch.findUnique({ where: { id } });
+    if (!batch) throw new AppError(404, 'O lote não foi encontrado. Atualize a lista e tente novamente.');
+    if (batch.qrCodePayload) {
+      return {
+        path: batch.qrCodePath || batchQrImagePath(batch.code),
+        targetUrl: batch.qrCodePayload,
+        generatedAt: batch.qrCodeGeneratedAt?.toISOString() ?? null,
+        created: false,
+      };
+    }
+
+    const targetUrl = batchPublicUrl(resolvePublicAppUrl(requestOrigin), batch.code);
+    try {
+      await renderer(targetUrl);
+    } catch {
+      throw new AppError(500, 'Não foi possível gerar o QR Code. Tente novamente.');
+    }
+    const path = batchQrImagePath(batch.code);
+    const generatedAt = new Date();
+    await prisma.batch.updateMany({
+      where: { id, qrCodePayload: null },
+      data: { qrCodePayload: targetUrl, qrCodePath: path, qrCodeGeneratedAt: generatedAt },
+    });
+    const persisted = await prisma.batch.findUniqueOrThrow({ where: { id } });
+    return {
+      path: persisted.qrCodePath || batchQrImagePath(persisted.code),
+      targetUrl: persisted.qrCodePayload || targetUrl,
+      generatedAt: persisted.qrCodeGeneratedAt?.toISOString() ?? generatedAt.toISOString(),
+      created: persisted.qrCodeGeneratedAt?.getTime() === generatedAt.getTime(),
+    };
   },
 };

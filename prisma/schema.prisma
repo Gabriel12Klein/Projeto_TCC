@@ -273,8 +273,10 @@ model Batch {
 
   status String
 
-  blockchainRef String?
-  qrCodePath    String?
+  blockchainRef     String?
+  qrCodePath        String?
+  qrCodePayload     String?
+  qrCodeGeneratedAt DateTime?
 
   grapeLinks BatchGrape[]
 

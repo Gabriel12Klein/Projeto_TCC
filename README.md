@@ -80,7 +80,10 @@ Somente ADMIN/EDITOR vinculados à VINUM podem administrar produtos. O cadastro 
 - Safra pertence ao vinho e copia suas uvas em uma transação. Alterar posteriormente o vinho ou editar observações da safra não muda essa composição histórica.
 - Lote pertence a uma safra e ao mesmo vinho, garantido pela FK composta. A seleção é automática apenas quando existe uma safra; com várias, exige escolha.
 - O catálogo apresenta somente vinhos publicados. Consultas públicas de lotes exigem lote e vinho publicados.
-- Blockchain e geração de QR Code ficam reservadas. A API de geração responde 501; imagens e referências históricas não são apagadas.
+- Blockchain continua reservada. O QR Code de cada lote é gerado por usuário
+  administrativo, tem payload e data persistidos no PostgreSQL e aponta para a
+  consulta pública `/consulta/lotes/:code`. A imagem é reconstruída do payload,
+  sem base64 no banco e sem depender de arquivo temporário.
 
 Os identificadores existentes continuam `SF26-T01` (safra/ano/tanque) e `L26254` (lote/ano/dia do ano).
 

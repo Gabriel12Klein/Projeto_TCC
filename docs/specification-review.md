@@ -336,3 +336,12 @@ foi executado nesta tarefa.
 - Não é uma certificação de segurança completa nem garantia de inexistência de bugs.
 - O requisito funcional foi tratado sem excluir dados existentes. As limitações
   de validação e operação acima não foram ocultadas.
+
+## Adendo posterior — versão 2.13.0
+
+A observação histórica acima sobre QR Code correspondia ao escopo vigente na
+auditoria original. Por solicitação funcional posterior, a geração foi reativada
+na versão 2.13.0 e passou a persistir o payload e a data de geração no
+PostgreSQL. O QR direciona à consulta pública já existente do lote; blockchain
+permanece fora do escopo. A implementação e as validações atuais estão
+documentadas em `docs/batch-qr-code.md`.

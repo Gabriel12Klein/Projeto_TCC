@@ -73,6 +73,14 @@ export function validResponse(path: string, method: string, value: unknown) {
     return object(value) && typeof value.token === 'string' && Boolean(value.token) && user(value.user);
   if (route === '/auth/me') return user(value);
   if (route === '/auth/logout') return object(value) && value.ok === true;
+  if (/^\/lotes\/[^/]+\/qr-code$/.test(route) && method === 'POST')
+    return (
+      object(value) &&
+      typeof value.path === 'string' &&
+      typeof value.targetUrl === 'string' &&
+      typeof value.generatedAt === 'string' &&
+      typeof value.created === 'boolean'
+    );
   if (route === '/catalog/wines') return Array.isArray(value) && value.every(wine);
   if (route.startsWith('/catalog/wines/'))
     return (

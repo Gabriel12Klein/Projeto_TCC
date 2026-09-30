@@ -2,6 +2,7 @@ import { AppError } from '../../common/http.js';
 import { toInputDate } from '../../common/format.js';
 import { prisma } from '../../lib/prisma.js';
 import type { Prisma } from '../../generated/prisma/client.js';
+import { renderQrCode } from '../../common/qrCode.js';
 
 const summarySelect = {
   id: true,
@@ -134,7 +135,7 @@ export const catalogService = {
       name: wine.name,
       slug: wine.slug,
       type: wine.wineType?.name ?? '',
-    classification: wine.classification?.name ?? null,
+      classification: wine.classification?.name ?? null,
       grapes: wine.grapeLinks.map(({ grape }) => grape.name).join(', '),
       volumeMl: wine.volumeMl,
       alcoholPercentage: wine.alcoholPercentage,
@@ -174,7 +175,7 @@ export const catalogService = {
         },
         grapeLinks: { include: { grape: { select: { name: true } } } },
         wineType: { select: { name: true } },
-  classification: { select: { name: true } },
+        classification: { select: { name: true } },
       },
     });
     if (!wine) throw new AppError(404, 'Vinho não encontrado no catálogo.');
@@ -205,7 +206,7 @@ export const catalogService = {
       name: wine.name,
       slug: wine.slug,
       type: wine.wineType?.name ?? '',
-    classification: wine.classification?.name ?? null,
+      classification: wine.classification?.name ?? null,
       grapes: wine.grapeLinks.map(({ grape }) => grape.name).join(', '),
       volumeMl: wine.volumeMl,
       alcoholPercentage: wine.alcoholPercentage,
@@ -256,5 +257,18 @@ export const catalogService = {
         grapes: vintageGrapes,
       },
     };
+  },
+
+  async batchQrCode(code: string) {
+    const batch = await prisma.batch.findUnique({
+      where: { code },
+      select: { qrCodePayload: true },
+    });
+    if (!batch?.qrCodePayload) throw new AppError(404, 'Este lote ainda não possui QR Code.');
+    try {
+      return await renderQrCode(batch.qrCodePayload);
+    } catch {
+      throw new AppError(500, 'Não foi possível exibir o QR Code. Tente novamente.');
+    }
   },
 };

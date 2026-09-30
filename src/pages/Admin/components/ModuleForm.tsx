@@ -153,6 +153,7 @@ function invalidFieldMessage(field) {
 export default function ModuleForm({ config, initialData, onSave, onCancel, onMessage, onSaved, confirmOnCancel = true, draftScope = config.key, onBusyChange = (_busy: boolean) => {} }) {
   const sending = useRef(false);
   const [busy, setBusy] = useState(false);
+  const [qrBusy, setQrBusy] = useState(false);
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [form,setForm] = useState<Record<string, any>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -304,8 +305,32 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
     } finally { sending.current = false; setBusy(false); onBusyChange(false); }
   }
 
-  return <form className="min-h-full flex flex-col" onSubmit={submit} noValidate aria-busy={busy}>
-    <fieldset disabled={busy} className="contents">
+  async function generateQrCode() {
+    if (!initialData?.id) {
+      showMessage('Salve o lote antes de gerar o QR Code.');
+      return;
+    }
+    setQrBusy(true);
+    onBusyChange(true);
+    showMessage('Gerando QR Code…');
+    try {
+      const result = await api.generateBatchQr(String(initialData.id));
+      setForm((current) => ({
+        ...current,
+        qrCode: result.path,
+        qrCodeGeneratedAt: result.generatedAt,
+      }));
+      showMessage('QR Code gerado e persistido no lote.');
+    } catch {
+      showMessage('Não foi possível gerar o QR Code. Tente novamente.');
+    } finally {
+      setQrBusy(false);
+      onBusyChange(false);
+    }
+  }
+
+  return <form className="min-h-full flex flex-col" onSubmit={submit} noValidate aria-busy={busy || qrBusy}>
+    <fieldset disabled={busy || qrBusy} className="contents">
     <div className="flex items-center gap-[clamp(12px,1vw,16px)] min-w-0">
       <span className="w-[clamp(58px,4.8vw,68px)] h-[clamp(58px,4.8vw,68px)] border border-[#e5c99d] rounded-full grid place-items-center shrink-0"><img className="w-[70%] h-[70%] object-contain" src={config.icon} alt="" /></span>
       <div><h2 className="mt-0 mb-[5px] font-playfair text-[#6a1424] text-[clamp(21px,1.7vw,25px)] font-semibold">{config.formTitle}</h2><p className="m-0 text-[#746e6b] text-[clamp(12px,0.95vw,14px)] leading-[1.35]">{config.formSubtitle}</p></div>
@@ -350,10 +375,25 @@ export default function ModuleForm({ config, initialData, onSave, onCancel, onMe
 
     {config.blockchainInfo && <div className="mt-[clamp(15px,1.5vw,20px)] grid grid-cols-[minmax(220px,.65fr)_minmax(0,1.35fr)] items-start gap-x-[clamp(22px,2.5vw,38px)] gap-y-[clamp(14px,1.25vw,18px)] max-md:grid-cols-1">
       <button type="button" className={`${secondaryButton} w-full`} disabled title="Reservado para trabalhos futuros"><img className="w-[25px] h-[25px] object-contain" src={linkIcon} alt=""/>Registrar na blockchain</button>
-      <button type="button" className={`${secondaryButton} w-full`} disabled title="Reservado para trabalhos futuros"><img className="w-[25px] h-[25px] object-contain" src={qrIcon} alt=""/>QR Code — futuro</button>
+      <button
+        type="button"
+        className={`${secondaryButton} w-full`}
+        disabled={qrBusy || !initialData?.id || Boolean(form.qrCodeGeneratedAt)}
+        title={!initialData?.id ? 'Salve o lote antes de gerar o QR Code' : undefined}
+        onClick={generateQrCode}
+      >
+        <img className="w-[25px] h-[25px] object-contain" src={qrIcon} alt=""/>
+        {qrBusy ? 'Gerando QR Code…' : form.qrCodeGeneratedAt ? 'QR Code gerado' : 'Gerar QR Code'}
+      </button>
       {config.fields.filter((field) => field.name === 'registrationDate').map((field) => <FormField key={field.name} field={field} value={form[field.name]} valid={fieldValidity[field.name]} invalid={false} unlocked={true} onChange={change} onRequestFocus={() => {}} />)}
       <div className="flex min-h-[150px] items-center justify-center rounded-[10px] border border-dashed border-[#d8b77f] bg-[#fffdf9] p-4" aria-live="polite">
-        {form.qrCode ? <img className="h-32 w-32 object-contain" src={String(form.qrCode)} alt="QR Code do lote" /> : <span className="max-w-sm text-center text-[12px] leading-relaxed text-[#857d79]">O QR Code aparecerá aqui após ser gerado.</span>}
+        {qrBusy ? (
+          <span className="max-w-sm text-center text-[12px] leading-relaxed text-[#857d79]" role="status">Gerando QR Code…</span>
+        ) : form.qrCode ? (
+          <img className="h-32 w-32 object-contain" src={String(form.qrCode)} alt="QR Code do lote" />
+        ) : (
+          <span className="max-w-sm text-center text-[12px] leading-relaxed text-[#857d79]">Este lote ainda não possui QR Code.</span>
+        )}
       </div>
     </div>}
 

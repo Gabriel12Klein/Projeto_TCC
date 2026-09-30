@@ -59,8 +59,9 @@ it('cadastra e edita vinho com classificação sem duplicar e atualiza catálogo
   }
 });
 
-it('mantém geração de QR Code reservada para trabalhos futuros', async () => {
-  await request(app).post('/api/lotes/qualquer-id/qr-code').set('Authorization', 'Bearer ' + token).expect(501);
+it('protege a geração de QR Code e não expõe lotes inexistentes', async () => {
+  await request(app).post('/api/lotes/qualquer-id/qr-code').expect(401);
+  await request(app).post('/api/lotes/qualquer-id/qr-code').set('Authorization', 'Bearer ' + token).expect(404);
 });
 
 it('não permite ao administrador usar o domínio privado de clientes', async () => {

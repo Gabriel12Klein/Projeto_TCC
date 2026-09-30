@@ -4,7 +4,7 @@ A versão oficial do projeto é mantida em `package.json` e `package-lock.json`,
 seguindo versionamento semântico (`MAJOR.MINOR.PATCH`). Cada versão publicada
 também recebe uma tag Git no formato `vMAJOR.MINOR.PATCH`.
 
-Versão atual: **2.12.0**
+Versão atual: **2.13.0**
 
 - `PATCH` (`2.1.1`): correções e ajustes sem mudança incompatível.
 - `MINOR` (`2.2.0`): nova funcionalidade compatível com a versão anterior.
@@ -151,3 +151,13 @@ selecionar 10, 20, 50 ou 100 itens por página, com intervalo, total, navegaçã
 e página atual acessíveis. Filtros e ordenação são aplicados antes do recorte,
 e alterações de filtro ou limite retornam à primeira página. Não houve
 alteração de schema ou migration.
+
+## Versão 2.13.0
+
+Reativa a geração de QR Code dos lotes administrativos com persistência no
+PostgreSQL. O banco conserva o endereço público codificado e a data de geração;
+a imagem PNG é reconstruída de forma determinística pela API pública, sem
+depender de arquivo local ou Base64. A geração é idempotente, restrita à área
+administrativa e mantém compatibilidade com caminhos históricos. O QR direciona
+somente para a consulta pública do lote e não altera a funcionalidade de
+blockchain, que continua reservada para trabalho futuro.
